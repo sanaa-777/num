@@ -1,2 +1,6 @@
 .DS_Store
 Thumbs.db
+tools/
+apk-decompiled/
+apk-contents/
+*.tar.gz
