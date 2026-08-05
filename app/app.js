@@ -107,7 +107,7 @@ const App = {
     if (preview) {
       preview.innerHTML = this.placeImages.map((img, i) => `
         <div class="relative">
-          <img src="${img}" class="w-20 h-16 object-cover rounded-lg border">
+          <img src="${img}" class="w-20 h-16 object-cover rounded-lg border" loading="lazy" alt="صورة">
           <button onclick="App.removePlaceImage(${i})" class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">
             <i data-lucide="x" class="w-3 h-3"></i>
           </button>

@@ -193,8 +193,8 @@
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js" defer></script>
   <style>
     * { font-family: 'Noto Kufi Arabic', sans-serif; }
     body { margin: 0; transition: background-color 0.3s, color 0.3s; }
@@ -226,22 +226,22 @@
     <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
   </div>
 
-  <!-- Firebase SDK (Comapat版本) -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
+  <!-- Firebase SDK (Comapat版本) - Defer for faster load -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js" defer></script>
 
   <!-- Firebase Config & Modules -->
-  <script src="app/firebase-config.js"></script>
-  <script src="app/firebase-auth.js"></script>
-  <script src="app/firebase-db.js"></script>
+  <script src="app/firebase-config.js" defer></script>
+  <script src="app/firebase-auth.js" defer></script>
+  <script src="app/firebase-db.js" defer></script>
 
   <!-- App Modules -->
-  <script src="app/data.js"></script>
-  <script src="app/auth.js"></script>
-  <script src="app/admin.js"></script>
+  <script src="app/data.js" defer></script>
+  <script src="app/auth.js" defer></script>
+  <script src="app/admin.js" defer></script>
   <script src="app/ads.js"></script>
   <script src="app/app.js"></script>
 
