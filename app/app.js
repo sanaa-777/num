@@ -7,6 +7,7 @@ const App = {
 
   init() {
     Auth.checkAuth();
+    Admin.initDefaultAdmin();
     this.render();
     window.addEventListener('hashchange', () => this.handleRoute());
     this.handleRoute();
@@ -38,6 +39,7 @@ const App = {
     else if (view === 'category' && params[0]) { this.selectedCategory = params[0]; this.selectedCity = null; this.currentView = 'category'; this.render(); }
     else if (view === 'subcategory' && params[0]) { this.selectedCategory = params[0]; this.selectedSubCategory = params[1]; this.selectedCity = null; this.currentView = 'subcategory'; this.render(); }
     else if (view === 'city' && params[0]) { this.selectedCity = params[0]; this.currentView = 'search'; this.render(); }
+    else if (view === 'admin') { this.currentView = 'admin'; this.render(); }
     else this.render();
   },
 
@@ -76,10 +78,13 @@ const App = {
                 <img src="${user.avatar}" class="w-6 h-6 rounded-full" alt="">
                 <i data-lucide="chevron-down" class="w-3 h-3 text-gray-400"></i>
               </button>
-              <div class="absolute left-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-2 w-44 hidden group-hover:block z-50">
+              <div class="absolute left-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-2 w-48 hidden group-hover:block z-50">
+                ${user.verified ? '<div class="flex items-center gap-1.5 px-3 py-1 text-xs text-green-600 bg-green-50"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i>حساب موثّق</div>' : '<div class="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-500 bg-gray-50"><i data-lucide="clock" class="w-3.5 h-3.5"></i>بانتظار التوثيق</div>'}
+                <hr class="my-1 border-gray-100">
                 <a href="#profile" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><i data-lucide="user" class="w-4 h-4"></i>الملف الشخصي</a>
                 <a href="#myplaces" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><i data-lucide="building-2" class="w-4 h-4"></i>مواقعي</a>
                 <a href="#favorites" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><i data-lucide="heart" class="w-4 h-4"></i>المفضلة</a>
+                ${Admin.isAdmin() ? `<a href="#admin" class="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"><i data-lucide="shield" class="w-4 h-4"></i>لوحة التحكم ${Admin.getUnreadCount() > 0 ? `<span class="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full mr-auto">${Admin.getUnreadCount()}</span>` : ''}</a>` : ''}
                 <hr class="my-1 border-gray-100">
                 <button onclick="Auth.logout()" class="w-full flex items-center gap-2 text-right px-3 py-2 text-sm text-red-600 hover:bg-red-50"><i data-lucide="log-out" class="w-4 h-4"></i>تسجيل الخروج</button>
               </div>
@@ -596,13 +601,184 @@ const App = {
     const n = document.getElementById('placeName').value, c = document.getElementById('placeCategory').value, s = document.getElementById('placeSubCategory').value, ci = document.getElementById('placeCity').value;
     if (!n||!c||!ci) { alert('يرجى ملء الحقول المطلوبة'); return; }
     Data.addPlace({ name:n, category:c, subcategory:s||null, city:ci, description:document.getElementById('placeDesc').value, address:document.getElementById('placeAddress').value, phone:document.getElementById('placePhone').value, whatsapp:document.getElementById('placeWhatsapp').value, email:document.getElementById('placeEmail').value, owner:Auth.currentUser.id, verified:false, featured:false });
-    alert('تم إضافة المكان بنجاح'); location.hash = 'myplaces';
+    Admin.notifyNewPlace(n, Auth.currentUser.name);
+    alert('تم إضافة المكان بنجاح! سيتم مراجعته من قبل الإدارة.'); location.hash = 'myplaces';
   },
   toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } Data.toggleFavorite(Auth.currentUser.id, pid); this.render(); },
   setRating(s) { document.querySelectorAll('[data-star]').forEach(b => { const v = parseInt(b.dataset.star); b.className = v <= s ? 'text-yellow-500' : 'text-gray-300'; b.querySelector('i')?.classList.toggle('fill-yellow-500', v <= s); }); this._selectedRating = s; },
   submitReview(pid) { if (!this._selectedRating) { alert('اختر تقييم'); return; } const c = document.getElementById('reviewComment').value; if (!c) { alert('اكتب تعليق'); return; } Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, this._selectedRating, c); this._selectedRating = 0; this.showPlace(pid); },
   deletePlaceConfirm(id) { if (confirm('هل أنت متأكد من الحذف؟')) { Data.deletePlace(id); alert('تم الحذف'); location.hash = 'myplaces'; } },
-  updateProfile() { Auth.updateProfile({ name:document.getElementById('profileName').value, phone:document.getElementById('profilePhone').value }); alert('تم التحديث'); this.render(); }
+  updateProfile() { Auth.updateProfile({ name:document.getElementById('profileName').value, phone:document.getElementById('profilePhone').value }); alert('تم التحديث'); this.render(); },
+
+  // ====== ADMIN DASHBOARD ======
+  render_admin() {
+    if (!Admin.isAdmin()) return `<section class="py-16 text-center"><div class="max-w-md mx-auto"><i data-lucide="shield-alert" class="w-16 h-16 text-red-400 mx-auto mb-4"></i><h3 class="text-xl font-bold mb-2">غير مصرح</h3><p class="text-gray-500 text-sm">ليس لديك صلاحية الوصول لهذه الصفحة</p><a href="#home" class="text-blue-600 text-sm mt-4 inline-block">العودة للرئيسية</a></div></section>`;
+
+    const stats = Admin.getStats();
+    const users = Admin.getAllUsers();
+    const places = Admin.getAllPlaces();
+    const notifs = Admin.getNotifications();
+    Admin.markNotificationsRead();
+
+    return `
+    <section class="py-6 md:py-8">
+      <div class="max-w-7xl mx-auto px-3">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold flex items-center gap-2"><i data-lucide="shield" class="w-6 h-6 text-red-600"></i>لوحة تحكم الأدمن</h2>
+          <span class="text-xs text-gray-500">مرحباً، ${Auth.currentUser.name}</span>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="flex items-center gap-2 mb-2"><i data-lucide="users" class="w-5 h-5 text-blue-600"></i><span class="text-xs text-gray-500">المستخدمين</span></div>
+            <div class="text-2xl font-bold text-gray-900">${stats.totalUsers}</div>
+            <div class="text-[10px] text-green-600">${stats.verifiedUsers} موثّق</div>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="flex items-center gap-2 mb-2"><i data-lucide="building-2" class="w-5 h-5 text-blue-600"></i><span class="text-xs text-gray-500">الأماكن</span></div>
+            <div class="text-2xl font-bold text-gray-900">${stats.totalPlaces}</div>
+            <div class="text-[10px] text-green-600">${stats.verifiedPlaces} موثّق</div>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="flex items-center gap-2 mb-2"><i data-lucide="star" class="w-5 h-5 text-yellow-500"></i><span class="text-xs text-gray-500">مميزة</span></div>
+            <div class="text-2xl font-bold text-gray-900">${stats.featuredPlaces}</div>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-gray-100">
+            <div class="flex items-center gap-2 mb-2"><i data-lucide="bell" class="w-5 h-5 text-red-500"></i><span class="text-xs text-gray-500">إشعارات</span></div>
+            <div class="text-2xl font-bold text-gray-900">${stats.pendingRequests}</div>
+          </div>
+        </div>
+
+        <!-- Notifications -->
+        ${notifs.length > 0 ? `
+        <div class="bg-white rounded-xl p-4 border border-gray-100 mb-6">
+          <h3 class="text-sm font-bold mb-3 flex items-center gap-2"><i data-lucide="bell" class="w-4 h-4 text-red-500"></i>أحدث الإشعارات</h3>
+          <div class="space-y-2 max-h-48 overflow-y-auto">
+            ${notifs.slice(0, 10).map(n => `
+              <div class="flex items-center gap-2 p-2 rounded-lg ${n.read ? 'bg-gray-50' : 'bg-blue-50'} text-xs">
+                <i data-lucide="${n.type === 'request' ? 'user-plus' : n.type === 'new_place' ? 'building-2' : 'info'}" class="w-4 h-4 ${n.read ? 'text-gray-400' : 'text-blue-600'} shrink-0"></i>
+                <span class="flex-1 ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}">${n.message}</span>
+                <span class="text-[10px] text-gray-400 shrink-0">${new Date(n.createdAt).toLocaleTimeString('ar', {hour:'2-digit',minute:'2-digit'})}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Tabs -->
+        <div class="flex gap-2 mb-4 overflow-x-auto">
+          <button onclick="App.adminTab='users';App.render()" class="px-4 py-2 rounded-lg text-xs font-medium ${this.adminTab==='users' || !this.adminTab ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-200'} flex items-center gap-1 whitespace-nowrap"><i data-lucide="users" class="w-3.5 h-3.5"></i>المستخدمين (${users.length})</button>
+          <button onclick="App.adminTab='places';App.render()" class="px-4 py-2 rounded-lg text-xs font-medium ${this.adminTab==='places' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-200'} flex items-center gap-1 whitespace-nowrap"><i data-lucide="building-2" class="w-3.5 h-3.5"></i>الأماكن (${places.length})</button>
+        </div>
+
+        <!-- Users Tab -->
+        ${(this.adminTab === 'users' || !this.adminTab) ? `
+        <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-3 py-2.5 text-right font-medium text-gray-500">المستخدم</th>
+                  <th class="px-3 py-2.5 text-right font-medium text-gray-500">البريد</th>
+                  <th class="px-3 py-2.5 text-right font-medium text-gray-500">الدور</th>
+                  <th class="px-3 py-2.5 text-right font-medium text-gray-500">الحالة</th>
+                  <th class="px-3 py-2.5 text-right font-medium text-gray-500">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${users.map(u => `
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2.5">
+                      <div class="flex items-center gap-2">
+                        <img src="${u.avatar}" class="w-7 h-7 rounded-full" alt="">
+                        <div>
+                          <div class="font-medium text-gray-900 flex items-center gap-1">${u.name} ${u.verified ? '<i data-lucide="badge-check" class="w-3.5 h-3.5 text-blue-500"></i>' : ''}</div>
+                          <div class="text-[10px] text-gray-400">${u.phone || '-'}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-gray-600">${u.email}</td>
+                    <td class="px-3 py-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-medium ${u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}">${u.role === 'admin' ? 'أدمن' : 'مستخدم'}</span></td>
+                    <td class="px-3 py-2.5">
+                      ${u.suspended ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">موقوف</span>' : u.verified ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">موثّق</span>' : '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-700">معلّق</span>'}
+                    </td>
+                    <td class="px-3 py-2.5">
+                      ${u.role !== 'admin' ? `
+                        <div class="flex items-center gap-1">
+                          <button onclick="App.adminToggleVerify('${u.id}')" class="p-1.5 rounded-lg ${u.verified ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}" title="${u.verified ? 'إلغاء التوثيق' : 'توثيق'}"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>
+                          <button onclick="App.adminToggleSuspend('${u.id}')" class="p-1.5 rounded-lg ${u.suspended ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}" title="${u.suspended ? 'تفعيل' : 'إيقاف'}"><i data-lucide="ban" class="w-3.5 h-3.5"></i></button>
+                          <button onclick="App.adminDeleteUser('${u.id}')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="حذف"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                      ` : '<span class="text-[10px] text-gray-400">-</span>'}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Places Tab -->
+        ${this.adminTab === 'places' ? `
+        <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-3 py-2.5 text-right font-medium text-gray-500">المكان</th>
+                  <th class="px-3 py-2.5 text-right font-medium text-gray-500">القسم</th>
+                  <th class="px-3 py-2.5 text-right font-medium text-gray-500">المدينة</th>
+                  <th class="px-3 py-2.5 text-right font-medium text-gray-500">الحالة</th>
+                  <th class="px-3 py-2.5 text-right font-medium text-gray-500">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                ${places.map(p => {
+                  const cat = Data.categories.find(c => c.id === p.category);
+                  const city = Data.cities.find(c => c.id === p.city);
+                  return `
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2.5">
+                      <div class="font-medium text-gray-900 flex items-center gap-1">${p.name} ${p.verified ? '<i data-lucide="badge-check" class="w-3.5 h-3.5 text-blue-500"></i>' : ''}</div>
+                      <div class="text-[10px] text-gray-400">${p.phone || '-'}</div>
+                    </td>
+                    <td class="px-3 py-2.5 text-gray-600">${cat ? cat.name : '-'}</td>
+                    <td class="px-3 py-2.5 text-gray-600">${city ? city.name : '-'}</td>
+                    <td class="px-3 py-2.5">
+                      <div class="flex gap-1">
+                        ${p.verified ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">موثّق</span>' : ''}
+                        ${p.featured ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-700">مميز</span>' : ''}
+                        ${!p.verified && !p.featured ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">عادي</span>' : ''}
+                      </div>
+                    </td>
+                    <td class="px-3 py-2.5">
+                      <div class="flex items-center gap-1">
+                        <button onclick="App.adminToggleVerifyPlace('${p.id}')" class="p-1.5 rounded-lg ${p.verified ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}" title="${p.verified ? 'إلغاء التوثيق' : 'توثيق'}"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="App.adminToggleFeature('${p.id}')" class="p-1.5 rounded-lg ${p.featured ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}" title="${p.featured ? 'إلغاء التمييز' : 'تمييز'}"><i data-lucide="star" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="App.adminDeletePlace('${p.id}')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="حذف"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                      </div>
+                    </td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ` : ''}
+      </div>
+    </section>`;
+  },
+
+  // Admin Actions
+  adminTab: 'users',
+  adminToggleVerify(userId) { Admin.toggleVerify(userId); this.render(); },
+  adminToggleSuspend(userId) { Admin.toggleSuspend(userId); this.render(); },
+  adminDeleteUser(userId) { if (confirm('هل أنت متأكد من حذف هذا المستخدم؟')) { Admin.deleteUser(userId); this.render(); } },
+  adminToggleVerifyPlace(placeId) { Admin.verifyPlace(placeId); this.render(); },
+  adminToggleFeature(placeId) { Admin.featurePlace(placeId); this.render(); },
+  adminDeletePlace(placeId) { if (confirm('هل أنت متأكد من حذف هذا المكان؟')) { Admin.deletePlaceAdmin(placeId); this.render(); } }
 };
 
 document.addEventListener('DOMContentLoaded', () => App.init());
