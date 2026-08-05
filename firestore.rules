@@ -1,23 +1,30 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // المستخدمون
+
+    // ====== المستخدمون ======
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId;
-      allow delete: if false;
+      allow update: if request.auth.uid == userId || isAdmin();
+      allow delete: if false; // لا يُسمح بالحذف المباشر
     }
 
-    // الأماكن
+    // ====== الأماكن ======
     match /places/{placeId} {
+      // القراءة: أي مكان نشط (للعامة) أو أي مكان للمصادقين
       allow read: if resource.data.isActive == true || request.auth != null;
+      // الإنشاء: أي مستخدم مصادق
       allow create: if request.auth != null;
-      allow update: if request.auth.uid == resource.data.owner || isAdmin();
-      allow delete: if request.auth.uid == resource.data.owner || isAdmin();
+      // التحديث: المالك أو الأدمن
+      allow update: if request.auth != null && (
+        request.auth.uid == resource.data.owner || isAdmin()
+      );
+      // الحذف: الأدمن فقط (نستخدم تعطيل isActive بدلاً من الحذف)
+      allow delete: if isAdmin();
     }
 
-    // المراجعات
+    // ====== المراجعات ======
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if request.auth != null;
@@ -25,32 +32,48 @@ service cloud.firestore {
       allow delete: if request.auth.uid == resource.data.userId || isAdmin();
     }
 
-    // المفضلة
+    // ====== المفضلة ======
     match /favorites/{favId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && favId.matches(request.auth.uid + '_.*');
     }
 
-    // الإشعارات
+    // ====== الإشعارات (للمستخدمين) ======
     match /notifications/{notifId} {
       allow read: if request.auth.uid == resource.data.userId;
       allow create: if request.auth != null;
       allow update: if request.auth.uid == resource.data.userId;
     }
 
-    // التصنيفات
+    // ====== إشعارات الأدمن ======
+    match /admin_notifications/{notifId} {
+      allow read: if isAdmin();
+      allow create: if request.auth != null; // أي مصادق يمكنه إنشاء إشعار (للطلبات)
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ====== الإعلانات ======
+    match /ads/{adId} {
+      allow read: if true; // الإعلانات النشطة للعامة
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ====== التصنيفات ======
     match /categories/{catId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // المدن
+    // ====== المدن ======
     match /cities/{cityId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // التحقق من صلاحيات الأدمن
+    // ====== التحقق من صلاحيات الأدمن ======
     function isAdmin() {
       return request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';

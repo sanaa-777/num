@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>لوحة التحكم | دليل اليمن</title>
+  <meta name="robots" content="noindex, nofollow">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -22,24 +23,36 @@
     select { -webkit-appearance:none; -moz-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 12px center; background-size:12px; padding-left:32px; padding-right:12px; cursor:pointer; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; color:#374151; background-color:#fff; }
     select:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
     .icon-sm { width:18px; height:18px; } .icon-md { width:22px; height:22px; } .icon-lg { width:28px; height:28px; }
+    .loading-spinner { width:40px; height:40px; border:3px solid #e2e8f0; border-top-color:#dc2626; border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div id="admin-app">
     <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;">
-      <div style="width:40px;height:40px;border:3px solid #e2e8f0;border-top-color:#dc2626;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+      <div class="loading-spinner"></div>
       <p style="color:#94a3b8;font-size:13px;">جاري تحميل لوحة التحكم...</p>
     </div>
-    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
   </div>
 
-  <script src="app/data.js"></script>
-  <script src="app/auth.js"></script>
-  <script src="app/admin.js"></script>
-  <script src="app/ads.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
+  <!-- Firebase Config -->
+  <script src="app/firebase-config.js"></script>
+
+  <!-- App Modules (Firestore-based) -->
+  <script src="app/data-firestore.js"></script>
+  <script src="app/auth-firestore.js"></script>
+  <script src="app/admin-firestore.js"></script>
+  <script src="app/ads-firestore.js"></script>
+
   <script>
     // =============================================
-    // لوحة تحكم الأدمن - Admin Panel (صفحة مستقلة)
+    // لوحة تحكم الأدمن - Admin Panel (Firestore)
     // =============================================
 
     const AdminPanel = {
@@ -47,21 +60,31 @@
       showAdForm: false,
       editAd: null,
       adFormImages: [],
+      _dataLoaded: false,
 
-      init() {
-        Auth.checkAuth();
-        Admin.initDefaultAdmin();
+      async init() {
+        try {
+          // انتظار تحميل Firebase Auth
+          await Auth.init();
+          await Admin.initDefaultAdmin();
 
-        // التحقق من تسجيل الدخول كأدمن
-        if (!Auth.currentUser) {
+          if (!Auth.currentUser) {
+            this.renderLogin();
+            return;
+          }
+          if (Auth.currentUser.role !== 'admin') {
+            this.renderUnauthorized();
+            return;
+          }
+
+          // تحميل البيانات
+          await Data.getPlaces();
+          this._dataLoaded = true;
+          this.render();
+        } catch (e) {
+          console.error('Admin init error:', e);
           this.renderLogin();
-          return;
         }
-        if (Auth.currentUser.role !== 'admin') {
-          this.renderUnauthorized();
-          return;
-        }
-        this.render();
       },
 
       renderLogin() {
@@ -92,12 +115,60 @@
                 <i data-lucide="log-in" class="w-5 h-5"></i>دخول لوحة التحكم
               </button>
             </div>
+            <div class="mt-4 text-center">
+              <button onclick="AdminPanel.forgotPassword()" class="text-sm text-gray-400 hover:text-gray-600">نسيت كلمة المرور؟</button>
+            </div>
             <a href="index.html" class="block text-center text-sm text-gray-400 hover:text-gray-600 mt-6 flex items-center justify-center gap-1">
               <i data-lucide="arrow-right" class="w-4 h-4"></i>العودة للموقع
             </a>
           </div>
         </div>`;
         this.initIcons();
+      },
+
+      async doLogin() {
+        const email = document.getElementById('adminEmail').value;
+        const password = document.getElementById('adminPassword').value;
+        const errEl = document.getElementById('loginError');
+
+        if (!email || !password) {
+          errEl.classList.remove('hidden');
+          errEl.querySelector('span').textContent = 'أدخل البريد وكلمة المرور';
+          return;
+        }
+
+        try {
+          errEl.classList.add('hidden');
+          await Auth.login(email, password);
+
+          if (Auth.currentUser.role !== 'admin') {
+            await Auth.logout();
+            errEl.classList.remove('hidden');
+            errEl.querySelector('span').textContent = 'ليس لديك صلاحيات الأدمن';
+            return;
+          }
+
+          await Data.getPlaces();
+          this._dataLoaded = true;
+          this.render();
+        } catch (e) {
+          errEl.classList.remove('hidden');
+          errEl.querySelector('span').textContent = e.message;
+        }
+      },
+
+      async forgotPassword() {
+        const email = document.getElementById('adminEmail').value;
+        if (!email) {
+          alert('أدخل البريد الإلكتروني أولاً');
+          return;
+        }
+        try {
+          await Auth.resetPassword(email);
+          alert('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني');
+        } catch (e) {
+          alert(e.message);
+        }
       },
 
       renderUnauthorized() {
@@ -114,18 +185,18 @@
         this.initIcons();
       },
 
-      render() {
+      async render() {
         const app = document.getElementById('admin-app');
-        const stats = Admin.getStats();
-        const users = Admin.getAllUsers();
-        const places = Admin.getAllPlaces();
-        const ads = Ads.getAll();
-        const notifs = Admin.getNotifications();
-        Admin.markNotificationsRead();
+        const stats = await Admin.getStats();
+        const users = await Admin.getAllUsers();
+        const places = await Admin.getAllPlaces();
+        const ads = await Ads.getAll();
+        const notifs = await Admin.getNotifications();
+        await Admin.markNotificationsRead();
+        const unreadCount = await Admin.getUnreadCount();
 
         app.innerHTML = `
         <div class="min-h-screen bg-gray-100">
-          <!-- Top Bar -->
           <header class="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
             <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
               <div class="flex items-center gap-3">
@@ -138,23 +209,21 @@
                   <img src="${Auth.currentUser.avatar}" class="w-6 h-6 rounded-full" alt="">
                   <span class="text-xs font-medium">${Auth.currentUser.name}</span>
                 </div>
-                <button onclick="Auth.logout();AdminPanel.renderLogin()" class="text-red-500 hover:text-red-700"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                <button onclick="Auth.logout().then(()=>AdminPanel.renderLogin())" class="text-red-500 hover:text-red-700"><i data-lucide="log-out" class="w-5 h-5"></i></button>
               </div>
             </div>
           </header>
 
           <div class="max-w-7xl mx-auto px-4 py-6">
-            <!-- Stats -->
             <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
               <div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="users" class="w-4 h-4 text-blue-600"></i><span class="text-[10px] text-gray-500">المستخدمين</span></div><div class="text-xl font-bold">${stats.totalUsers}</div><div class="text-[10px] text-green-600">${stats.verifiedUsers} موثّق</div></div>
               <div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="building-2" class="w-4 h-4 text-blue-600"></i><span class="text-[10px] text-gray-500">الأماكن</span></div><div class="text-xl font-bold">${stats.totalPlaces}</div><div class="text-[10px] text-green-600">${stats.verifiedPlaces} موثّق</div></div>
               <div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="star" class="w-4 h-4 text-yellow-500"></i><span class="text-[10px] text-gray-500">مميزة</span></div><div class="text-xl font-bold">${stats.featuredPlaces}</div></div>
               <div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="megaphone" class="w-4 h-4 text-purple-600"></i><span class="text-[10px] text-gray-500">إعلانات</span></div><div class="text-xl font-bold">${ads.length}</div></div>
-              <div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="eye" class="w-4 h-4 text-blue-500"></i><span class="text-[10px] text-gray-500">مشاهدات</span></div><div class="text-xl font-bold">${Ads.getStats().totalViews}</div></div>
-              <div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="bell" class="w-4 h-4 text-red-500"></i><span class="text-[10px] text-gray-500">إشعارات</span></div><div class="text-xl font-bold">${stats.pendingRequests}</div></div>
+              <div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="eye" class="w-4 h-4 text-blue-500"></i><span class="text-[10px] text-gray-500">مشاهدات</span></div><div class="text-xl font-bold">${(await Ads.getStats()).totalViews}</div></div>
+              <div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="bell" class="w-4 h-4 text-red-500"></i><span class="text-[10px] text-gray-500">إشعارات</span></div><div class="text-xl font-bold">${unreadCount}</div></div>
             </div>
 
-            <!-- Notifications -->
             ${notifs.length > 0 ? `
             <div class="bg-white rounded-xl p-4 border border-gray-100 mb-6">
               <h3 class="text-sm font-bold mb-3 flex items-center gap-2"><i data-lucide="bell" class="w-4 h-4 text-red-500"></i>أحدث الإشعارات</h3>
@@ -163,13 +232,12 @@
                   <div class="flex items-center gap-2 p-2 rounded-lg ${n.read ? 'bg-gray-50' : 'bg-blue-50'} text-xs">
                     <i data-lucide="${n.type === 'request' ? 'user-plus' : n.type === 'new_place' ? 'building-2' : 'info'}" class="w-4 h-4 ${n.read ? 'text-gray-400' : 'text-blue-600'} shrink-0"></i>
                     <span class="flex-1 ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}">${n.message}</span>
-                    <span class="text-[10px] text-gray-400 shrink-0">${new Date(n.createdAt).toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'})}</span>
+                    <span class="text-[10px] text-gray-400 shrink-0">${n.createdAt?.toDate ? n.createdAt.toDate().toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'}) : ''}</span>
                   </div>
                 `).join('')}
               </div>
             </div>` : ''}
 
-            <!-- Tabs -->
             <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
               ${[
                 {id:'dashboard',name:'نظرة عامة',icon:'layout-dashboard'},
@@ -183,11 +251,10 @@
               `).join('')}
             </div>
 
-            <!-- Tab Content -->
             ${this.currentTab === 'dashboard' ? this.renderDashboard(stats, users, places, notifs) : ''}
             ${this.currentTab === 'users' ? this.renderUsers(users) : ''}
             ${this.currentTab === 'places' ? this.renderPlaces(places) : ''}
-            ${this.currentTab === 'ads' ? this.renderAds() : ''}
+            ${this.currentTab === 'ads' ? this.renderAdsTab(ads) : ''}
           </div>
         </div>`;
         this.initIcons();
@@ -195,7 +262,7 @@
 
       renderDashboard(stats, users, places, notifs) {
         const recentUsers = users.slice(-5).reverse();
-        const recentPlaces = places.slice(0, 5);
+        const recentPlaces = places.filter(p => p.isActive !== false).slice(0, 5);
         return `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="bg-white rounded-xl p-4 border border-gray-100">
@@ -203,7 +270,7 @@
             <div class="space-y-2">
               ${recentUsers.map(u => `
                 <div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 text-xs">
-                  <img src="${u.avatar}" class="w-7 h-7 rounded-full" alt="">
+                  <img src="${u.avatar || ''}" class="w-7 h-7 rounded-full" alt="">
                   <div class="flex-1"><div class="font-medium flex items-center gap-1">${u.name} ${u.verified ? '<i data-lucide="badge-check" class="w-3 h-3 text-blue-500"></i>' : ''}</div><div class="text-[10px] text-gray-400">${u.email}</div></div>
                   <span class="text-[10px] px-2 py-0.5 rounded ${u.verified ? 'bg-green-100 text-green-700' : u.suspended ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}">${u.verified ? 'موثّق' : u.suspended ? 'موقوف' : 'معلّق'}</span>
                 </div>
@@ -218,6 +285,7 @@
                 return `<div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 text-xs">
                   <div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0"><i data-lucide="${cat?.icon||'map-pin'}" class="w-4 h-4 text-blue-600"></i></div>
                   <div class="flex-1"><div class="font-medium flex items-center gap-1">${p.name} ${p.verified ? '<i data-lucide="badge-check" class="w-3 h-3 text-blue-500"></i>' : ''}</div><div class="text-[10px] text-gray-400">${cat?.name||''}</div></div>
+                  <span class="text-[10px] px-2 py-0.5 rounded ${p.status === 'approved' || !p.status ? 'bg-green-100 text-green-700' : p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}">${p.status === 'approved' || !p.status ? 'معتمد' : p.status === 'pending' ? 'معلق' : 'مرفوض'}</span>
                 </div>`;
               }).join('')}
             </div>
@@ -233,16 +301,14 @@
               <thead class="bg-gray-50"><tr>
                 <th class="px-3 py-3 text-right font-medium text-gray-500">المستخدم</th>
                 <th class="px-3 py-3 text-right font-medium text-gray-500">البريد</th>
-                <th class="px-3 py-3 text-right font-medium text-gray-500">الهاتف</th>
                 <th class="px-3 py-3 text-right font-medium text-gray-500">الدور</th>
                 <th class="px-3 py-3 text-right font-medium text-gray-500">الحالة</th>
                 <th class="px-3 py-3 text-right font-medium text-gray-500">الإجراءات</th>
               </tr></thead>
               <tbody class="divide-y divide-gray-100">
                 ${users.map(u => `<tr class="hover:bg-gray-50">
-                  <td class="px-3 py-3"><div class="flex items-center gap-2"><img src="${u.avatar}" class="w-8 h-8 rounded-full" alt=""><div><div class="font-medium flex items-center gap-1">${u.name} ${u.verified?'<i data-lucide="badge-check" class="w-3.5 h-3.5 text-blue-500"></i>':''}</div><div class="text-[10px] text-gray-400">منذ ${Math.ceil((Date.now()-new Date(u.createdAt))/86400000)} يوم</div></div></div></td>
+                  <td class="px-3 py-3"><div class="flex items-center gap-2"><img src="${u.avatar || ''}" class="w-8 h-8 rounded-full" alt=""><div><div class="font-medium flex items-center gap-1">${u.name} ${u.verified?'<i data-lucide="badge-check" class="w-3.5 h-3.5 text-blue-500"></i>':''}</div></div></div></td>
                   <td class="px-3 py-3 text-gray-600">${u.email}</td>
-                  <td class="px-3 py-3 text-gray-600">${u.phone||'-'}</td>
                   <td class="px-3 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-medium ${u.role==='admin'?'bg-red-100 text-red-700':'bg-gray-100 text-gray-700'}">${u.role==='admin'?'أدمن':'مستخدم'}</span></td>
                   <td class="px-3 py-3">${u.suspended?'<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">موقوف</span>':u.verified?'<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">موثّق</span>':'<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-700">معلّق</span>'}</td>
                   <td class="px-3 py-3">${u.role!=='admin'?`<div class="flex items-center gap-1">
@@ -260,10 +326,7 @@
       renderPlaces(places) {
         const pendingPlaces = places.filter(p => p.status === 'pending');
         const approvedPlaces = places.filter(p => p.status === 'approved' || !p.status);
-        const rejectedPlaces = places.filter(p => p.status === 'rejected');
-        
         return `
-        <!-- Pending Places -->
         ${pendingPlaces.length > 0 ? `
         <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
           <h3 class="text-sm font-bold text-yellow-800 mb-3 flex items-center gap-2">
@@ -280,62 +343,40 @@
                     <div class="font-bold text-sm text-gray-900">${p.name}</div>
                     <div class="text-xs text-gray-500">${cat?.name||''} ${city ? '• '+city.name : ''}</div>
                     <div class="text-[10px] text-gray-400 mt-1">${p.phone||''} ${p.email ? '• '+p.email : ''}</div>
-                  </div>
-                  <div class="flex gap-1">
-                    <button onclick="AdminPanel.previewPlace('${p.id}')" class="px-2 py-1 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 text-[10px] font-medium flex items-center gap-1" title="معاينة">
-                      <i data-lucide="eye" class="w-3 h-3"></i>معاينة
-                    </button>
-                    <button onclick="AdminPanel.approvePlace('${p.id}')" class="px-2 py-1 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 text-[10px] font-medium flex items-center gap-1" title="موافقة">
-                      <i data-lucide="check" class="w-3 h-3"></i>موافقة
-                    </button>
-                    <button onclick="AdminPanel.rejectPlace('${p.id}')" class="px-2 py-1 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 text-[10px] font-medium flex items-center gap-1" title="رفض">
-                      <i data-lucide="x" class="w-3 h-3"></i>رفض
-                    </button>
+                    <div class="text-xs text-gray-600 mt-1">${p.description || ''}</div>
                   </div>
                 </div>
-                ${p.description ? `<p class="text-xs text-gray-600 line-clamp-2">${p.description}</p>` : ''}
+                <div class="flex gap-2 mt-2">
+                  <button onclick="AdminPanel.approvePlace('${p.id}')" class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700">موافقة</button>
+                  <button onclick="AdminPanel.rejectPlace('${p.id}')" class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700">رفض</button>
+                </div>
               </div>`;
             }).join('')}
           </div>
         </div>` : ''}
-        
-        <!-- All Places Table -->
+
         <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div class="p-3 border-b border-gray-100 flex items-center gap-2">
-            <button onclick="AdminPanel.filterStatus='all'" class="px-3 py-1 rounded-lg text-xs ${this.filterStatus==='all'?'bg-blue-100 text-blue-600':'bg-gray-100 text-gray-600'}">الكل (${places.length})</button>
-            <button onclick="AdminPanel.filterStatus='approved'" class="px-3 py-1 rounded-lg text-xs ${this.filterStatus==='approved'?'bg-green-100 text-green-600':'bg-gray-100 text-gray-600'}">معتمد (${approvedPlaces.length})</button>
-            <button onclick="AdminPanel.filterStatus='pending'" class="px-3 py-1 rounded-lg text-xs ${this.filterStatus==='pending'?'bg-yellow-100 text-yellow-600':'bg-gray-100 text-gray-600'}">معلق (${pendingPlaces.length})</button>
-            <button onclick="AdminPanel.filterStatus='rejected'" class="px-3 py-1 rounded-lg text-xs ${this.filterStatus==='rejected'?'bg-red-100 text-red-600':'bg-gray-100 text-gray-600'}">مرفوض (${rejectedPlaces.length})</button>
-          </div>
           <div class="overflow-x-auto">
             <table class="w-full text-xs">
               <thead class="bg-gray-50"><tr>
                 <th class="px-3 py-3 text-right font-medium text-gray-500">المكان</th>
-                <th class="px-3 py-3 text-right font-medium text-gray-500">القسم</th>
-                <th class="px-3 py-3 text-right font-medium text-gray-500">المدينة</th>
+                <th class="px-3 py-3 text-right font-medium text-gray-500">التصنيف</th>
                 <th class="px-3 py-3 text-right font-medium text-gray-500">الحالة</th>
                 <th class="px-3 py-3 text-right font-medium text-gray-500">الإجراءات</th>
               </tr></thead>
               <tbody class="divide-y divide-gray-100">
-                ${places.filter(p => this.filterStatus==='all' || p.status===this.filterStatus || (!p.status && this.filterStatus==='approved')).map(p => {
+                ${approvedPlaces.slice(0, 50).map(p => {
                   const cat = Data.categories.find(c => c.id === p.category);
-                  const city = Data.cities.find(c => c.id === p.city);
-                  const status = p.status || 'approved';
-                  const statusColors = { pending: 'bg-yellow-100 text-yellow-700', approved: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700' };
-                  const statusLabels = { pending: 'معلق', approved: 'معتمد', rejected: 'مرفوض' };
                   return `<tr class="hover:bg-gray-50">
-                    <td class="px-3 py-3"><div class="font-medium">${p.name}</div><div class="text-[10px] text-gray-400">${p.phone||'-'}</div></td>
-                    <td class="px-3 py-3 text-gray-600">${cat?.name||'-'}</td>
-                    <td class="px-3 py-3 text-gray-600">${city?.name||'-'}</td>
-                    <td class="px-3 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-medium ${statusColors[status]}">${statusLabels[status]}</span></td>
+                    <td class="px-3 py-3"><div class="font-medium">${p.name}</div><div class="text-[10px] text-gray-400">${p.phone || ''}</div></td>
+                    <td class="px-3 py-3 text-gray-600">${cat?.name || '-'}</td>
+                    <td class="px-3 py-3">
+                      ${p.verified ? '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">موثّق</span>' : ''}
+                      ${p.featured ? '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 mr-1">مميّز</span>' : ''}
+                    </td>
                     <td class="px-3 py-3"><div class="flex items-center gap-1">
-                      <button onclick="AdminPanel.previewPlace('${p.id}')" class="p-1.5 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200" title="معاينة"><i data-lucide="eye" class="w-3.5 h-3.5"></i></button>
-                      ${status === 'pending' ? `
-                        <button onclick="AdminPanel.approvePlace('${p.id}')" class="p-1.5 rounded-lg bg-green-100 text-green-600 hover:bg-green-200" title="موافقة"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>
-                        <button onclick="AdminPanel.rejectPlace('${p.id}')" class="p-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200" title="رفض"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
-                      ` : `
-                        <button onclick="AdminPanel.toggleVerifyPlace('${p.id}')" class="p-1.5 rounded-lg ${p.verified?'bg-blue-100 text-blue-600':'bg-gray-100 text-gray-500'}" title="توثيق"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>
-                      `}
+                      <button onclick="AdminPanel.verifyPlace('${p.id}')" class="p-1.5 rounded-lg ${p.verified?'bg-blue-100 text-blue-600':'bg-gray-100 text-gray-500'} hover:bg-blue-200" title="توثيق"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>
+                      <button onclick="AdminPanel.featurePlace('${p.id}')" class="p-1.5 rounded-lg ${p.featured?'bg-yellow-100 text-yellow-600':'bg-gray-100 text-gray-500'} hover:bg-yellow-200" title="تمييز"><i data-lucide="star" class="w-3.5 h-3.5"></i></button>
                       <button onclick="AdminPanel.deletePlace('${p.id}')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="حذف"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                     </div></td>
                   </tr>`;
@@ -346,232 +387,39 @@
         </div>`;
       },
 
-      renderAds() {
-        const ads = Ads.getAll();
-        const adStats = Ads.getStats();
+      renderAdsTab(ads) {
         return `
-        <div class="space-y-4">
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <div class="bg-white rounded-xl p-3 border border-gray-100 text-center"><div class="text-lg font-bold">${adStats.total}</div><div class="text-[10px] text-gray-500">إجمالي</div></div>
-            <div class="bg-white rounded-xl p-3 border border-gray-100 text-center"><div class="text-lg font-bold text-green-600">${adStats.active}</div><div class="text-[10px] text-gray-500">نشط</div></div>
-            <div class="bg-white rounded-xl p-3 border border-gray-100 text-center"><div class="text-lg font-bold text-gray-400">${adStats.inactive}</div><div class="text-[10px] text-gray-500">متوقف</div></div>
-            <div class="bg-white rounded-xl p-3 border border-gray-100 text-center"><div class="text-lg font-bold text-blue-600">${adStats.totalViews}</div><div class="text-[10px] text-gray-500">مشاهدات</div></div>
-            <div class="bg-white rounded-xl p-3 border border-gray-100 text-center"><div class="text-lg font-bold text-yellow-600">${adStats.totalClicks}</div><div class="text-[10px] text-gray-500">نقرات</div></div>
-          </div>
-          <button onclick="AdminPanel.showAdForm=true;AdminPanel.editAd=null;AdminPanel.adFormImages=[];AdminPanel.render()" class="bg-red-600 text-white px-4 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-700 flex items-center gap-2 shadow-lg shadow-red-600/25"><i data-lucide="plus" class="w-4 h-4"></i>إضافة إعلان جديد</button>
-          ${this.showAdForm ? this.renderAdForm() : ''}
-          ${ads.length > 0 ? `
-          <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs">
-                <thead class="bg-gray-50"><tr>
-                  <th class="px-3 py-3 text-right font-medium text-gray-500">الصورة</th>
-                  <th class="px-3 py-3 text-right font-medium text-gray-500">الاسم</th>
-                  <th class="px-3 py-3 text-right font-medium text-gray-500">الموضع</th>
-                  <th class="px-3 py-3 text-right font-medium text-gray-500">المقاس</th>
-                  <th class="px-3 py-3 text-right font-medium text-gray-500">الصور</th>
-                  <th class="px-3 py-3 text-right font-medium text-gray-500">المشاهدات</th>
-                  <th class="px-3 py-3 text-right font-medium text-gray-500">النقرات</th>
-                  <th class="px-3 py-3 text-right font-medium text-gray-500">الحالة</th>
-                  <th class="px-3 py-3 text-right font-medium text-gray-500">الإجراءات</th>
-                </tr></thead>
-                <tbody class="divide-y divide-gray-100">
-                  ${ads.map(ad => `<tr class="hover:bg-gray-50">
-                    <td class="px-3 py-3"><img src="${ad.images?.[0]||''}" class="w-14 h-10 object-cover rounded-lg border" alt=""></td>
-                    <td class="px-3 py-3 font-medium">${ad.title||'-'}</td>
-                    <td class="px-3 py-3 text-gray-600">${Ads.positions.find(p=>p.id===ad.position)?.name||'-'}</td>
-                    <td class="px-3 py-3 text-gray-600">${Ads.sizes.find(s=>s.id===ad.size)?.name||'-'}</td>
-                    <td class="px-3 py-3 text-gray-600">${ad.images?.length||0}</td>
-                    <td class="px-3 py-3 text-gray-600">${ad.views||0}</td>
-                    <td class="px-3 py-3 text-gray-600">${ad.clicks||0}</td>
-                    <td class="px-3 py-3"><button onclick="Ads.toggleActive('${ad.id}');AdminPanel.render()" class="px-2 py-0.5 rounded text-[10px] font-medium ${ad.isActive?'bg-green-100 text-green-700':'bg-gray-100 text-gray-500'}">${ad.isActive?'نشط':'متوقف'}</button></td>
-                    <td class="px-3 py-3"><div class="flex items-center gap-1">
-                      <button onclick="AdminPanel.editAd='${ad.id}';AdminPanel.adFormImages=[...ad.images];AdminPanel.showAdForm=true;AdminPanel.render()" class="p-1.5 rounded-lg bg-gray-100 text-blue-500 hover:bg-blue-100"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-                      <button onclick="if(confirm('حذف؟')){Ads.delete('${ad.id}');AdminPanel.render()}" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                    </div></td>
-                  </tr>`).join('')}
-                </tbody>
-              </table>
-            </div>
-          </div>` : '<div class="text-center py-12 text-gray-400 bg-white rounded-xl border border-gray-100"><i data-lucide="megaphone" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i><br>لا توجد إعلانات</div>'}
-        </div>`;
-      },
-
-      renderAdForm() {
-        const ad = this.editAd ? Ads.getAll().find(a => a.id === this.editAd) : null;
-        return `
-        <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h3 class="text-sm font-bold mb-4 flex items-center gap-2"><i data-lucide="megaphone" class="w-5 h-5 text-red-600"></i>${ad?'تعديل الإعلان':'إضافة إعلان جديد'}</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">اسم الإعلان</label><input type="text" id="adTitle" value="${ad?.title||''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm" placeholder="مثال:عرض خاص"></div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">رابط الإعلان (URL)</label><input type="url" id="adUrl" value="${ad?.linkUrl||''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="https://example.com"></div>
-            <div class="md:col-span-2"><label class="block text-xs font-medium text-gray-700 mb-1">الوصف (اختياري)</label><textarea id="adDesc" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" rows="2">${ad?.description||''}</textarea></div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">مكان الظهور</label><select id="adPosition" class="w-full py-2.5 text-xs rounded-lg border border-gray-200 bg-white">${Ads.positions.map(p=>`<option value="${p.id}" ${ad?.position===p.id?'selected':''}>${p.name} - ${p.description}</option>`).join('')}</select></div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">المقاس</label><select id="adSize" class="w-full py-2.5 text-xs rounded-lg border border-gray-200 bg-white">${Ads.sizes.map(s=>`<option value="${s.id}" ${ad?.size===s.id?'selected':''}>${s.name}</option>`).join('')}</select></div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">تاريخ النشر</label><input type="datetime-local" id="adPublish" value="${ad?.publishDate?.slice(0,16)||''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">تاريخ الانتهاء</label><input type="datetime-local" id="adExpire" value="${ad?.expireDate?.slice(0,16)||''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">مدة السلايدر (ms)</label><input type="number" id="adSlider" value="${ad?.sliderDuration||4000}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" min="1000" step="500"></div>
-            <div class="flex items-end"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="adActive" ${!ad||ad.isActive?'checked':''} class="w-4 h-4 rounded border-gray-300 text-red-600 focus:ring-red-500"><span class="text-xs font-medium text-gray-700">الإعلان نشط</span></label></div>
-            <div class="md:col-span-2">
-              <label class="block text-xs font-medium text-gray-700 mb-1">صور الإعلان (يمكن رفع أكثر من صورة للسلايدر)</label>
-              <input type="file" id="adImages" accept="image/*" multiple onchange="AdminPanel.handleImageUpload(this.files)" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm">
-              <div id="adPreview" class="flex flex-wrap gap-2 mt-2">
-                ${this.adFormImages.map((img,i)=>`<div class="relative"><img src="${img}" class="w-20 h-14 object-cover rounded-lg border"><button onclick="AdminPanel.removeImage(${i})" class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center hover:bg-red-600"><i data-lucide="x" class="w-3 h-3"></i></button></div>`).join('')}
+        <div class="bg-white rounded-xl border border-gray-100 p-4">
+          <h3 class="text-sm font-bold mb-3">الإعلانات (${ads.length})</h3>
+          <div class="space-y-2">
+            ${ads.map(ad => `
+              <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div class="flex-1">
+                  <div class="font-medium text-sm">${ad.title || 'بدون عنوان'}</div>
+                  <div class="text-[10px] text-gray-400">${ad.position || ''} • ${ad.views || 0} مشاهدة • ${ad.clicks || 0} نقرة</div>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] ${ad.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${ad.isActive ? 'نشط' : 'معطل'}</span>
               </div>
-            </div>
-          </div>
-          <div class="flex gap-2 mt-4">
-            <button onclick="AdminPanel.saveAd()" class="bg-red-600 text-white px-5 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-700 flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i>${ad?'حفظ التعديلات':'إضافة الإعلان'}</button>
-            <button onclick="AdminPanel.showAdForm=false;AdminPanel.render()" class="bg-gray-100 text-gray-700 px-5 py-2.5 rounded-xl text-xs font-semibold hover:bg-gray-200">إلغاء</button>
+            `).join('') || '<p class="text-gray-400 text-sm text-center py-4">لا توجد إعلانات</p>'}
           </div>
         </div>`;
       },
 
-      // Actions
-      doLogin() {
-        const err = document.getElementById('loginError');
-        try {
-          const user = Auth.login(document.getElementById('adminEmail').value, document.getElementById('adminPassword').value);
-          if (user.role !== 'admin') { err.querySelector('span').textContent = 'هذا الحساب ليس أدمن'; err.classList.remove('hidden'); this.initIcons(); return; }
-          this.render();
-        } catch(e) { err.querySelector('span').textContent = e.message; err.classList.remove('hidden'); this.initIcons(); }
-      },
-      toggleVerify(id) { Admin.toggleVerify(id); this.render(); },
-      toggleSuspend(id) { Admin.toggleSuspend(id); this.render(); },
-      deleteUser(id) { if (confirm('حذف المستخدم نهائياً؟')) { Admin.deleteUser(id); this.render(); } },
-      toggleVerifyPlace(id) { Admin.verifyPlace(id); this.render(); },
-      toggleFeature(id) { Admin.featurePlace(id); this.render(); },
-      deletePlace(id) { if (confirm('حذف المكان نهائياً؟')) { Admin.deletePlaceAdmin(id); this.render(); } },
-      
-      filterStatus: 'all',
-      
-      approvePlace(id) {
-        const note = prompt('ملاحظة للمستخدم (اختياري):');
-        if (Data.updatePlaceStatus(id, 'approved', note)) {
-          Admin.addNotification('approve', `تمت الموافقة على المكان`);
-          alert('✅ تمت الموافقة على المكان');
-          this.render();
-        }
-      },
-      
-      rejectPlace(id) {
-        const note = prompt('سبب الرفض (مطلوب):');
-        if (!note) return;
-        if (Data.updatePlaceStatus(id, 'rejected', note)) {
-          Admin.addNotification('reject', `تم رفض المكان`);
-          alert('❌ تم رفض المكان');
-          this.render();
-        }
-      },
-      
-      previewPlace(id) {
-        const place = Data.getPlaces().find(p => p.id === id);
-        if (!place) return;
-        const cat = Data.categories.find(c => c.id === place.category);
-        const city = Data.cities.find(c => c.id === place.city);
-        const statusColors = { pending: 'bg-yellow-100 text-yellow-800', approved: 'bg-green-100 text-green-800', rejected: 'bg-red-100 text-red-800' };
-        const statusLabels = { pending: 'معلق', approved: 'معتمد', rejected: 'مرفوض' };
-        const status = place.status || 'approved';
-        
-        const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
-        modal.innerHTML = `
-          <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div class="p-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 class="font-bold text-lg">معاينة المكان</h3>
-              <button onclick="this.closest('.fixed').remove()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                <i data-lucide="x" class="w-4 h-4"></i>
-              </button>
-            </div>
-            <div class="p-4 space-y-3">
-              <div class="flex items-center gap-2">
-                <h4 class="text-xl font-bold">${place.name}</h4>
-                <span class="px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[status]}">${statusLabels[status]}</span>
-              </div>
-              ${cat ? `<div class="flex items-center gap-2 text-sm text-gray-600"><i data-lucide="tag" class="w-4 h-4"></i>${cat.name}</div>` : ''}
-              ${city ? `<div class="flex items-center gap-2 text-sm text-gray-600"><i data-lucide="map-pin" class="w-4 h-4"></i>${city.name}</div>` : ''}
-              ${place.address ? `<div class="flex items-center gap-2 text-sm text-gray-600"><i data-lucide="navigation" class="w-4 h-4"></i>${place.address}</div>` : ''}
-              ${place.description ? `<p class="text-sm text-gray-700">${place.description}</p>` : ''}
-              
-              <div class="grid grid-cols-2 gap-2 text-sm">
-                ${place.phone ? `<div class="flex items-center gap-2"><i data-lucide="phone" class="w-4 h-4 text-green-600"></i>${place.phone}</div>` : ''}
-                ${place.whatsapp ? `<div class="flex items-center gap-2"><i data-lucide="message-circle" class="w-4 h-4 text-green-600"></i>${place.whatsapp}</div>` : ''}
-                ${place.email ? `<div class="flex items-center gap-2"><i data-lucide="mail" class="w-4 h-4 text-blue-600"></i>${place.email}</div>` : ''}
-                ${place.website ? `<div class="flex items-center gap-2"><i data-lucide="globe" class="w-4 h-4 text-blue-600"></i><a href="${place.website}" target="_blank" class="text-blue-600 underline">موقع إلكتروني</a></div>` : ''}
-              </div>
-              
-              ${(place.lat && place.lng) ? `<div id="previewMap" style="height:200px;border-radius:12px;overflow:hidden;"></div>` : ''}
-              
-              <div class="text-xs text-gray-400">
-                <div>تاريخ الإرسال: ${new Date(place.createdAt).toLocaleString('ar')}</div>
-                <div>المالك: ${place.owner}</div>
-              </div>
-              
-              ${status === 'pending' ? `
-              <div class="flex gap-2 pt-2">
-                <button onclick="AdminPanel.approvePlace('${place.id}');this.closest('.fixed').remove();" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-bold hover:bg-green-700 text-sm flex items-center justify-center gap-2">
-                  <i data-lucide="check" class="w-4 h-4"></i>موافقة
-                </button>
-                <button onclick="AdminPanel.rejectPlace('${place.id}');this.closest('.fixed').remove();" class="flex-1 bg-red-600 text-white py-2.5 rounded-xl font-bold hover:bg-red-700 text-sm flex items-center justify-center gap-2">
-                  <i data-lucide="x" class="w-4 h-4"></i>رفض
-                </button>
-              </div>` : ''}
-            </div>
-          </div>
-        `;
-        document.body.appendChild(modal);
-        lucide.createIcons();
-        
-        // Initialize map if coordinates exist
-        if (place.lat && place.lng) {
-          setTimeout(() => {
-            const map = L.map('previewMap').setView([parseFloat(place.lat), parseFloat(place.lng)], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(map);
-            L.marker([parseFloat(place.lat), parseFloat(place.lng)]).addTo(map).bindPopup(place.name);
-          }, 300);
-        }
-      },
-
-      async handleImageUpload(files) {
-        for (const file of files) {
-          const base64 = await Ads.compressImage(file, 1200);
-          this.adFormImages.push(base64);
-        }
-        const preview = document.getElementById('adPreview');
-        if (preview) preview.innerHTML = this.adFormImages.map((img,i)=>`<div class="relative"><img src="${img}" class="w-20 h-14 object-cover rounded-lg border"><button onclick="AdminPanel.removeImage(${i})" class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center"><i data-lucide="x" class="w-3 h-3"></i></button></div>`).join('');
-        this.initIcons();
-      },
-
-      removeImage(i) {
-        this.adFormImages.splice(i, 1);
-        const preview = document.getElementById('adPreview');
-        if (preview) preview.innerHTML = this.adFormImages.map((img,j)=>`<div class="relative"><img src="${img}" class="w-20 h-14 object-cover rounded-lg border"><button onclick="AdminPanel.removeImage(${j})" class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center"><i data-lucide="x" class="w-3 h-3"></i></button></div>`).join('');
-        this.initIcons();
-      },
-
-      saveAd() {
-        const data = {
-          title: document.getElementById('adTitle').value,
-          description: document.getElementById('adDesc').value,
-          linkUrl: document.getElementById('adUrl').value,
-          position: document.getElementById('adPosition').value,
-          size: document.getElementById('adSize').value,
-          publishDate: document.getElementById('adPublish').value || null,
-          expireDate: document.getElementById('adExpire').value || null,
-          sliderDuration: parseInt(document.getElementById('adSlider').value) || 4000,
-          isActive: document.getElementById('adActive').checked,
-          images: this.adFormImages
-        };
-        if (this.editAd) Ads.update(this.editAd, data);
-        else Ads.add(data);
-        this.showAdForm = false; this.editAd = null; this.adFormImages = [];
-        this.render();
-      },
+      // ====== الإجراءات ======
+      async toggleVerify(userId) { await Admin.toggleVerify(userId); this.render(); },
+      async toggleSuspend(userId) { await Admin.toggleSuspend(userId); this.render(); },
+      async deleteUser(userId) { if (confirm('هل أنت متأكد من حذف هذا المستخدم؟')) { await Admin.deleteUser(userId); this.render(); } },
+      async verifyPlace(placeId) { await Admin.verifyPlace(placeId); this.render(); },
+      async featurePlace(placeId) { await Admin.featurePlace(placeId); this.render(); },
+      async deletePlace(placeId) { if (confirm('هل أنت متأكد من حذف هذا المكان؟')) { await Admin.deletePlaceAdmin(placeId); this.render(); } },
+      async approvePlace(placeId) { await Admin.approvePlace(placeId); this.render(); },
+      async rejectPlace(placeId) { const note = prompt('سبب الرفض (اختياري):'); await Admin.rejectPlace(placeId, note); this.render(); },
 
       initIcons() { try { lucide.createIcons(); } catch(e) {} }
     };
 
-    document.addEventListener('DOMContentLoaded', () => AdminPanel.init());
+    // بدء التطبيق
+    AdminPanel.init();
   </script>
 </body>
 </html>
