@@ -5,13 +5,13 @@
 // https://console.firebase.google.com
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  measurementId: "YOUR_MEASUREMENT_ID"
+  apiKey: "AIzaSyBAGdUGSb1tAVNA_PC6LbNM_jTG6P6VdG4",
+  authDomain: "deel-39f2e.firebaseapp.com",
+  projectId: "deel-39f2e",
+  storageBucket: "deel-39f2e.firebasestorage.app",
+  messagingSenderId: "915094552048",
+  appId: "1:915094552048:web:08c78c6c0a26d43534f135",
+  measurementId: "G-12LQHJMSP6"
 };
 
 // تهيئة Firebase
