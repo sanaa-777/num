@@ -262,6 +262,18 @@ const Data = {
         { id: 'sub_18_5', name: 'خزف', icon: 'palette' },
       ]
     },
+    {
+      id: 'cat_19', name: 'تنسيقات أعراس', icon: 'heart', color: '#e11d48',
+      subs: [
+        { id: 'sub_19_1', name: 'كوش', icon: 'crown' },
+        { id: 'sub_19_2', name: 'فنانين', icon: 'mic' },
+        { id: 'sub_19_3', name: 'صالات أعراس', icon: 'building-2' },
+        { id: 'sub_19_4', name: 'فساتين زفاف', icon: 'shirt' },
+        { id: 'sub_19_5', name: 'لبس رجالي', icon: 'user' },
+        { id: 'sub_19_6', name: 'سماعات & زينة', icon: 'speaker' },
+        { id: 'sub_19_7', name: 'مراكز تجهيز أعراس', icon: 'sparkles' },
+      ]
+    },
   ],
 
   // ====== المدن ======
