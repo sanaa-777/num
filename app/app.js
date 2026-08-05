@@ -320,10 +320,10 @@ const App = {
           <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
             ${cat.subs.map(sub => {
               const count = places.filter(p => p.subcategory === sub.id).length;
-              return `<a href="#subcategory/${cat.id}/${sub.id}" class="bg-gray-50 rounded-lg p-2 text-center hover:bg-blue-50 transition-colors cursor-pointer border border-gray-100 active-scale">
-                <div class="flex justify-center mb-1">${IBS(sub.icon, cat.color)}</div>
-                <div class="text-[10px] md:text-xs font-medium text-gray-700 leading-tight">${sub.name}</div>
-                <div class="text-[9px] text-gray-400">${count}</div>
+              return `<a href="#subcategory/${cat.id}/${sub.id}" class="subcategory-grid-item">
+                <div class="subcategory-grid-item-icon">${IBS(sub.icon, cat.color)}</div>
+                <div class="subcategory-grid-item-name">${sub.name}</div>
+                <div class="subcategory-grid-item-count">${count} مكان</div>
               </a>`;
             }).join('')}
           </div>
@@ -357,9 +357,12 @@ const App = {
             <p class="text-xs text-gray-500">${cat.name} • ${places.length} مكان</p>
           </div>
         </div>
-        <div class="bg-white rounded-xl p-3 mb-4 border border-gray-100 flex flex-wrap gap-2">
-          <button onclick="App.filterCity(null)" class="px-3 py-1.5 rounded-lg text-xs font-medium ${!this.selectedCity ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} flex items-center gap-1"><i data-lucide="layers" class="w-3 h-3"></i>الكل</button>
-          ${Data.cities.map(c => { const count = places.filter(p => p.city === c.id).length; if (!count) return ''; return `<button onclick="App.filterCity('${c.id}')" class="px-3 py-1.5 rounded-lg text-xs font-medium ${this.selectedCity === c.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}">${c.name} (${count})</button>`; }).join('')}
+        <div class="filter-buttons">
+          <button onclick="App.filterCity(null)" class="filter-btn ${!this.selectedCity ? 'active' : ''}">
+            <i data-lucide="layers"></i>
+            الكل
+          </button>
+          ${Data.cities.map(c => { const count = places.filter(p => p.city === c.id).length; if (!count) return ''; return `<button onclick="App.filterCity('${c.id}')" class="filter-btn ${this.selectedCity === c.id ? 'active' : ''}">${c.name} <span class="filter-btn-count">${count}</span></button>`; }).join('')}
         </div>
         ${places.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${places.filter(p => !this.selectedCity || p.city === this.selectedCity).map(p => this.renderPlaceCard(p)).join('')}</div>` : '<div class="text-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100 text-sm">لا توجد أماكن</div>'}
       </div>
