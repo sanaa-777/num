@@ -4,18 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>دليل اليمن | الدليل الشامل للأعمال والأماكن</title>
+  <meta name="description" content="دليل اليمن الشامل - ابحث عن المطاعم والفنادق والعيادات والمتاجر وجميع الخدمات في اليمن">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            primary: {
-              50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
-              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
-              800: '#1e40af', 900: '#1e3a8a', 950: '#172554',
-            },
-            accent: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' }
+            primary: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
+            accent: { 400:'#fbbf24',500:'#f59e0b',600:'#d97706' }
           }
         }
       }
@@ -24,395 +21,27 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * { font-family: 'Noto Kufi Arabic', sans-serif; }
-    .gradient-hero { background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 50%, #1e3a8a 100%); }
-    .card-hover { transition: all 0.3s ease; }
-    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-    .animate-fade { animation: fadeIn 0.5s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .stat-number { font-size: 2.5rem; font-weight: 800; }
-    .glass { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+    body { margin: 0; background: #f9fafb; }
+    a { text-decoration: none; }
+    .no-underline { text-decoration: none !important; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .group:hover .group-hover\:block { display: block !important; }
   </style>
 </head>
-<body class="bg-gray-50 text-gray-900">
-
-  <!-- Header -->
-  <header class="bg-white shadow-sm sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
-          <span class="text-white font-bold text-xl">د</span>
-        </div>
-        <h1 class="text-xl font-bold text-gray-900">دليل اليمن</h1>
-      </div>
-      <nav class="hidden md:flex items-center gap-6">
-        <a href="#" class="text-gray-600 hover:text-primary-600 transition-colors">الرئيسية</a>
-        <a href="#categories" class="text-gray-600 hover:text-primary-600 transition-colors">التصنيفات</a>
-        <a href="#cities" class="text-gray-600 hover:text-primary-600 transition-colors">المدن</a>
-        <a href="#" class="text-gray-600 hover:text-primary-600 transition-colors">الإعلانات</a>
-      </nav>
-      <div class="flex items-center gap-3">
-        <button class="border-2 border-primary-600 text-primary-600 px-4 py-2 rounded-xl font-semibold hover:bg-primary-50 transition-colors text-sm">تسجيل الدخول</button>
-        <button class="bg-primary-600 text-white px-4 py-2 rounded-xl font-semibold hover:bg-primary-700 transition-colors text-sm shadow-lg shadow-primary-600/25">إضافة مكان</button>
-      </div>
+<body>
+  <div id="app">
+    <!-- Loading -->
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;">
+      <div style="width:48px;height:48px;border:4px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite;"></div>
+      <p style="color:#64748b;font-size:14px;">جاري التحميل...</p>
     </div>
-  </header>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+  </div>
 
-  <!-- Hero Section -->
-  <section class="gradient-hero text-white py-20 relative overflow-hidden">
-    <div class="absolute inset-0 opacity-10">
-      <div class="absolute top-20 right-20 w-72 h-72 bg-white rounded-full blur-3xl"></div>
-      <div class="absolute bottom-20 left-20 w-96 h-96 bg-accent-500 rounded-full blur-3xl"></div>
-    </div>
-    <div class="max-w-7xl mx-auto px-4 text-center relative z-10">
-      <h2 class="text-4xl md:text-6xl font-bold mb-6 animate-fade">اكتشف اليمن</h2>
-      <p class="text-xl text-primary-100 mb-10 max-w-2xl mx-auto animate-fade">الدليل الشامل للأعمال والأماكن في جميع أنحاء اليمن</p>
-      
-      <!-- Search Bar -->
-      <div class="max-w-2xl mx-relative animate-fade">
-        <div class="flex bg-white rounded-2xl shadow-2xl overflow-hidden">
-          <div class="flex-1 flex items-center px-6">
-            <svg class="w-5 h-5 text-gray-400 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <input type="text" placeholder="ابحث عن مكان، خدمة، أو نشاط..." class="w-full py-4 text-gray-900 placeholder:text-gray-400 focus:outline-none text-lg">
-          </div>
-          <button class="bg-accent-500 hover:bg-accent-600 text-white px-8 font-semibold transition-colors">بحث</button>
-        </div>
-        <div class="flex flex-wrap justify-center gap-3 mt-6">
-          <span class="glass px-4 py-2 rounded-full text-sm cursor-pointer hover:bg-white/25 transition-colors">🍽️ مطاعم</span>
-          <span class="glass px-4 py-2 rounded-full text-sm cursor-pointer hover:bg-white/25 transition-colors">🏨 فنادق</span>
-          <span class="glass px-4 py-2 rounded-full text-sm cursor-pointer hover:bg-white/25 transition-colors">🏥 عيادات</span>
-          <span class="glass px-4 py-2 rounded-full text-sm cursor-pointer hover:bg-white/25 transition-colors">💊 صيدليات</span>
-          <span class="glass px-4 py-2 rounded-full text-sm cursor-pointer hover:bg-white/25 transition-colors">🛍️ متاجر</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Stats -->
-  <section class="bg-white py-8 border-b">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
-        <div class="text-center">
-          <div class="text-3xl mb-2">📍</div>
-          <div class="stat-number text-gray-900">15,000+</div>
-          <div class="text-sm text-gray-500">مكان مسجل</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl mb-2">👥</div>
-          <div class="stat-number text-gray-900">50,000+</div>
-          <div class="text-sm text-gray-500">مستخدم نشط</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl mb-2">⭐</div>
-          <div class="stat-number text-gray-900">120,000+</div>
-          <div class="text-sm text-gray-500">مراجعة</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl mb-2">🏙️</div>
-          <div class="stat-number text-gray-900">22</div>
-          <div class="text-sm text-gray-500">مدينة</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Categories -->
-  <section id="categories" class="py-16">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex items-center justify-between mb-8">
-        <h3 class="text-2xl font-bold text-gray-900">التصنيفات</h3>
-        <a href="#" class="text-primary-600 hover:text-primary-700 flex items-center gap-1">عرض الكل ←</a>
-      </div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
-        <div class="bg-white rounded-2xl p-4 text-center card-hover cursor-pointer border border-gray-100">
-          <div class="text-4xl mb-3">🍽️</div>
-          <div class="font-semibold text-gray-900 mb-1">مطاعم</div>
-          <div class="text-xs text-gray-500">1,250 مكان</div>
-        </div>
-        <div class="bg-white rounded-2xl p-4 text-center card-hover cursor-pointer border border-gray-100">
-          <div class="text-4xl mb-3">🏨</div>
-          <div class="font-semibold text-gray-900 mb-1">فنادق</div>
-          <div class="text-xs text-gray-500">380 مكان</div>
-        </div>
-        <div class="bg-white rounded-2xl p-4 text-center card-hover cursor-pointer border border-gray-100">
-          <div class="text-4xl mb-3">🏥</div>
-          <div class="font-semibold text-gray-900 mb-1">عيادات</div>
-          <div class="text-xs text-gray-500">890 مكان</div>
-        </div>
-        <div class="bg-white rounded-2xl p-4 text-center card-hover cursor-pointer border border-gray-100">
-          <div class="text-4xl mb-3">🛍️</div>
-          <div class="font-semibold text-gray-900 mb-1">متاجر</div>
-          <div class="text-xs text-gray-500">2,100 مكان</div>
-        </div>
-        <div class="bg-white rounded-2xl p-4 text-center card-hover cursor-pointer border border-gray-100">
-          <div class="text-4xl mb-3">🔧</div>
-          <div class="font-semibold text-gray-900 mb-1">خدمات</div>
-          <div class="text-xs text-gray-500">650 مكان</div>
-        </div>
-        <div class="bg-white rounded-2xl p-4 text-center card-hover cursor-pointer border border-gray-100">
-          <div class="text-4xl mb-3">📚</div>
-          <div class="font-semibold text-gray-900 mb-1">تعليم</div>
-          <div class="text-xs text-gray-500">420 مكان</div>
-        </div>
-        <div class="bg-white rounded-2xl p-4 text-center card-hover cursor-pointer border border-gray-100">
-          <div class="text-4xl mb-3">🎮</div>
-          <div class="font-semibold text-gray-900 mb-1">ترفيه</div>
-          <div class="text-xs text-gray-500">310 مكان</div>
-        </div>
-        <div class="bg-white rounded-2xl p-4 text-center card-hover cursor-pointer border border-gray-100">
-          <div class="text-4xl mb-3">💊</div>
-          <div class="font-semibold text-gray-900 mb-1">صيدليات</div>
-          <div class="text-xs text-gray-500">560 مكان</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Featured Places -->
-  <section class="bg-white py-16">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex items-center justify-between mb-8">
-        <div>
-          <h3 class="text-2xl font-bold text-gray-900 flex items-center gap-2">🔥 أماكن مميزة</h3>
-          <p class="text-gray-500 mt-1">الأعلى تقييماً في اليمن</p>
-        </div>
-        <a href="#" class="text-primary-600 hover:text-primary-700 flex items-center gap-1">عرض الكل ←</a>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white rounded-2xl overflow-hidden card-hover cursor-pointer border border-gray-100">
-          <div class="relative h-48 bg-gradient-to-br from-primary-400 to-primary-600">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-            <div class="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">✓ موثّق</div>
-            <div class="absolute bottom-3 right-3 text-white">
-              <div class="text-lg font-bold">مطعم البركة</div>
-              <div class="text-sm text-gray-200 flex items-center gap-1">📍 صنعاء • مطاعم</div>
-            </div>
-          </div>
-          <div class="p-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-1">
-                <span class="text-accent-500">⭐</span>
-                <span class="font-bold text-gray-900">4.8</span>
-                <span class="text-sm text-gray-500">(234)</span>
-              </div>
-              <button class="text-gray-400 hover:text-red-500 transition-colors text-xl">♡</button>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white rounded-2xl overflow-hidden card-hover cursor-pointer border border-gray-100">
-          <div class="relative h-48 bg-gradient-to-br from-accent-400 to-accent-600">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-            <div class="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">✓ موثّق</div>
-            <div class="absolute bottom-3 right-3 text-white">
-              <div class="text-lg font-bold">فندق القصر</div>
-              <div class="text-sm text-gray-200 flex items-center gap-1">📍 عدن • فنادق</div>
-            </div>
-          </div>
-          <div class="p-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-1">
-                <span class="text-accent-500">⭐</span>
-                <span class="font-bold text-gray-900">4.6</span>
-                <span class="text-sm text-gray-500">(189)</span>
-              </div>
-              <button class="text-gray-400 hover:text-red-500 transition-colors text-xl">♡</button>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white rounded-2xl overflow-hidden card-hover cursor-pointer border border-gray-100">
-          <div class="relative h-48 bg-gradient-to-br from-green-400 to-green-600">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-            <div class="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">✓ موثّق</div>
-            <div class="absolute bottom-3 right-3 text-white">
-              <div class="text-lg font-bold">عيادة الشفاء</div>
-              <div class="text-sm text-gray-200 flex items-center gap-1">📍 تعز • عيادات</div>
-            </div>
-          </div>
-          <div class="p-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-1">
-                <span class="text-accent-500">⭐</span>
-                <span class="font-bold text-gray-900">4.9</span>
-                <span class="text-sm text-gray-500">(312)</span>
-              </div>
-              <button class="text-gray-400 hover:text-red-500 transition-colors text-xl">♡</button>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white rounded-2xl overflow-hidden card-hover cursor-pointer border border-gray-100">
-          <div class="relative h-48 bg-gradient-to-br from-purple-400 to-purple-600">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-            <div class="absolute bottom-3 right-3 text-white">
-              <div class="text-lg font-bold">مجمع التسوق الحديث</div>
-              <div class="text-sm text-gray-200 flex items-center gap-1">📍 صنعاء • متاجر</div>
-            </div>
-          </div>
-          <div class="p-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-1">
-                <span class="text-accent-500">⭐</span>
-                <span class="font-bold text-gray-900">4.5</span>
-                <span class="text-sm text-gray-500">(156)</span>
-              </div>
-              <button class="text-gray-400 hover:text-red-500 transition-colors text-xl">♡</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Cities -->
-  <section id="cities" class="py-16">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="flex items-center justify-between mb-8">
-        <h3 class="text-2xl font-bold text-gray-900">🏙️ المدن</h3>
-        <a href="#" class="text-primary-600 hover:text-primary-700 flex items-center gap-1">عرض الكل ←</a>
-      </div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div class="bg-white rounded-2xl p-6 card-hover cursor-pointer border border-gray-100">
-          <div class="flex items-center justify-between mb-3">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center"><span class="text-primary-600 text-xl">📍</span></div>
-            <span class="text-sm text-gray-500">4,500 مكان</span>
-          </div>
-          <h4 class="text-lg font-bold text-gray-900">صنعاء</h4>
-        </div>
-        <div class="bg-white rounded-2xl p-6 card-hover cursor-pointer border border-gray-100">
-          <div class="flex items-center justify-between mb-3">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center"><span class="text-primary-600 text-xl">📍</span></div>
-            <span class="text-sm text-gray-500">2,800 مكان</span>
-          </div>
-          <h4 class="text-lg font-bold text-gray-900">عدن</h4>
-        </div>
-        <div class="bg-white rounded-2xl p-6 card-hover cursor-pointer border border-gray-100">
-          <div class="flex items-center justify-between mb-3">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center"><span class="text-primary-600 text-xl">📍</span></div>
-            <span class="text-sm text-gray-500">1,900 مكان</span>
-          </div>
-          <h4 class="text-lg font-bold text-gray-900">تعز</h4>
-        </div>
-        <div class="bg-white rounded-2xl p-6 card-hover cursor-pointer border border-gray-100">
-          <div class="flex items-center justify-between mb-3">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center"><span class="text-primary-600 text-xl">📍</span></div>
-            <span class="text-sm text-gray-500">1,200 مكان</span>
-          </div>
-          <h4 class="text-lg font-bold text-gray-900">الحديدة</h4>
-        </div>
-        <div class="bg-white rounded-2xl p-6 card-hover cursor-pointer border border-gray-100">
-          <div class="flex items-center justify-between mb-3">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center"><span class="text-primary-600 text-xl">📍</span></div>
-            <span class="text-sm text-gray-500">1,100 مكان</span>
-          </div>
-          <h4 class="text-lg font-bold text-gray-900">حضرموت</h4>
-        </div>
-        <div class="bg-white rounded-2xl p-6 card-hover cursor-pointer border border-gray-100">
-          <div class="flex items-center justify-between mb-3">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center"><span class="text-primary-600 text-xl">📍</span></div>
-            <span class="text-sm text-gray-500">850 مكان</span>
-          </div>
-          <h4 class="text-lg font-bold text-gray-900">إب</h4>
-        </div>
-        <div class="bg-white rounded-2xl p-6 card-hover cursor-pointer border border-gray-100">
-          <div class="flex items-center justify-between mb-3">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center"><span class="text-primary-600 text-xl">📍</span></div>
-            <span class="text-sm text-gray-500">650 مكان</span>
-          </div>
-          <h4 class="text-lg font-bold text-gray-900">مأرب</h4>
-        </div>
-        <div class="bg-white rounded-2xl p-6 card-hover cursor-pointer border border-gray-100">
-          <div class="flex items-center justify-between mb-3">
-            <div class="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center"><span class="text-primary-600 text-xl">📍</span></div>
-            <span class="text-sm text-gray-500">480 مكان</span>
-          </div>
-          <h4 class="text-lg font-bold text-gray-900">لحج</h4>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Latest Ads -->
-  <section class="bg-white py-16">
-    <div class="max-w-7xl mx-auto px-4">
-      <h3 class="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-2">📰 أحدث الإعلانات</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white rounded-2xl p-6 border-r-4 border-r-accent-500 card-hover border border-gray-100">
-          <div class="bg-accent-100 text-accent-700 px-3 py-1 rounded-full text-xs font-medium inline-block mb-3">إعلان</div>
-          <h4 class="font-bold text-gray-900 mb-2">خصم 30% على جميع الوجبات</h4>
-          <p class="text-gray-600 text-sm mb-3">مطعم البركة</p>
-          <p class="text-xs text-gray-400">ينتهي بعد 3 أيام</p>
-        </div>
-        <div class="bg-white rounded-2xl p-6 border-r-4 border-r-accent-500 card-hover border border-gray-100">
-          <div class="bg-accent-100 text-accent-700 px-3 py-1 rounded-full text-xs font-medium inline-block mb-3">إعلان</div>
-          <h4 class="font-bold text-gray-900 mb-2">افتتاح فرع جديد</h4>
-          <p class="text-gray-600 text-sm mb-3">محل الأناقة</p>
-          <p class="text-xs text-gray-400">اليوم</p>
-        </div>
-        <div class="bg-white rounded-2xl p-6 border-r-4 border-r-accent-500 card-hover border border-gray-100">
-          <div class="bg-accent-100 text-accent-700 px-3 py-1 rounded-full text-xs font-medium inline-block mb-3">إعلان</div>
-          <h4 class="font-bold text-gray-900 mb-2">عرض خاص على الفحص الطبي</h4>
-          <p class="text-gray-600 text-sm mb-3">عيادة الشفاء</p>
-          <p class="text-xs text-gray-400">ينتهي بعد أسبوع</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CTA -->
-  <section class="bg-gradient-to-r from-accent-500 to-accent-600 py-16">
-    <div class="max-w-7xl mx-auto px-4 text-center">
-      <h3 class="text-3xl font-bold text-white mb-4">أضف مكانك مجاناً</h3>
-      <p class="text-accent-100 mb-8 max-w-xl mx-auto">سجّل عملك في دليل اليمن واحصل على المزيد من العملاء</p>
-      <button class="bg-white text-accent-600 px-8 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-xl">🚀 ابدأ الآن</button>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="bg-gray-900 text-gray-300 py-12">
-    <div class="max-w-7xl mx-auto px-4">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-        <div>
-          <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
-              <span class="text-white font-bold text-xl">د</span>
-            </div>
-            <h4 class="text-white font-bold text-lg">دليل اليمن</h4>
-          </div>
-          <p class="text-sm text-gray-400">الدليل الشامل للأعمال والأماكن في جميع أنحاء اليمن</p>
-        </div>
-        <div>
-          <h5 class="text-white font-semibold mb-4">روابط سريعة</h5>
-          <ul class="space-y-2 text-sm">
-            <li><a href="#" class="hover:text-white transition-colors">الرئيسية</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">التصنيفات</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">المدن</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">الإعلانات</a></li>
-          </ul>
-        </div>
-        <div>
-          <h5 class="text-white font-semibold mb-4">لأصحاب الأعمال</h5>
-          <ul class="space-y-2 text-sm">
-            <li><a href="#" class="hover:text-white transition-colors">أضف مكانك</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">الباقات والأسعار</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">لوحة التحكم</a></li>
-            <li><a href="#" class="hover:text-white transition-colors">الإعلانات المميزة</a></li>
-          </ul>
-        </div>
-        <div>
-          <h5 class="text-white font-semibold mb-4">تواصل معنا</h5>
-          <ul class="space-y-2 text-sm">
-            <li>📧 info@yemendirectory.net</li>
-            <li>📱 واتساب</li>
-            <li>📘 فيسبوك</li>
-            <li>📸 انستغرام</li>
-          </ul>
-        </div>
-      </div>
-      <div class="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-500">
-        © 2024 دليل اليمن. جميع الحقوق محفوظة.
-      </div>
-    </div>
-  </footer>
-
+  <script src="app/auth.js"></script>
+  <script src="app/data.js"></script>
+  <script src="app/app.js"></script>
 </body>
 </html>
