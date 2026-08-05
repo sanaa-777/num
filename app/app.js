@@ -185,7 +185,7 @@ const App = {
     <section class="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-10 md:py-14 relative overflow-hidden">
       <div class="absolute inset-0 opacity-10"><div class="absolute top-10 right-10 w-48 h-48 bg-white rounded-full blur-3xl"></div><div class="absolute bottom-10 left-10 w-64 h-64 bg-yellow-500 rounded-full blur-3xl"></div></div>
       <div class="max-w-7xl mx-auto px-4 text-center relative z-10">
-        <h2 class="text-3xl md:text-5xl font-bold mb-3">دليل اليمن</h2>
+        <h2 class="text-3xl md:text-5xl font-bold mb-3">الدليل اليمني التجاري</h2>
         <p class="text-base md:text-lg text-blue-100 mb-6 max-w-xl mx-auto">الدليل الشامل للأعمال والأماكن في جميع أنحاء اليمن</p>
         <div class="max-w-xl mx-auto relative">
           <div class="flex bg-white rounded-xl shadow-2xl overflow-hidden">
@@ -627,12 +627,16 @@ const App = {
   renderFooter() {
     return `<footer class="bg-gray-900 text-gray-300 py-6 mt-8">
       <div class="max-w-7xl mx-auto px-3">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div><div class="flex items-center gap-2 mb-2"><div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">د</span></div><span class="text-white font-bold text-sm">دليل اليمن</span></div><p class="text-xs text-gray-400">الدليل الشامل للأعمال والأماكن في اليمن</p></div>
-          <div><h5 class="text-white font-semibold mb-2 text-sm">روابط</h5><ul class="space-y-1 text-xs"><li><a href="#home" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a></li><li><a href="#search" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="search" class="w-3 h-3"></i>البحث</a></li><li><a href="#add" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i>أضف مكانك</a></li></ul></div>
-          <div><h5 class="text-white font-semibold mb-2 text-sm">تواصل</h5><p class="text-xs text-gray-400 flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i>info@yemendirectory.net</p></div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div><div class="flex items-center gap-2 mb-2"><div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">د</span></div><span class="text-white font-bold text-sm">الدليل اليمني التجاري</span></div><p class="text-xs text-gray-400">الدليل الشامل للأعمال والأماكن في اليمن</p></div>
+          <div><h5 class="text-white font-semibold mb-2 text-sm">روابط سريعة</h5><ul class="space-y-1 text-xs"><li><a href="#home" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a></li><li><a href="#search" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="search" class="w-3 h-3"></i>البحث</a></li><li><a href="#add" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i>أضف مكانك</a></li></ul></div>
+          <div><h5 class="text-white font-semibold mb-2 text-sm">معلومات</h5><ul class="space-y-1 text-xs"><li><a href="about.html" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="info" class="w-3 h-3"></i>من نحن</a></li><li><a href="privacy.html" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="shield" class="w-3 h-3"></i>سياسة الخصوصية</a></li><li><a href="admin.html" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="settings" class="w-3 h-3"></i>لوحة التحكم</a></li></ul></div>
+          <div><h5 class="text-white font-semibold mb-2 text-sm">تواصل معنا</h5><p class="text-xs text-gray-400 flex items-center gap-1"><i data-lucide="mail" class="w-3 h-3"></i>info@yemendirectory.net</p><p class="text-xs text-gray-400 flex items-center gap-1 mt-1"><i data-lucide="globe" class="w-3 h-3"></i>الدليل اليمني التجاري</p></div>
         </div>
-        <div class="border-t border-gray-800 mt-4 pt-4 text-center text-xs text-gray-500">2024دليل اليمن</div>
+        <div class="border-t border-gray-800 mt-4 pt-4 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-gray-500">
+          <span>© 2024 الدليل اليمني التجاري. جميع الحقوق محفوظة.</span>
+          <div class="flex gap-3"><a href="privacy.html" class="hover:text-white">سياسة الخصوصية</a><a href="about.html" class="hover:text-white">من نحن</a></div>
+        </div>
       </div>
     </footer>`;
   },

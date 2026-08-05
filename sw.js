@@ -88,7 +88,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
   event.waitUntil(
-    self.registration.showNotification(data.title || 'دليل اليمن', {
+    self.registration.showNotification(data.title || 'الدليل اليمني التجاري', {
       body: data.body || 'إشعار جديد',
       icon: '/manifest.json',
       vibrate: [200, 100, 200],
