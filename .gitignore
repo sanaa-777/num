@@ -1,6 +1,51 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Firebase
+.firebase/
+.firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.database/
+
+# Environment
+.env
+.env.local
+.env.production
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
 Thumbs.db
-tools/
-apk-decompiled/
-apk-contents/
+desktop.ini
+
+# Build
+dist/
+build/
 *.tar.gz
+tools/
+
+# APK Contents (large files)
+apk-contents/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Temporary
+tmp/
+temp/
+.openclaw/

@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // المستخدمون
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // الأماكن
+    match /places/{placeId} {
+      allow read: if resource.data.isActive == true || request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth.uid == resource.data.owner || isAdmin();
+      allow delete: if request.auth.uid == resource.data.owner || isAdmin();
+    }
+
+    // المراجعات
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth.uid == resource.data.userId;
+      allow delete: if request.auth.uid == resource.data.userId || isAdmin();
+    }
+
+    // المفضلة
+    match /favorites/{favId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && favId.matches(request.auth.uid + '_.*');
+    }
+
+    // الإشعارات
+    match /notifications/{notifId} {
+      allow read: if request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null;
+      allow update: if request.auth.uid == resource.data.userId;
+    }
+
+    // التصنيفات
+    match /categories/{catId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // المدن
+    match /cities/{cityId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // التحقق من صلاحيات الأدمن
+    function isAdmin() {
+      return request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}
