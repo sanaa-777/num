@@ -15,8 +15,18 @@ const Auth = {
       if (this._authListenerAttached) { resolve(this.currentUser); return; }
       this._authListenerAttached = true;
 
+      // Timeout: إذا لم يستجب Firebase خلال 5 ثوانٍ
+      const timeout = setTimeout(() => {
+        console.log('Auth init timeout - continuing without auth');
+        if (this._initResolve) {
+          this._initResolve(null);
+          this._initResolve = null;
+        }
+      }, 5000);
+
       try {
       auth.onAuthStateChanged(async (user) => {
+        clearTimeout(timeout);
         if (user) {
           try {
             const userDoc = await db.collection('users').doc(user.uid).get();

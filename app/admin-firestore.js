@@ -273,7 +273,10 @@ const Admin = {
   getUnreadCountSync() { return this._unreadCount; },
   async refreshUnreadCount() {
     try {
-      const snap = await db.collection('admin_notifications').where('read', '==', false).get();
+      const snap = await Promise.race([
+        db.collection('admin_notifications').where('read', '==', false).get(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      ]);
       this._unreadCount = snap.size;
     } catch(e) { this._unreadCount = 0; }
   }

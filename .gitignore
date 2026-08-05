@@ -49,3 +49,4 @@ yarn-error.log*
 tmp/
 temp/
 .openclaw/
+firebase-sa.json

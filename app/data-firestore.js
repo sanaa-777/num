@@ -733,8 +733,13 @@ const Data = {
 
   // تحميل مسبق لجميع البيانات
   async preloadAll() {
-    // تحميل الأماكن (متاح للجميع)
-    try { await this.getPlaces(); } catch(e) { console.log('Places load skipped:', e.message); }
+    // تحميل الأماكن مع timeout
+    try {
+      await Promise.race([
+        this.getPlaces(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+      ]);
+    } catch(e) { console.log('Places load skipped:', e.message); }
     // تحميل المستخدمين (يحتاج مصادقة)
     if (Auth.currentUser) {
       try { this._usersCache = (await db.collection('users').get()).docs.map(d => d.data()); } catch(e) { this._usersCache = []; }
