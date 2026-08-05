@@ -15,6 +15,7 @@ const Auth = {
       if (this._authListenerAttached) { resolve(this.currentUser); return; }
       this._authListenerAttached = true;
 
+      try {
       auth.onAuthStateChanged(async (user) => {
         if (user) {
           try {
@@ -67,6 +68,10 @@ const Auth = {
           App.render();
         }
       });
+      } catch(e) {
+        console.log('Auth listener error:', e.message);
+        resolve(null);
+      }
     });
   },
 

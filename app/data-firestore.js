@@ -276,6 +276,15 @@ const Data = {
     },
   ],
 
+  // ====== بيانات افتراضية (fallback) ======
+  defaultPlaces: [
+    { id: 'p_1', name: 'مستشفى الثورة', category: 'cat_1', subcategory: 'sub_1_1', city: 'city_1', description: 'مستشفى حكومي كبير. طوارئ 24 ساعة.', phone: '777111222', address: 'شارع الستين، صنعاء', verified: true, featured: true, isActive: true, status: 'approved', views: 8900, reviews: 156, rating: 4.2, owner: 'system' },
+    { id: 'p_2', name: 'مطعم البركة', category: 'cat_2', subcategory: 'sub_2_1', city: 'city_1', description: 'مطعم يمني تقليدي. مندي، مظبي، حنيذ.', phone: '777222333', address: 'شارع الزبيري، صنعاء', verified: true, featured: true, isActive: true, status: 'approved', views: 12500, reviews: 312, rating: 4.8, owner: 'system' },
+    { id: 'p_3', name: 'فندق القصر', category: 'cat_3', subcategory: 'sub_3_1', city: 'city_2', description: 'فندق 4 نجوم. إطلالة بحرية.', phone: '777333444', address: 'كريتر، عدن', verified: true, featured: true, isActive: true, status: 'approved', views: 7600, reviews: 189, rating: 4.6, owner: 'system' },
+    { id: 'p_4', name: 'صيدلية الحياة', category: 'cat_1', subcategory: 'sub_1_3', city: 'city_1', description: 'صيدلية شاملة 24 ساعة.', phone: '777444555', address: 'شارع الستين، صنعاء', verified: true, featured: false, isActive: true, status: 'approved', views: 5400, reviews: 98, rating: 4.7, owner: 'system' },
+    { id: 'p_5', name: 'مجمع التسوق الحديث', category: 'cat_5', subcategory: 'sub_5_2', city: 'city_1', description: 'أكبر مجمع تجاري في صنعاء.', phone: '777555666', address: 'شارع الربات، صنعاء', verified: true, featured: true, isActive: true, status: 'approved', views: 18000, reviews: 420, rating: 4.5, owner: 'system' },
+  ],
+
   // ====== المدن ======
   cities: [
     { id: 'city_1', name: 'صنعاء' }, { id: 'city_2', name: 'عدن' }, { id: 'city_3', name: 'تعز' },
@@ -299,16 +308,30 @@ const Data = {
       return this._placesCache;
     }
     try {
-      const snapshot = await db.collection('places')
-        .where('isActive', '==', true)
-        .orderBy('createdAt', 'desc')
-        .get();
+      // محاولة مع orderBy أولاً
+      let snapshot;
+      try {
+        snapshot = await db.collection('places')
+          .where('isActive', '==', true)
+          .orderBy('createdAt', 'desc')
+          .get();
+      } catch(idxErr) {
+        // إذا فشل بسبب عدم وجود index، جرب بدون orderBy
+        console.log('Falling back to query without orderBy');
+        snapshot = await db.collection('places')
+          .where('isActive', '==', true)
+          .get();
+      }
       this._placesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       this._placesCacheTime = now;
       return this._placesCache;
     } catch (e) {
       console.error('getPlaces error:', e);
-      return this._placesCache || [];
+      // استخدام البيانات الافتراضية كحل أخير
+      if (!this._placesCache || this._placesCache.length === 0) {
+        this._placesCache = this.defaultPlaces || [];
+      }
+      return this._placesCache;
     }
   },
 
@@ -710,13 +733,21 @@ const Data = {
 
   // تحميل مسبق لجميع البيانات
   async preloadAll() {
-    try {
-      await this.getPlaces();
+    // تحميل الأماكن (متاح للجميع)
+    try { await this.getPlaces(); } catch(e) { console.log('Places load skipped:', e.message); }
+    // تحميل المستخدمين (يحتاج مصادقة)
+    if (Auth.currentUser) {
       try { this._usersCache = (await db.collection('users').get()).docs.map(d => d.data()); } catch(e) { this._usersCache = []; }
       try { this._reviewsCache = (await db.collection('reviews').get()).docs.map(d => ({id:d.id,...d.data()})); } catch(e) { this._reviewsCache = []; }
-      if (Auth.currentUser) {
-        try { this._favoritesCache = (await db.collection('favorites').where('userId','==',Auth.currentUser.id).get()).docs.map(d => d.data()); } catch(e) { this._favoritesCache = []; }
-      }
-    } catch(e) { console.error('preloadAll error:', e); }
+      try { this._favoritesCache = (await db.collection('favorites').where('userId','==',Auth.currentUser.id).get()).docs.map(d => d.data()); } catch(e) { this._favoritesCache = []; }
+    } else {
+      this._usersCache = [];
+      this._reviewsCache = [];
+      this._favoritesCache = [];
+    }
+    // إذا لم يتم تحميل أي أماكن، استخدم البيانات الافتراضية
+    if (!this._placesCache || this._placesCache.length === 0) {
+      this._placesCache = this.defaultPlaces || [];
+    }
   }
 };

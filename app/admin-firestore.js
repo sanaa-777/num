@@ -12,42 +12,12 @@ const Admin = {
   // ====== تهيئة الأدمن الافتراضي (مرة واحدة) ======
   async initDefaultAdmin() {
     try {
-      const adminsSnap = await db.collection('users').where('role', '==', 'admin').limit(1).get();
-      if (!adminsSnap.empty) return; // يوجد أدمن بالفعل
-
-      // إنشاء أدمن افتراضي باستخدام Firebase Auth
-      // ملاحظة: يتم إنشاؤه فقط إذا لم يكن موجوداً
-      const adminEmail = 'admin@yemendirectory.net';
-      const adminPassword = 'Admin@' + Date.now().toString(36); // كلمة مرور عشوائية آمنة
-
-      try {
-        const cred = await auth.createUserWithEmailAndPassword(adminEmail, adminPassword);
-        await cred.user.updateProfile({ displayName: 'مدير النظام' });
-
-        await db.collection('users').doc(cred.user.uid).set({
-          name: 'مدير النظام',
-          email: adminEmail,
-          phone: '777000000',
-          avatar: 'https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff&size=128',
-          role: 'admin',
-          verified: true,
-          suspended: false,
-          bio: 'حساب الإدارة الرئيسي',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-
-        console.log('Default admin created:', adminEmail);
-        // ⚠️ احفظ كلمة المرور في مكان آمن
-        console.log('Admin password:', adminPassword);
-      } catch (e) {
-        if (e.code === 'auth/email-already-in-use') {
-          console.log('Admin account already exists');
-        } else {
-          console.error('Create admin error:', e);
-        }
-      }
+      // التحقق من وجود أدمن فقط إذا كان المستخدم مصادقاً
+      if (!Auth.currentUser) return;
+      if (Auth.currentUser.role === 'admin') return;
+      // لا نحاول إنشاء أدمن تلقائياً - يتم إنشاؤه يدوياً
     } catch (e) {
-      console.error('initDefaultAdmin error:', e);
+      console.log('initDefaultAdmin skipped:', e.message);
     }
   },
 
