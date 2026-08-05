@@ -162,9 +162,66 @@ select {
   background-repeat: no-repeat;
   background-position: left 12px center;
   background-size: 12px;
-  padding-left: 32px;
-  padding-right: 12px;
+  padding: 10px 12px 10px 32px;
   cursor: pointer;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background-color: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-family: 'Noto Kufi Arabic', sans-serif;
+  transition: all 0.2s ease;
+  outline: none;
+  width: 100%;
+}
+
+select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+select:hover {
+  border-color: #9ca3af;
+}
+
+/* Fix select dropdown styling */
+select option {
+  padding: 10px 12px;
+  background-color: #fff;
+  color: #374151;
+  font-size: 13px;
+}
+
+select option:checked {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+select option:hover {
+  background: #f3f4f6;
+}
+
+/* Remove blue highlight on mobile */
+select:focus option {
+  background-color: #fff;
+  color: #374151;
+}
+
+/* Dark mode select */
+.dark select {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark select option {
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+
+.dark select option:checked {
+  background: #334155;
+  color: #f1f5f9;
 }
 
 /* Badges */
