@@ -25,3 +25,4 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEEL_39F2E }}'
           projectId: deel-39f2e
           channelId: live
+# Firebase deploy trigger
