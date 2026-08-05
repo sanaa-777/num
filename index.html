@@ -37,6 +37,22 @@
   <meta name="twitter:url" content="https://sanaa-777.github.io/num/">
   <meta name="twitter:title" content="الدليل اليمني التجاري">
   <meta name="twitter:description" content="الدليل الشامل للأعمال والأماكن في اليمن - سجّل عملك مجاناً">
+  <meta name="twitter:image" content="https://sanaa-777.github.io/num/og-image.png">
+
+  <!-- Dynamic OG Tags -->
+  <script>
+    // تحديث OG tags عند عرض نشاط تجاري
+    function updateOGTags(place) {
+      if (!place) return;
+      const title = place.name + ' - الدليل اليمني التجاري';
+      const desc = place.description || 'تعرف على ' + place.name + ' في الدليل اليمني التجاري';
+      document.title = title;
+      document.querySelector('meta[property="og:title"]').content = title;
+      document.querySelector('meta[property="og:description"]').content = desc;
+      document.querySelector('meta[name="twitter:title"]').content = title;
+      document.querySelector('meta[name="twitter:description"]').content = desc;
+    }
+  </script>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">

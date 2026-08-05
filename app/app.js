@@ -444,11 +444,23 @@ const App = {
               <span class="text-gray-400 text-xs flex items-center gap-1"><i data-lucide="eye" class="w-3.5 h-3.5"></i>${place.views || 0} مشاهدة</span>
             </div>
             ${place.description ? `<p class="text-gray-600 mb-4 text-sm leading-relaxed">${place.description}</p>` : ''}
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-              ${place.phone ? `<a href="tel:${place.phone}" class="bg-green-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-600 text-xs flex items-center justify-center gap-1"><i data-lucide="phone" class="w-4 h-4"></i>اتصال</a>` : ''}
-              ${place.whatsapp ? `<a href="https://wa.me/967${place.whatsapp}" target="_blank" class="bg-green-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-700 text-xs flex items-center justify-center gap-1"><i data-lucide="message-circle" class="w-4 h-4"></i>واتساب</a>` : ''}
-              ${place.email ? `<a href="mailto:${place.email}" class="bg-blue-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-blue-600 text-xs flex items-center justify-center gap-1"><i data-lucide="mail" class="w-4 h-4"></i>إيميل</a>` : ''}
-              ${place.address ? `<button onclick="window.open('https://maps.google.com/?q=${encodeURIComponent(place.address)}','_blank')" class="bg-gray-100 text-gray-700 py-2.5 rounded-lg text-center font-semibold hover:bg-gray-200 text-xs flex items-center justify-center gap-1"><i data-lucide="map" class="w-4 h-4"></i>خريطة</button>` : ''}
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+              ${place.phone ? `<a href="tel:${place.phone}" class="bg-green-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="phone" class="w-4 h-4"></i>اتصال</a>` : ''}
+              ${place.whatsapp ? `<a href="https://wa.me/967${place.whatsapp}" target="_blank" class="bg-green-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="message-circle" class="w-4 h-4"></i>واتساب</a>` : ''}
+              ${place.email ? `<a href="mailto:${place.email}" class="bg-blue-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-blue-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="mail" class="w-4 h-4"></i>إيميل</a>` : ''}
+              ${place.address ? `<button onclick="window.open('https://maps.google.com/?q=${encodeURIComponent(place.address)}','_blank')" class="bg-gray-100 text-gray-700 py-2.5 rounded-lg text-center font-semibold hover:bg-gray-200 text-xs flex items-center justify-center gap-1.5"><i data-lucide="map" class="w-4 h-4"></i>خريطة</button>` : ''}
+              <button onclick="App.sharePlace('${place.id}')" class="bg-blue-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-blue-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="share-2" class="w-4 h-4"></i>مشاركة</button>
+              <button onclick="App.copyPlaceLink('${place.id}')" class="bg-gray-100 text-gray-700 py-2.5 rounded-lg text-center font-semibold hover:bg-gray-200 text-xs flex items-center justify-center gap-1.5"><i data-lucide="copy" class="w-4 h-4"></i>نسخ الرابط</button>
+            </div>
+            <!-- Social Share Links -->
+            <div class="flex flex-wrap gap-2 mb-4">
+              <span class="text-xs text-gray-400">مشاركة عبر:</span>
+              <a href="https://wa.me/?text=${encodeURIComponent(place.name + ' - الدليل اليمني التجاري\n' + location.origin + '/#place/' + place.id)}" target="_blank" class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600" title="واتساب"><i data-lucide="message-circle" class="w-4 h-4"></i></a>
+              <a href="https://t.me/share/url?url=${encodeURIComponent(location.origin + '/#place/' + place.id)}&text=${encodeURIComponent(place.name + ' - الدليل اليمني التجاري')}" target="_blank" class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600" title="تيليجرام"><i data-lucide="send" class="w-4 h-4"></i></a>
+              <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.origin + '/#place/' + place.id)}" target="_blank" class="w-8 h-8 rounded-full bg-blue-700 text-white flex items-center justify-center hover:bg-blue-800" title="فيسبوك"><i data-lucide="facebook" class="w-4 h-4"></i></a>
+              <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(place.name + ' - الدليل اليمني التجاري')}&url=${encodeURIComponent(location.origin + '/#place/' + place.id)}" target="_blank" class="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center hover:bg-sky-600" title="تويتر/X"><i data-lucide="twitter" class="w-4 h-4"></i></a>
+              <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(location.origin + '/#place/' + place.id)}" target="_blank" class="w-8 h-8 rounded-full bg-blue-800 text-white flex items-center justify-center hover:bg-blue-900" title="لينكدإن"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
             </div>
             ${place.address ? `<div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm flex items-start gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-gray-400 mt-0.5 shrink-0"></i><span>${place.address}</span></div>` : ''}
           </div>
@@ -737,6 +749,67 @@ const App = {
   submitReview(pid) { if (!this._selectedRating) { alert('اختر تقييم'); return; } const c = document.getElementById('reviewComment').value; if (!c) { alert('اكتب تعليق'); return; } Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, this._selectedRating, c); this._selectedRating = 0; this.showPlace(pid); },
   deletePlaceConfirm(id) { if (confirm('هل أنت متأكد من الحذف؟')) { Data.deletePlace(id); alert('تم الحذف'); location.hash = 'myplaces'; } },
   updateProfile() { Auth.updateProfile({ name:document.getElementById('profileName').value, phone:document.getElementById('profilePhone').value, bio:document.getElementById('profileBio')?.value||'' }); alert('تم التحديث'); this.render(); },
+
+  // ====== مشاركة النشاط التجاري ======
+  sharePlace(pid) {
+    const place = Data.getPlaces().find(p => p.id === pid);
+    if (!place) return;
+    const cat = Data.categories.find(c => c.id === place.category);
+    const city = Data.cities.find(c => c.id === place.city);
+    const shareUrl = location.origin + '/#place/' + pid;
+    const shareText = `${place.name}\n${cat ? cat.name : ''} ${city ? '- ' + city.name : ''}\n\nالدليل اليمني التجاري\n${shareUrl}`;
+
+    // استخدام Web Share API (متاح على الموبايل)
+    if (navigator.share) {
+      navigator.share({
+        title: place.name + ' - الدليل اليمني التجاري',
+        text: shareText,
+        url: shareUrl
+      }).catch(() => {});
+    } else {
+      // نسخ الرابط كبديل
+      this.copyPlaceLink(pid);
+    }
+  },
+
+  copyPlaceLink(pid) {
+    const place = Data.getPlaces().find(p => p.id === pid);
+    if (!place) return;
+    const shareUrl = location.origin + '/#place/' + pid;
+    const shareText = `${place.name} - الدليل اليمني التجاري\n${shareUrl}`;
+
+    // نسخ الرابط
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareText).then(() => {
+        this.showCopyToast();
+      }).catch(() => {
+        this.fallbackCopy(shareText);
+      });
+    } else {
+      this.fallbackCopy(shareText);
+    }
+  },
+
+  fallbackCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    this.showCopyToast();
+  },
+
+  showCopyToast() {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium z-50 shadow-lg fade-in';
+    toast.innerHTML = '<span class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>تم نسخ الرابط بنجاح</span>';
+    document.body.appendChild(toast);
+    try { lucide.createIcons({ nodes: [toast] }); } catch(e) {}
+    setTimeout(() => { toast.remove(); }, 2000);
+  },
 
   // Admin moved to admin.html
   render_admin() { window.location.href = 'admin.html'; return ''; }
