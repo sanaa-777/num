@@ -7,22 +7,31 @@ on:
       - main
 
 jobs:
-  build_and_deploy:
+  deploy_default:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Deploy to Firebase Hosting
+      - name: Deploy to deel-39f2e.web.app
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEEL_39F2E }}'
           projectId: deel-39f2e
           channelId: live
-# Firebase deploy trigger
+
+  deploy_dalil:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to dalil-yemen-deel.web.app
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEEL_39F2E }}'
+          projectId: deel-39f2e
+          target: dalil-yemen-deel
+          channelId: live

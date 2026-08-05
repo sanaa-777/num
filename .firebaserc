@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "deel-39f2e"
+  },
+  "targets": {
+    "deel-39f2e": {
+      "hosting": {
+        "dalil-yemen-deel": [
+          "dalil-yemen-deel"
+        ]
+      }
+    }
   }
 }
