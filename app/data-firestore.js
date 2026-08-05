@@ -576,7 +576,7 @@ const Data = {
   getSubCategory(subId) {
     for (const cat of this.categories) {
       const sub = cat.subs.find(s => s.id === subId);
-      if (sub) return sub;
+      if (sub) return { ...sub, parent: cat };
     }
     return null;
   },
