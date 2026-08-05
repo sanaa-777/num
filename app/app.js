@@ -54,6 +54,7 @@ const App = {
       const bg = this.C('bg-gray-50', 'bg-dark-950');
       app.innerHTML = `<div class="min-h-screen ${bg}">${this.renderHeader(user)}${Ads.renderPosition('header')}<main class="fade-in">${this['render_' + this.currentView]?.() || ''}</main>${this.renderFooter()}</div>`;
       this.initIcons();
+      this.initAllCustomSelects();
       Ads.initAllSliders();
       // Scroll to top on navigation
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -385,8 +386,8 @@ const App = {
               <div id="searchSuggestions" class="search-suggestions hidden"></div>
             </div>
             <div class="flex gap-2">
-              <select id="searchCat" class="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm place-select"><option value="">جميع الأقسام</option>${Data.categories.map(c => `<option value="${c.id}" ${this.selectedCategory===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
-              <select id="searchCity" class="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm place-select"><option value="">جميع المدن</option>${Data.cities.map(c => `<option value="${c.id}" ${this.selectedCity===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
+              <div class="flex-1 custom-select-wrapper"><select id="searchCat" class="hidden"><option value="">جميع الأقسام</option>${Data.categories.map(c => `<option value="${c.id}" ${this.selectedCategory===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
+              <div class="flex-1 custom-select-wrapper"><select id="searchCity" class="hidden"><option value="">جميع المدن</option>${Data.cities.map(c => `<option value="${c.id}" ${this.selectedCity===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
               <button onclick="App.doSearch()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold text-xs flex items-center gap-1"><i data-lucide="search" class="w-3.5 h-3.5"></i></button>
             </div>
           </div>
@@ -494,10 +495,10 @@ const App = {
           <div class="space-y-3">
             <div><label class="block text-xs font-medium text-gray-700 mb-1">اسم المكان *</label><input type="text" id="placeName" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" placeholder="مثال: مطعم البركة"></div>
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الرئيسي *</label><select id="placeCategory" onchange="App.updateSubs()" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm place-select"><option value="">اختر القسم</option>${Data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
-              <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الفرعي *</label><select id="placeSubCategory" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm place-select"><option value="">اختر القسم الفرعي</option></select></div>
+              <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الرئيسي *</label><div class="custom-select-wrapper"><select id="placeCategory" onchange="App.updateSubs()" class="hidden"><option value="">اختر القسم</option>${Data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div></div>
+              <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الفرعي *</label><div class="custom-select-wrapper"><select id="placeSubCategory" class="hidden"><option value="">اختر القسم الفرعي</option></select></div></div>
             </div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">المدينة *</label><select id="placeCity" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm place-select"><option value="">اختر المدينة</option>${Data.cities.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">المدينة *</label><div class="custom-select-wrapper"><select id="placeCity" class="hidden"><option value="">اختر المدينة</option>${Data.cities.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div></div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">الوصف</label><textarea id="placeDesc" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" rows="3" placeholder="وصف المكان..."></textarea></div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">العنوان</label><input type="text" id="placeAddress" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="الشارع، المدينة"></div>
             <div class="grid grid-cols-2 gap-3">
@@ -522,6 +523,106 @@ const App = {
     const sub = document.getElementById('placeSubCategory');
     const cat = Data.categories.find(c => c.id === catId);
     sub.innerHTML = '<option value="">اختر القسم الفرعي</option>' + (cat ? cat.subs.map(s => `<option value="${s.id}">${s.name}</option>`).join('') : '');
+    // Update custom dropdown if exists
+    const subWrapper = sub.closest('.custom-select-wrapper');
+    if (subWrapper) {
+      const options = subWrapper.querySelector('.custom-select-options');
+      if (options) {
+        options.innerHTML = '<div class="custom-select-option" data-value="">اختر القسم الفرعي</div>' + 
+          (cat ? cat.subs.map(s => `<div class="custom-select-option" data-value="${s.id}">${s.name}</div>`).join('') : '');
+        App.initCustomSelectOptions(subWrapper, sub);
+      }
+    }
+  },
+
+  // Custom Select Dropdown Component
+  initCustomSelect(wrapper) {
+    const select = wrapper.querySelector('select');
+    if (!select) return;
+    
+    // Create trigger
+    const trigger = document.createElement('div');
+    trigger.className = 'custom-select-trigger';
+    const selectedOption = select.options[select.selectedIndex];
+    trigger.innerHTML = `<span class="${selectedOption.value ? '' : 'placeholder'}">${selectedOption.text}</span><svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+    
+    // Create options container
+    const optionsDiv = document.createElement('div');
+    optionsDiv.className = 'custom-select-options';
+    
+    Array.from(select.options).forEach(opt => {
+      const optDiv = document.createElement('div');
+      optDiv.className = 'custom-select-option' + (opt.selected ? ' selected' : '');
+      optDiv.dataset.value = opt.value;
+      optDiv.textContent = opt.text;
+      optionsDiv.appendChild(optDiv);
+    });
+    
+    wrapper.appendChild(trigger);
+    wrapper.appendChild(optionsDiv);
+    
+    // Toggle dropdown
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close other dropdowns
+      document.querySelectorAll('.custom-select-options.show').forEach(d => {
+        if (d !== optionsDiv) d.classList.remove('show');
+      });
+      document.querySelectorAll('.custom-select-trigger.open').forEach(t => {
+        if (t !== trigger) t.classList.remove('open');
+      });
+      optionsDiv.classList.toggle('show');
+      trigger.classList.toggle('open');
+    });
+    
+    // Select option
+    App.initCustomSelectOptions(wrapper, select);
+    
+    // Close on outside click
+    document.addEventListener('click', () => {
+      optionsDiv.classList.remove('show');
+      trigger.classList.remove('open');
+    });
+  },
+
+  initCustomSelectOptions(wrapper, select) {
+    const optionsDiv = wrapper.querySelector('.custom-select-options');
+    const trigger = wrapper.querySelector('.custom-select-trigger');
+    if (!optionsDiv || !trigger) return;
+    
+    optionsDiv.querySelectorAll('.custom-select-option').forEach(opt => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const value = opt.dataset.value;
+        const text = opt.textContent;
+        
+        // Update select
+        select.value = value;
+        
+        // Update trigger
+        trigger.querySelector('span').textContent = text;
+        trigger.querySelector('span').className = value ? '' : 'placeholder';
+        
+        // Update selected state
+        optionsDiv.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        
+        // Close dropdown
+        optionsDiv.classList.remove('show');
+        trigger.classList.remove('open');
+        
+        // Trigger change event
+        select.dispatchEvent(new Event('change'));
+      });
+    });
+  },
+
+  initAllCustomSelects() {
+    document.querySelectorAll('.custom-select-wrapper').forEach(wrapper => {
+      if (!wrapper.querySelector('.custom-select-trigger')) {
+        App.initCustomSelect(wrapper);
+      }
+    });
   },
 
   // ====== LOGIN ======
