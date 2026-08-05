@@ -676,7 +676,7 @@ const Data = {
       });
     }
     console.log('Default places seeded');
-  }
+  },
 
   // ====== نسخ متزامنة للتوافق مع app.js ======
   _usersCache: [],

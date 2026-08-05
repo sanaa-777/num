@@ -266,7 +266,7 @@ const Admin = {
 
   async notifyNewPlace(placeName, userName) {
     await this.addNotification('new_place', `نشاط جديد: ${placeName} بواسطة ${userName}`);
-  }
+  },
 
   // نسخة متزامنة للتوافق
   _unreadCount: 0,

@@ -1038,8 +1038,7 @@ const App = {
     alert('✅ تم إرسال طلبك بنجاح!\n\nسيتم مراجعة النشاط من قبل الإدارة قبل النشر.\nستظهر حالة الطلب في "مواقعي".');
     location.hash = 'myplaces';
   },
-  toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } await Data.toggleFavorite(Auth.currentUser.id, pid); await Data.preloadAll(); this.render(); },
-    await Admin.refreshUnreadCount();
+  async toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } await Data.toggleFavorite(Auth.currentUser.id, pid); await Data.preloadAll(); this.render(); },
   setRating(s) { document.querySelectorAll('[data-star]').forEach(b => { const v = parseInt(b.dataset.star); b.className = v <= s ? 'text-yellow-500' : 'text-gray-300'; b.querySelector('i')?.classList.toggle('fill-yellow-500', v <= s); }); this._selectedRating = s; },
   submitReview(pid) { if (!this._selectedRating) { alert('اختر تقييم'); return; } const c = document.getElementById('reviewComment').value; if (!c) { alert('اكتب تعليق'); return; } Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, this._selectedRating, c); this._selectedRating = 0; this.showPlace(pid); },
   deletePlaceConfirm(id) { if (confirm('هل أنت متأكد من الحذف؟')) { Data.deletePlace(id); alert('تم الحذف'); location.hash = 'myplaces'; } },
