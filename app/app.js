@@ -46,8 +46,9 @@ const App = {
   render() {
     const app = document.getElementById('app');
     const user = Auth.currentUser;
-    app.innerHTML = `<div class="min-h-screen bg-gray-50">${this.renderHeader(user)}<main>${this['render_' + this.currentView]?.() || ''}</main>${this.renderFooter()}</div>`;
+    app.innerHTML = `<div class="min-h-screen bg-gray-50">${this.renderHeader(user)}${Ads.renderPosition('header')}<main>${this['render_' + this.currentView]?.() || ''}</main>${this.renderFooter()}</div>`;
     this.initIcons();
+    Ads.initAllSliders();
   },
 
   initIcons() { try { lucide.createIcons(); } catch(e) {} },
@@ -121,6 +122,9 @@ const App = {
       </div>
     </section>
 
+    <!-- Ad: Below Hero -->
+    ${Ads.renderPosition('below_hero')}
+
     <section class="bg-white py-4 border-b">
       <div class="max-w-7xl mx-auto px-4 grid grid-cols-4 gap-3 text-center">
         <div><div class="text-lg md:text-2xl font-bold text-blue-600">${stats.places}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>مكان</div></div>
@@ -146,10 +150,15 @@ const App = {
       </div>
     </section>
 
+    <!-- Ad: Between Sections -->
+    ${Ads.renderPosition('between_sections')}
+
     <section class="bg-white py-6 md:py-10">
       <div class="max-w-7xl mx-auto px-3">
         <h3 class="text-base md:text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="star" class="w-5 h-5 text-yellow-500"></i>أماكن مميزة</h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${featured.map(p => this.renderPlaceCard(p)).join('')}</div>
+        <!-- Ad: Inside Places Grid -->
+        ${Ads.renderPosition('inside_places')}
       </div>
     </section>
 
@@ -175,7 +184,11 @@ const App = {
         <p class="text-yellow-100 mb-4 text-sm">سجّل عملك في دليل Yemen واحصل على المزيد من العملاء</p>
         <a href="${Auth.currentUser ? '#add' : '#signup'}" class="bg-white text-yellow-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors shadow-xl inline-block text-sm">ابدأ الآن</a>
       </div>
-    </section>`;
+    </section>
+
+    <!-- Ad: Footer -->
+    ${Ads.renderPosition('footer')}
+    `;
   },
 
   // ====== PLACE CARD ======
@@ -670,6 +683,7 @@ const App = {
         <div class="flex gap-2 mb-4 overflow-x-auto">
           <button onclick="App.adminTab='users';App.render()" class="px-4 py-2 rounded-lg text-xs font-medium ${this.adminTab==='users' || !this.adminTab ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-200'} flex items-center gap-1 whitespace-nowrap"><i data-lucide="users" class="w-3.5 h-3.5"></i>المستخدمين (${users.length})</button>
           <button onclick="App.adminTab='places';App.render()" class="px-4 py-2 rounded-lg text-xs font-medium ${this.adminTab==='places' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-200'} flex items-center gap-1 whitespace-nowrap"><i data-lucide="building-2" class="w-3.5 h-3.5"></i>الأماكن (${places.length})</button>
+          <button onclick="App.adminTab='ads';App.render()" class="px-4 py-2 rounded-lg text-xs font-medium ${this.adminTab==='ads' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-200'} flex items-center gap-1 whitespace-nowrap"><i data-lucide="megaphone" class="w-3.5 h-3.5"></i>الإعلانات (${Ads.getAll().length})</button>
         </div>
 
         <!-- Users Tab -->
@@ -720,6 +734,9 @@ const App = {
         </div>
         ` : ''}
 
+        <!-- Ads Tab -->
+        ${this.adminTab === 'ads' ? this.renderAdminAds() : ''}
+
         <!-- Places Tab -->
         ${this.adminTab === 'places' ? `
         <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -769,6 +786,164 @@ const App = {
         ` : ''}
       </div>
     </section>`;
+  },
+
+  // ====== Admin Ads Tab ======
+  renderAdminAds() {
+    const ads = Ads.getAll();
+    const adStats = Ads.getStats();
+    return `
+    <div class="space-y-4">
+      <!-- Ads Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center"><div class="text-lg font-bold text-gray-900">${adStats.total}</div><div class="text-[10px] text-gray-500">إجمالي</div></div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center"><div class="text-lg font-bold text-green-600">${adStats.active}</div><div class="text-[10px] text-gray-500">نشط</div></div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center"><div class="text-lg font-bold text-gray-400">${adStats.inactive}</div><div class="text-[10px] text-gray-500">متوقف</div></div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center"><div class="text-lg font-bold text-blue-600">${adStats.totalViews}</div><div class="text-[10px] text-gray-500">مشاهدات</div></div>
+        <div class="bg-white rounded-xl p-3 border border-gray-100 text-center"><div class="text-lg font-bold text-yellow-600">${adStats.totalClicks}</div><div class="text-[10px] text-gray-500">نقرات</div></div>
+      </div>
+
+      <!-- Add Ad Button -->
+      <button onclick="App.showAdForm=true;App.render()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-semibold hover:bg-blue-700 flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i>إضافة إعلان جديد</button>
+
+      <!-- Ad Form -->
+      ${this.showAdForm ? this.renderAdForm() : ''}
+
+      <!-- Ads List -->
+      ${ads.length > 0 ? `
+      <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-500">الصورة</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-500">الاسم</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-500">الموضع</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-500">المقاس</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-500">الصور</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-500">المشاهدات</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-500">النقرات</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-500">الحالة</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-500">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              ${ads.map(ad => `
+                <tr class="hover:bg-gray-50">
+                  <td class="px-3 py-2.5"><img src="${ad.images && ad.images[0] ? ad.images[0] : ''}" class="w-12 h-8 object-cover rounded" alt=""></td>
+                  <td class="px-3 py-2.5 font-medium text-gray-900">${ad.title || '-'}</td>
+                  <td class="px-3 py-2.5 text-gray-600">${Ads.positions.find(p => p.id === ad.position)?.name || '-'}</td>
+                  <td class="px-3 py-2.5 text-gray-600">${Ads.sizes.find(s => s.id === ad.size)?.name || '-'}</td>
+                  <td class="px-3 py-2.5 text-gray-600">${ad.images ? ad.images.length : 0}</td>
+                  <td class="px-3 py-2.5 text-gray-600">${ad.views || 0}</td>
+                  <td class="px-3 py-2.5 text-gray-600">${ad.clicks || 0}</td>
+                  <td class="px-3 py-2.5">
+                    <button onclick="Ads.toggleActive('${ad.id}');App.render()" class="px-2 py-0.5 rounded text-[10px] font-medium ${ad.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${ad.isActive ? 'نشط' : 'متوقف'}</button>
+                  </td>
+                  <td class="px-3 py-2.5">
+                    <div class="flex items-center gap-1">
+                      <button onclick="App.editAd='${ad.id}';App.showAdForm=true;App.render()" class="p-1.5 rounded-lg bg-gray-100 text-blue-500 hover:bg-blue-100" title="تعديل"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                      <button onclick="if(confirm('حذف الإعلان؟')){Ads.delete('${ad.id}');App.render()}" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="حذف"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      ` : '<div class="text-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100"><i data-lucide="megaphone" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i><br>لا توجد إعلانات</div>'}
+    </div>`;
+  },
+
+  showAdForm: false,
+  editAd: null,
+  adFormImages: [],
+
+  renderAdForm() {
+    const ad = this.editAd ? Ads.getAll().find(a => a.id === this.editAd) : null;
+    return `
+    <div class="bg-white rounded-xl p-4 md:p-6 border border-gray-100">
+      <h3 class="text-sm font-bold mb-4 flex items-center gap-2"><i data-lucide="megaphone" class="w-5 h-5 text-blue-600"></i>${ad ? 'تعديل الإعلان' : 'إضافة إعلان جديد'}</h3>
+      <div class="space-y-3">
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">اسم الإعلان</label><input type="text" id="adTitle" value="${ad ? ad.title : ''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="مثال:عرض خاص على الملابس"></div>
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">الوصف (اختياري)</label><textarea id="adDesc" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" rows="2" placeholder="وصف الإعلان...">${ad ? ad.description || '' : ''}</textarea></div>
+        <div><label class="block text-xs font-medium text-gray-700 mb-1">رابط الإعلان (URL)</label><input type="url" id="adUrl" value="${ad ? ad.linkUrl || '' : ''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="https://example.com"></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">مكان الظهور</label>
+            <select id="adPosition" class="w-full py-2.5 text-xs">${Ads.positions.map(p => `<option value="${p.id}" ${ad && ad.position === p.id ? 'selected' : ''}>${p.name}</option>`).join('')}</select>
+          </div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">المقاس</label>
+            <select id="adSize" class="w-full py-2.5 text-xs">${Ads.sizes.map(s => `<option value="${s.id}" ${ad && ad.size === s.id ? 'selected' : ''}>${s.name}</option>`).join('')}</select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">تاريخ النشر (اختياري)</label><input type="datetime-local" id="adPublish" value="${ad && ad.publishDate ? ad.publishDate.slice(0,16) : ''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">تاريخ الانتهاء (اختياري)</label><input type="datetime-local" id="adExpire" value="${ad && ad.expireDate ? ad.expireDate.slice(0,16) : ''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">مدة السلايدر (مللي ثانية)</label><input type="number" id="adSliderDuration" value="${ad ? ad.sliderDuration || 4000 : 4000}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" min="1000" step="500"></div>
+          <div class="flex items-end"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="adActive" ${!ad || ad.isActive ? 'checked' : ''} class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"><span class="text-xs font-medium text-gray-700">الإعلان نشط</span></label></div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">صور الإعلان (يمكن رفع أكثر من صورة)</label>
+          <input type="file" id="adImages" accept="image/*" multiple onchange="App.handleAdImageUpload(this.files)" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm">
+          <div id="adImagePreview" class="flex flex-wrap gap-2 mt-2">
+            ${ad && ad.images ? ad.images.map((img, i) => `<div class="relative"><img src="${img}" class="w-16 h-16 object-cover rounded-lg border"><button onclick="App.removeAdImage(${i})" class="absolute -top-1 -left-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">x</button></div>`).join('') : ''}
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="App.saveAd()" class="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-blue-700 flex items-center gap-1"><i data-lucide="save" class="w-4 h-4"></i>${ad ? 'حفظ التعديلات' : 'إضافة الإعلان'}</button>
+          <button onclick="App.showAdForm=false;App.editAd=null;App.adFormImages=[];App.render()" class="bg-gray-100 text-gray-700 px-4 py-2.5 rounded-lg text-xs font-semibold hover:bg-gray-200">إلغاء</button>
+        </div>
+      </div>
+    </div>`;
+  },
+
+  async handleAdImageUpload(files) {
+    const preview = document.getElementById('adImagePreview');
+    for (const file of files) {
+      const base64 = await Ads.compressImage(file, 1200);
+      this.adFormImages.push(base64);
+    }
+    this.updateAdImagePreview();
+  },
+
+  updateAdImagePreview() {
+    const preview = document.getElementById('adImagePreview');
+    if (preview) {
+      preview.innerHTML = this.adFormImages.map((img, i) => `<div class="relative"><img src="${img}" class="w-16 h-16 object-cover rounded-lg border"><button onclick="App.removeAdImage(${i})" class="absolute -top-1 -left-1 w-4 h-4 bg-red-500 text-white rounded-full text-[8px] flex items-center justify-center">x</button></div>`).join('');
+    }
+  },
+
+  removeAdImage(index) {
+    this.adFormImages.splice(index, 1);
+    this.updateAdImagePreview();
+  },
+
+  saveAd() {
+    const title = document.getElementById('adTitle').value;
+    const description = document.getElementById('adDesc').value;
+    const linkUrl = document.getElementById('adUrl').value;
+    const position = document.getElementById('adPosition').value;
+    const size = document.getElementById('adSize').value;
+    const publishDate = document.getElementById('adPublish').value;
+    const expireDate = document.getElementById('adExpire').value;
+    const sliderDuration = parseInt(document.getElementById('adSliderDuration').value) || 4000;
+    const isActive = document.getElementById('adActive').checked;
+
+    const adData = { title, description, linkUrl, position, size, publishDate: publishDate || null, expireDate: expireDate || null, sliderDuration, isActive, images: this.adFormImages };
+
+    if (this.editAd) {
+      Ads.update(this.editAd, adData);
+    } else {
+      Ads.add(adData);
+    }
+
+    this.showAdForm = false;
+    this.editAd = null;
+    this.adFormImages = [];
+    this.render();
   },
 
   // Admin Actions
