@@ -293,11 +293,42 @@ const Data = {
     localStorage.setItem('dy_places', JSON.stringify(this.defaultPlaces));
     return this.defaultPlaces;
   },
+  
+  // الأماكن المعتمدة فقط (للمستخدمين العاديين)
+  getApprovedPlaces() {
+    return this.getPlaces().filter(p => p.status === 'approved' || !p.status);
+  },
+  
+  // الأماكن المعلقة
+  getPendingPlaces() {
+    return this.getPlaces().filter(p => p.status === 'pending');
+  },
+  
+  // الأماكن المرفوضة
+  getRejectedPlaces() {
+    return this.getPlaces().filter(p => p.status === 'rejected');
+  },
+  
+  // تحديث حالة المكان
+  updatePlaceStatus(placeId, status, adminNote) {
+    const places = this.getPlaces();
+    const place = places.find(p => p.id === placeId);
+    if (place) {
+      place.status = status;
+      place.adminNote = adminNote || '';
+      place.reviewedAt = new Date().toISOString();
+      localStorage.setItem('dy_places', JSON.stringify(places));
+      return true;
+    }
+    return false;
+  },
   addPlace(place) {
     const places = this.getPlaces();
     place.id = 'p_' + Date.now();
     place.createdAt = new Date().toISOString();
     place.views = 0; place.reviews = 0; place.rating = 0;
+    place.status = 'pending'; // pending, approved, rejected
+    place.adminNote = '';
     places.unshift(place);
     localStorage.setItem('dy_places', JSON.stringify(places));
     return place;
@@ -323,7 +354,7 @@ const Data = {
 
   // بحث ذكي ومتقدم
   search(q, cat, sub, city) {
-    let p = this.getPlaces();
+    let p = this.getApprovedPlaces();
     if (q && q.trim()) {
       const query = this.normalizeArabic(q.trim());
       const queryWords = query.split(' ').filter(w => w.length > 0);
@@ -415,7 +446,7 @@ const Data = {
     return f[uid].includes(pid);
   },
   isFavorite(uid, pid) { const f = JSON.parse(localStorage.getItem('dy_favorites') || '{}'); return f[uid] ? f[uid].includes(pid) : false; },
-  getFavorites(uid) { const f = JSON.parse(localStorage.getItem('dy_favorites') || '{}'); return this.getPlaces().filter(p => (f[uid]||[]).includes(p.id)); },
+  getFavorites(uid) { const f = JSON.parse(localStorage.getItem('dy_favorites') || '{}'); return this.getApprovedPlaces().filter(p => (f[uid]||[]).includes(p.id)); },
   addReview(pid, uid, name, rating, comment) {
     const r = JSON.parse(localStorage.getItem('dy_reviews') || '[]');
     r.push({ id: 'rev_' + Date.now(), placeId: pid, userId: uid, userName: name, rating, comment, createdAt: new Date().toISOString() });

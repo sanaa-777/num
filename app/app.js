@@ -182,7 +182,7 @@ const App = {
   // ====== HOME ======
   render_home() {
     const stats = Data.getStats();
-    const places = Data.getPlaces();
+    const places = Data.getApprovedPlaces();
     const featured = places.filter(p => p.featured || p.verified).slice(0, 8);
     const latest = places.slice(0, 8);
 
@@ -295,7 +295,7 @@ const App = {
   render_category() {
     const cat = Data.categories.find(c => c.id === this.selectedCategory);
     if (!cat) return '<div class="text-center py-12 text-gray-400">القسم غير موجود</div>';
-    const places = Data.getPlaces().filter(p => p.category === cat.id);
+    const places = Data.getApprovedPlaces().filter(p => p.category === cat.id);
     return `
     <section class="py-6 md:py-8">
       <div class="max-w-7xl mx-auto px-3">
@@ -343,7 +343,7 @@ const App = {
     const subInfo = Data.getSubCategory(this.selectedSubCategory);
     if (!subInfo) return '<div class="text-center py-12 text-gray-400">القسم غير موجود</div>';
     const cat = subInfo.parent;
-    const places = Data.getPlaces().filter(p => p.subcategory === this.selectedSubCategory);
+    const places = Data.getApprovedPlaces().filter(p => p.subcategory === this.selectedSubCategory);
     return `
     <section class="py-6 md:py-8">
       <div class="max-w-7xl mx-auto px-3">
@@ -799,7 +799,30 @@ const App = {
         <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="building-2" class="w-5 h-5 text-blue-600"></i>مواقعي (${my.length})</h3>
         <a href="#add" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة</a>
       </div>
-      ${my.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${my.map(p => this.renderPlaceCard(p)).join('')}</div>` : '<div class="text-center py-8 text-gray-400 text-sm"><i data-lucide="building-2" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i><br>لم تضف أي مكان<br><a href="#add" class="text-blue-600 font-medium">أضف مكانك الأول</a></div>'}
+      ${my.length ? `<div class="space-y-3">${my.map(p => {
+        const cat = Data.categories.find(c => c.id === p.category);
+        const city = Data.cities.find(c => c.id === p.city);
+        const statusColors = { pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', approved: 'bg-green-50 text-green-700 border-green-200', rejected: 'bg-red-50 text-red-700 border-red-200' };
+        const statusLabels = { pending: '⏳ قيد المراجعة', approved: '✅ معتمد', rejected: '❌ مرفوض' };
+        const status = p.status || 'approved';
+        return `<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center gap-3">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <h4 class="font-bold text-sm text-gray-900">${p.name}</h4>
+              <span class="text-[10px] px-2 py-0.5 rounded-full border ${statusColors[status]}">${statusLabels[status]}</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              ${cat ? `<span>${cat.name}</span>` : ''}
+              ${city ? `<span>• ${city.name}</span>` : ''}
+            </div>
+            ${p.adminNote ? `<p class="text-xs text-gray-500 mt-1">📝 ${p.adminNote}</p>` : ''}
+          </div>
+          <div class="flex gap-2">
+            <a href="#place/${p.id}" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i data-lucide="eye" class="w-4 h-4"></i></a>
+            ${status === 'rejected' ? `<button onclick="App.deletePlaceConfirm('${p.id}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+          </div>
+        </div>`;
+      }).join('')}</div>` : '<div class="text-center py-8 text-gray-400 text-sm"><i data-lucide="building-2" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i><br>لم تضف أي مكان<br><a href="#add" class="text-blue-600 font-medium">أضف مكانك الأول</a></div>'}
     </div></section>`;
   },
 
@@ -1007,7 +1030,8 @@ const App = {
     });
     Admin.notifyNewPlace(n, Auth.currentUser.name);
     this.placeImages = [];
-    alert('تم إضافة المكان بنجاح! سيتم مراجعته من قبل الإدارة.'); location.hash = 'myplaces';
+    alert('✅ تم إرسال طلبك بنجاح!\n\nسيتم مراجعة النشاط من قبل الإدارة قبل النشر.\nستظهر حالة الطلب في "مواقعي".');
+    location.hash = 'myplaces';
   },
   toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } Data.toggleFavorite(Auth.currentUser.id, pid); this.render(); },
   setRating(s) { document.querySelectorAll('[data-star]').forEach(b => { const v = parseInt(b.dataset.star); b.className = v <= s ? 'text-yellow-500' : 'text-gray-300'; b.querySelector('i')?.classList.toggle('fill-yellow-500', v <= s); }); this._selectedRating = s; },
