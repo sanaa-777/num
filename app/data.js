@@ -303,13 +303,108 @@ const Data = {
     return place;
   },
   deletePlace(id) { let p = this.getPlaces().filter(x => x.id !== id); localStorage.setItem('dy_places', JSON.stringify(p)); },
+  // تطبيع النص العربي (معالجة اختلافات الهمزات والحروف)
+  normalizeArabic(text) {
+    if (!text) return '';
+    return text
+      .toLowerCase()
+      // الهمزات
+      .replace(/[أإآا]/g, 'ا')
+      // التاء المربوطة والهاء
+      .replace(/ة/g, 'ه')
+      // الياء والألف المقصورة
+      .replace(/ى/g, 'ي')
+      // حذف التشكيل
+      .replace(/[ًٌٍَُِّْ]/g, '')
+      // حذف المسافات الزائدة
+      .replace(/\s+/g, ' ')
+      .trim();
+  },
+
+  // بحث ذكي ومتقدم
   search(q, cat, sub, city) {
     let p = this.getPlaces();
-    if (q) { q = q.toLowerCase(); p = p.filter(x => x.name.toLowerCase().includes(q) || (x.description||'').toLowerCase().includes(q) || (x.address||'').toLowerCase().includes(q)); }
+    if (q && q.trim()) {
+      const query = this.normalizeArabic(q.trim());
+      const queryWords = query.split(' ').filter(w => w.length > 0);
+
+      p = p.filter(place => {
+        // تجميع كل النصوص القابلة للبحث
+        const catObj = this.categories.find(c => c.id === place.category);
+        const subObj = place.subcategory ? this.getSubCategory(place.subcategory) : null;
+        const cityObj = this.cities.find(c => c.id === place.city);
+
+        const searchableText = this.normalizeArabic([
+          place.name,
+          place.description || '',
+          place.address || '',
+          place.phone || '',
+          catObj ? catObj.name : '',
+          subObj ? subObj.name : '',
+          cityObj ? cityObj.name : '',
+          place.email || '',
+          place.whatsapp || ''
+        ].join(' '));
+
+        // البحث بالكلمات (كل كلمة يجب أن تظهر في النص)
+        return queryWords.every(word => searchableText.includes(word));
+      });
+
+      // ترتيب النتائج (الأكثر relevance أولاً)
+      p.sort((a, b) => {
+        const aName = this.normalizeArabic(a.name);
+        const bName = this.normalizeArabic(b.name);
+        const aExact = aName.includes(query) ? 0 : 1;
+        const bExact = bName.includes(query) ? 0 : 1;
+        if (aExact !== bExact) return aExact - bExact;
+        // ثم بالتقييم
+        return (b.rating || 0) - (a.rating || 0);
+      });
+    }
     if (cat) p = p.filter(x => x.category === cat);
     if (sub) p = p.filter(x => x.subcategory === sub);
     if (city) p = p.filter(x => x.city === city);
     return p;
+  },
+
+  // بحث سريع (للuggestions)
+  quickSearch(q) {
+    if (!q || q.trim().length < 2) return [];
+    const query = this.normalizeArabic(q.trim());
+    const places = this.getPlaces();
+    const results = [];
+
+    // البحث في الأماكن
+    places.forEach(p => {
+      const name = this.normalizeArabic(p.name);
+      if (name.includes(query)) {
+        results.push({ type: 'place', id: p.id, name: p.name, icon: 'map-pin', subtitle: this.getSubCategory(p.subcategory)?.name || '' });
+      }
+    });
+
+    // البحث في الأقسام
+    this.categories.forEach(c => {
+      const catName = this.normalizeArabic(c.name);
+      if (catName.includes(query)) {
+        results.push({ type: 'category', id: c.id, name: c.name, icon: c.icon, subtitle: 'قسم رئيسي' });
+      }
+      c.subs.forEach(s => {
+        const subName = this.normalizeArabic(s.name);
+        if (subName.includes(query)) {
+          results.push({ type: 'subcategory', id: s.id, catId: c.id, name: s.name, icon: s.icon, subtitle: c.name });
+        }
+      });
+    });
+
+    // البحث في المدن
+    this.cities.forEach(c => {
+      const cityName = this.normalizeArabic(c.name);
+      if (cityName.includes(query)) {
+        results.push({ type: 'city', id: c.id, name: c.name, icon: 'map-pin', subtitle: 'مدينة' });
+      }
+    });
+
+    return results.slice(0, 10);
   },
   toggleFavorite(uid, pid) {
     const f = JSON.parse(localStorage.getItem('dy_favorites') || '{}');

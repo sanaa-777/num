@@ -10,6 +10,24 @@ const App = {
     this.render();
     window.addEventListener('hashchange', () => this.handleRoute());
     this.handleRoute();
+
+    // إخفاء الاقتراحات عند النقر خارجها
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#heroSearch') && !e.target.closest('#headerSearch') && !e.target.closest('#searchSuggestions') && !e.target.closest('#headerSearchSuggestions')) {
+        this.hideSuggestions();
+      }
+    });
+
+    // اختصارات لوحة المفاتيح
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') this.hideSuggestions();
+      if (e.key === 'Enter') {
+        const active = document.activeElement;
+        if (active && (active.id === 'heroSearch' || active.id === 'headerSearch')) {
+          this.doSearch();
+        }
+      }
+    });
   },
 
   handleRoute() {
@@ -43,8 +61,9 @@ const App = {
         </a>
         <div class="flex-1 max-w-sm mx-2 hidden md:block">
           <div class="relative">
-            <input type="text" id="headerSearch" placeholder="ابحث..." class="w-full px-3 py-2 pr-9 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" value="${this.searchQuery}">
+            <input type="text" id="headerSearch" placeholder="ابحث..." class="w-full px-3 py-2 pr-9 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" value="${this.searchQuery}" oninput="App.onSearchInput(this.value)" autocomplete="off">
             <i data-lucide="search" class="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400"></i>
+            <div id="headerSearchSuggestions" class="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 hidden"></div>
           </div>
         </div>
         <nav class="flex items-center gap-1">
@@ -87,11 +106,12 @@ const App = {
       <div class="max-w-7xl mx-auto px-4 text-center relative z-10">
         <h2 class="text-3xl md:text-5xl font-bold mb-3">دليل اليمن</h2>
         <p class="text-base md:text-lg text-blue-100 mb-6 max-w-xl mx-auto">الدليل الشامل للأعمال والأماكن في جميع أنحاء اليمن</p>
-        <div class="max-w-xl mx-auto">
+        <div class="max-w-xl mx-auto relative">
           <div class="flex bg-white rounded-xl shadow-2xl overflow-hidden">
-            <input type="text" id="heroSearch" placeholder="ابحث عن مكان، خدمة، أونشاط..." class="flex-1 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none text-sm">
+            <input type="text" id="heroSearch" placeholder="ابحث عن مكان، خدمة، أونشاط..." class="flex-1 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none text-sm" oninput="App.onSearchInput(this.value)" autocomplete="off">
             <button onclick="App.doSearch()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-5 font-semibold transition-colors text-sm flex items-center gap-1"><i data-lucide="search" class="w-4 h-4"></i>بحث</button>
           </div>
+          <div id="searchSuggestions" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 hidden"></div>
         </div>
       </div>
     </section>
@@ -264,8 +284,9 @@ const App = {
         <div class="bg-white rounded-xl p-3 mb-4 border border-gray-100">
           <div class="flex flex-col gap-2">
             <div class="relative">
-              <input type="text" id="searchInput" value="${this.searchQuery}" placeholder="ابحث عن مكان أو خدمة..." class="w-full px-3 py-2.5 pr-9 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm">
+              <input type="text" id="searchInput" value="${this.searchQuery}" placeholder="ابحث عن مكان أو خدمة..." class="w-full px-3 py-2.5 pr-9 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" oninput="App.onSearchInput(this.value)" autocomplete="off">
               <i data-lucide="search" class="absolute right-2.5 top-3 w-4 h-4 text-gray-400"></i>
+              <div id="searchSuggestions" class="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 hidden"></div>
             </div>
             <div class="flex gap-2">
               <select id="searchCat" class="flex-1 py-2.5 text-xs"><option value="">جميع الأقسام</option>${Data.categories.map(c => `<option value="${c.id}" ${this.selectedCategory===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
@@ -497,8 +518,65 @@ const App = {
     this.selectedCategory = document.getElementById('searchCat')?.value || null;
     this.selectedCity = document.getElementById('searchCity')?.value || null;
     this.selectedSubCategory = null;
+    this.hideSuggestions();
     this.currentView = 'search';
     this.render();
+  },
+
+  // معالج إدخال البحث (بحث فوري)
+  onSearchInput(value) {
+    const suggestions = Data.quickSearch(value);
+    const heroBox = document.getElementById('searchSuggestions');
+    const headerBox = document.getElementById('headerSearchSuggestions');
+    const boxes = [heroBox, headerBox].filter(Boolean);
+
+    boxes.forEach(box => {
+      if (!value || value.trim().length < 2 || suggestions.length === 0) {
+        box.classList.add('hidden');
+        box.innerHTML = '';
+        return;
+      }
+
+      box.classList.remove('hidden');
+      box.innerHTML = suggestions.map(s => `
+        <button onclick="App.selectSuggestion('${s.type}', '${s.id}', '${s.catId || ''}')" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-right border-b border-gray-50 last:border-0">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+            <i data-lucide="${s.icon}" class="w-4 h-4 text-blue-600"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-gray-900 truncate">${s.name}</div>
+            <div class="text-[10px] text-gray-500 truncate">${s.subtitle}</div>
+          </div>
+          <i data-lucide="arrow-left" class="w-4 h-4 text-gray-300 shrink-0"></i>
+        </button>
+      `).join('');
+      this.initIcons();
+    });
+  },
+
+  // اختيار اقتراح
+  selectSuggestion(type, id, catId) {
+    this.hideSuggestions();
+    if (type === 'place') {
+      location.hash = 'place/' + id;
+    } else if (type === 'category') {
+      location.hash = 'category/' + id;
+    } else if (type === 'subcategory') {
+      location.hash = 'subcategory/' + catId + '/' + id;
+    } else if (type === 'city') {
+      this.selectedCity = id;
+      this.currentView = 'search';
+      this.render();
+    }
+  },
+
+  // إخفاء الاقتراحات
+  hideSuggestions() {
+    const boxes = ['searchSuggestions', 'headerSearchSuggestions'];
+    boxes.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
+    });
   },
   doLogin() {
     const err = document.getElementById('loginError');
