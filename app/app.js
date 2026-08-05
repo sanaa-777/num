@@ -133,7 +133,7 @@ const App = {
           <div class="relative">
             <input type="text" id="headerSearch" placeholder="${Data.t('searchPlaceholder')}" class="w-full px-3 py-2 pr-9 rounded-lg border border-gray-200 dark:border-dark-600 dark:bg-dark-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" value="${this.searchQuery}" oninput="App.onSearchInput(this.value)" autocomplete="off">
             <i data-lucide="search" class="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400"></i>
-            <div id="headerSearchSuggestions" class="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-700 overflow-hidden z-50 hidden"></div>
+            <div id="headerSearchSuggestions" class="search-suggestions hidden"></div>
           </div>
         </div>
         <nav class="flex items-center gap-1">
@@ -192,7 +192,7 @@ const App = {
             <input type="text" id="heroSearch" placeholder="ابحث عن مكان، خدمة، أونشاط..." class="flex-1 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none text-sm" oninput="App.onSearchInput(this.value)" autocomplete="off">
             <button onclick="App.doSearch()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-5 font-semibold transition-colors text-sm flex items-center gap-1"><i data-lucide="search" class="w-4 h-4"></i>بحث</button>
           </div>
-          <div id="searchSuggestions" class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 hidden"></div>
+          <div id="searchSuggestions" class="search-suggestions hidden"></div>
         </div>
       </div>
     </section>
@@ -379,7 +379,7 @@ const App = {
             <div class="relative">
               <input type="text" id="searchInput" value="${this.searchQuery}" placeholder="ابحث عن مكان أو خدمة..." class="w-full px-3 py-2.5 pr-9 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" oninput="App.onSearchInput(this.value)" autocomplete="off">
               <i data-lucide="search" class="absolute right-2.5 top-3 w-4 h-4 text-gray-400"></i>
-              <div id="searchSuggestions" class="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 hidden"></div>
+              <div id="searchSuggestions" class="search-suggestions hidden"></div>
             </div>
             <div class="flex gap-2">
               <select id="searchCat" class="flex-1 py-2.5 text-xs rounded-lg border border-gray-200 bg-white"><option value="">جميع الأقسام</option>${Data.categories.map(c => `<option value="${c.id}" ${this.selectedCategory===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
@@ -662,15 +662,17 @@ const App = {
 
       box.classList.remove('hidden');
       box.innerHTML = suggestions.map(s => `
-        <button onclick="App.selectSuggestion('${s.type}', '${s.id}', '${s.catId || ''}')" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-right border-b border-gray-50 last:border-0">
-          <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-            <i data-lucide="${s.icon}" class="w-4 h-4 text-blue-600"></i>
+        <button onclick="App.selectSuggestion('${s.type}', '${s.id}', '${s.catId || ''}')" class="suggestion-item">
+          <div class="suggestion-icon">
+            <i data-lucide="${s.icon}"></i>
           </div>
-          <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium text-gray-900 truncate">${s.name}</div>
-            <div class="text-[10px] text-gray-500 truncate">${s.subtitle}</div>
+          <div class="suggestion-text">
+            <div class="suggestion-title">${s.name}</div>
+            <div class="suggestion-subtitle">${s.subtitle}</div>
           </div>
-          <i data-lucide="arrow-left" class="w-4 h-4 text-gray-300 shrink-0"></i>
+          <div class="suggestion-arrow">
+            <i data-lucide="arrow-left"></i>
+          </div>
         </button>
       `).join('');
       this.initIcons();
