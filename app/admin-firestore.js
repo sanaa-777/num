@@ -297,4 +297,14 @@ const Admin = {
   async notifyNewPlace(placeName, userName) {
     await this.addNotification('new_place', `نشاط جديد: ${placeName} بواسطة ${userName}`);
   }
+
+  // نسخة متزامنة للتوافق
+  _unreadCount: 0,
+  getUnreadCountSync() { return this._unreadCount; },
+  async refreshUnreadCount() {
+    try {
+      const snap = await db.collection('admin_notifications').where('read', '==', false).get();
+      this._unreadCount = snap.size;
+    } catch(e) { this._unreadCount = 0; }
+  }
 };

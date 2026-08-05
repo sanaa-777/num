@@ -5,9 +5,11 @@
 const App = {
   currentView: 'home', searchQuery: '', selectedCategory: null, selectedSubCategory: null, selectedCity: null, _selectedRating: 0,
 
-  init() {
-    Auth.checkAuth();
-    Admin.initDefaultAdmin();
+  async init() {
+    await Auth.init();
+    await Admin.initDefaultAdmin();
+    await Data.preloadAll();
+    await Admin.refreshUnreadCount();
     this.initDarkMode();
     this.initLang();
     this.render();
@@ -169,7 +171,7 @@ const App = {
                 <a href="#profile" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><i data-lucide="user" class="w-4 h-4"></i>الملف الشخصي</a>
                 <a href="#myplaces" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><i data-lucide="building-2" class="w-4 h-4"></i>مواقعي</a>
                 <a href="#favorites" class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"><i data-lucide="heart" class="w-4 h-4"></i>المفضلة</a>
-                ${Admin.isAdmin() ? `<a href="admin.html" target="_blank" class="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"><i data-lucide="shield" class="w-4 h-4"></i>لوحة التحكم ${Admin.getUnreadCount() > 0 ? `<span class="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full mr-auto">${Admin.getUnreadCount()}</span>` : ''}</a>` : ''}
+                ${Admin.isAdmin() ? `<a href="admin.html" target="_blank" class="flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"><i data-lucide="shield" class="w-4 h-4"></i>لوحة التحكم ${Admin.getUnreadCountSync() > 0 ? `<span class="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full mr-auto">${Admin.getUnreadCountSync()}</span>` : ''}</a>` : ''}
                 <hr class="my-1 border-gray-100">
                 <button onclick="Auth.logout()" class="w-full flex items-center gap-2 text-right px-3 py-2 text-sm text-red-600 hover:bg-red-50"><i data-lucide="log-out" class="w-4 h-4"></i>تسجيل الخروج</button>
               </div>
@@ -185,8 +187,8 @@ const App = {
 
   // ====== HOME ======
   render_home() {
-    const stats = Data.getStats();
-    const places = Data.getApprovedPlaces();
+    const stats = Data.getStatsSync();
+    const places = Data.getApprovedPlacesSync();
     const featured = places.filter(p => p.featured || p.verified).slice(0, 8);
     const latest = places.slice(0, 8);
 
@@ -271,7 +273,7 @@ const App = {
     const cat = Data.categories.find(c => c.id === p.category);
     const sub = p.subcategory ? Data.getSubCategory(p.subcategory) : null;
     const city = Data.cities.find(c => c.id === p.city);
-    const isFav = Auth.currentUser && Data.isFavorite(Auth.currentUser.id, p.id);
+    const isFav = Auth.currentUser && Data.isFavoriteSync(Auth.currentUser.id, p.id);
     const catColor = cat ? cat.color : '#3b82f6';
     return `
     <div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all cursor-pointer active-scale" onclick="location.hash='place/${p.id}'">
@@ -299,7 +301,7 @@ const App = {
   render_category() {
     const cat = Data.categories.find(c => c.id === this.selectedCategory);
     if (!cat) return '<div class="text-center py-12 text-gray-400">القسم غير موجود</div>';
-    const places = Data.getApprovedPlaces().filter(p => p.category === cat.id);
+    const places = Data.getApprovedPlacesSync().filter(p => p.category === cat.id);
     return `
     <section class="py-6 md:py-8">
       <div class="max-w-7xl mx-auto px-3">
@@ -347,7 +349,7 @@ const App = {
     const subInfo = Data.getSubCategory(this.selectedSubCategory);
     if (!subInfo) return '<div class="text-center py-12 text-gray-400">القسم غير موجود</div>';
     const cat = subInfo.parent;
-    const places = Data.getApprovedPlaces().filter(p => p.subcategory === this.selectedSubCategory);
+    const places = Data.getApprovedPlacesSync().filter(p => p.subcategory === this.selectedSubCategory);
     return `
     <section class="py-6 md:py-8">
       <div class="max-w-7xl mx-auto px-3">
@@ -382,7 +384,7 @@ const App = {
 
   // ====== SEARCH ======
   render_search() {
-    const results = Data.search(this.searchQuery, this.selectedCategory, this.selectedSubCategory, this.selectedCity);
+    const results = Data.searchSync(this.searchQuery, this.selectedCategory, this.selectedSubCategory, this.selectedCity);
     return `
     <section class="py-6 md:py-8">
       <div class="max-w-7xl mx-auto px-3">
@@ -408,15 +410,14 @@ const App = {
 
   // ====== PLACE DETAILS ======
   showPlace(pid) {
-    const place = Data.getPlaces().find(p => p.id === pid);
+    const place = Data.getPlacesSync().find(p => p.id === pid);
     if (!place) { location.hash = 'home'; return; }
-    place.views = (place.views || 0) + 1;
-    localStorage.setItem('dy_places', JSON.stringify(Data.getPlaces()));
+    place.views = (place.views || 0) + 1; Data.incrementViews(pid);
     const cat = Data.categories.find(c => c.id === place.category);
     const sub = place.subcategory ? Data.getSubCategory(place.subcategory) : null;
     const city = Data.cities.find(c => c.id === place.city);
-    const reviews = Data.getReviews(place.id);
-    const isFav = Auth.currentUser && Data.isFavorite(Auth.currentUser.id, place.id);
+    const reviews = Data.getReviewsSync(place.id);
+    const isFav = Auth.currentUser && Data.isFavoriteSync(Auth.currentUser.id, place.id);
     const isOwner = Auth.currentUser && place.owner === Auth.currentUser.id;
     const catColor = cat ? cat.color : '#3b82f6';
 
@@ -797,7 +798,7 @@ const App = {
 
   render_myplaces() {
     if (!Auth.currentUser) return this.render_login();
-    const my = Data.getPlaces().filter(p => p.owner === Auth.currentUser.id);
+    const my = Data.getPlacesSync().filter(p => p.owner === Auth.currentUser.id);
     return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="building-2" class="w-5 h-5 text-blue-600"></i>مواقعي (${my.length})</h3>
@@ -832,7 +833,7 @@ const App = {
 
   render_favorites() {
     if (!Auth.currentUser) return this.render_login();
-    const favs = Data.getFavorites(Auth.currentUser.id);
+    const favs = Data.getFavoritesSync(Auth.currentUser.id);
     return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
       <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i data-lucide="heart" class="w-5 h-5 text-red-500"></i>المفضلة (${favs.length})</h3>
       ${favs.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${favs.map(p => this.renderPlaceCard(p)).join('')}</div>` : '<div class="text-center py-8 text-gray-400 text-sm"><i data-lucide="heart" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i><br>لا توجد مفضلة</div>'}
@@ -1037,7 +1038,8 @@ const App = {
     alert('✅ تم إرسال طلبك بنجاح!\n\nسيتم مراجعة النشاط من قبل الإدارة قبل النشر.\nستظهر حالة الطلب في "مواقعي".');
     location.hash = 'myplaces';
   },
-  toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } Data.toggleFavorite(Auth.currentUser.id, pid); this.render(); },
+  toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } await Data.toggleFavorite(Auth.currentUser.id, pid); await Data.preloadAll(); this.render(); },
+    await Admin.refreshUnreadCount();
   setRating(s) { document.querySelectorAll('[data-star]').forEach(b => { const v = parseInt(b.dataset.star); b.className = v <= s ? 'text-yellow-500' : 'text-gray-300'; b.querySelector('i')?.classList.toggle('fill-yellow-500', v <= s); }); this._selectedRating = s; },
   submitReview(pid) { if (!this._selectedRating) { alert('اختر تقييم'); return; } const c = document.getElementById('reviewComment').value; if (!c) { alert('اكتب تعليق'); return; } Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, this._selectedRating, c); this._selectedRating = 0; this.showPlace(pid); },
   deletePlaceConfirm(id) { if (confirm('هل أنت متأكد من الحذف؟')) { Data.deletePlace(id); alert('تم الحذف'); location.hash = 'myplaces'; } },
@@ -1045,7 +1047,7 @@ const App = {
 
   // ====== مشاركة النشاط التجاري ======
   sharePlace(pid) {
-    const place = Data.getPlaces().find(p => p.id === pid);
+    const place = Data.getPlacesSync().find(p => p.id === pid);
     if (!place) return;
     const cat = Data.categories.find(c => c.id === place.category);
     const city = Data.cities.find(c => c.id === place.city);
@@ -1066,7 +1068,7 @@ const App = {
   },
 
   copyPlaceLink(pid) {
-    const place = Data.getPlaces().find(p => p.id === pid);
+    const place = Data.getPlacesSync().find(p => p.id === pid);
     if (!place) return;
     const shareUrl = location.origin + '/#place/' + pid;
     const shareText = `${place.name} - الدليل اليمني التجاري\n${shareUrl}`;

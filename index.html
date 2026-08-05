@@ -134,32 +134,19 @@
 
   <!-- App Initialization -->
   <script>
-    // انتظار تحميل Firebase ثم تهيئة التطبيق
     window.addEventListener('load', async () => {
-      // انتظار Firebase
       if (typeof firebase === 'undefined') {
         console.error('Firebase not loaded');
+        document.getElementById('app').innerHTML = '<div style="text-align:center;padding:40px;color:red;">خطأ في تحميل Firebase</div>';
         return;
       }
-
       try {
-        // 1. تهيئة المصادقة
-        await Auth.init();
-
-        // 2. تهيئة الأدمن الافتراضي
-        await Admin.initDefaultAdmin();
-
-        // 3. زرع البيانات التجريبية (مرة واحدة)
         await Data.seedDefaultPlaces();
-
-        // 4. تهيئة التطبيق
-        App.init();
-
+        await App.init();
         console.log('App initialized with Firestore backend');
       } catch (e) {
         console.error('App initialization error:', e);
-        // محاولة تحميل التطبيق حتى بدون مصادقة
-        App.init();
+        try { App.init(); } catch(e2) {}
       }
     });
   </script>

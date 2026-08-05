@@ -654,4 +654,69 @@ const Data = {
     }
     console.log('Default places seeded');
   }
+
+  // ====== نسخ متزامنة للتوافق مع app.js ======
+  _usersCache: [],
+  _reviewsCache: [],
+  _favoritesCache: [],
+
+  getApprovedPlacesSync() {
+    return (this._placesCache || []).filter(p => p.status === 'approved' || !p.status);
+  },
+
+  getStatsSync() {
+    return {
+      places: (this._placesCache || []).length,
+      users: (this._usersCache || []).length,
+      reviews: (this._reviewsCache || []).length,
+      cities: this.cities.length,
+      categories: this.categories.length
+    };
+  },
+
+  isFavoriteSync(userId, placeId) {
+    return (this._favoritesCache || []).some(f => f.userId === userId && f.placeId === placeId);
+  },
+
+  getFavoritesSync(userId) {
+    const favIds = (this._favoritesCache || []).filter(f => f.userId === userId).map(f => f.placeId);
+    return (this._placesCache || []).filter(p => favIds.includes(p.id));
+  },
+
+  searchSync(query, catFilter, subFilter, cityFilter) {
+    let places = this.getApprovedPlacesSync();
+    if (catFilter) places = places.filter(p => p.category === catFilter);
+    if (subFilter) places = places.filter(p => p.subcategory === subFilter);
+    if (cityFilter) places = places.filter(p => p.city === cityFilter);
+    if (query) {
+      const q = this.normalizeArabic(query.toLowerCase());
+      places = places.filter(p => {
+        const n = this.normalizeArabic((p.name || '').toLowerCase());
+        const d = this.normalizeArabic((p.description || '').toLowerCase());
+        const a = this.normalizeArabic((p.address || '').toLowerCase());
+        return n.includes(q) || d.includes(q) || a.includes(q);
+      });
+    }
+    return places;
+  },
+
+  getReviewsSync(placeId) {
+    return (this._reviewsCache || []).filter(r => r.placeId === placeId);
+  },
+
+  getMyPlacesSync(userId) {
+    return (this._placesCache || []).filter(p => p.owner === userId);
+  },
+
+  // تحميل مسبق لجميع البيانات
+  async preloadAll() {
+    try {
+      await this.getPlaces();
+      try { this._usersCache = (await db.collection('users').get()).docs.map(d => d.data()); } catch(e) { this._usersCache = []; }
+      try { this._reviewsCache = (await db.collection('reviews').get()).docs.map(d => ({id:d.id,...d.data()})); } catch(e) { this._reviewsCache = []; }
+      if (Auth.currentUser) {
+        try { this._favoritesCache = (await db.collection('favorites').where('userId','==',Auth.currentUser.id).get()).docs.map(d => d.data()); } catch(e) { this._favoritesCache = []; }
+      }
+    } catch(e) { console.error('preloadAll error:', e); }
+  }
 };
