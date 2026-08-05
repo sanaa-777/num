@@ -474,6 +474,26 @@ const App = {
             </div>
             ${place.address ? `<div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm flex items-start gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-gray-400 mt-0.5 shrink-0"></i><span>${place.address}</span></div>` : ''}
             
+            <!-- ساعات العمل -->
+            ${(place.openTime || place.closeTime || place.workDays) ? `
+            <div class="bg-gray-50 rounded-lg p-3 mb-4">
+              <h4 class="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5"><i data-lucide="clock" class="w-4 h-4 text-gray-500"></i>ساعات العمل</h4>
+              <div class="space-y-1.5">
+                ${place.openTime && place.closeTime ? `
+                <div class="flex items-center gap-2 text-xs">
+                  <i data-lucide="sunrise" class="w-3.5 h-3.5 text-orange-500"></i>
+                  <span class="text-gray-600">يفتح: <strong>${place.openTime}</strong></span>
+                  <i data-lucide="sunset" class="w-3.5 h-3.5 text-indigo-500"></i>
+                  <span class="text-gray-600">يغلق: <strong>${place.closeTime}</strong></span>
+                </div>` : ''}
+                ${place.workDays && place.workDays.length > 0 ? `
+                <div class="flex items-center gap-1.5 text-xs">
+                  <i data-lucide="calendar-days" class="w-3.5 h-3.5 text-blue-500"></i>
+                  <span class="text-gray-600">${place.workDays.join('، ')}</span>
+                </div>` : ''}
+              </div>
+            </div>` : ''}
+            
             <!-- Social Media Links -->
             ${(place.facebook || place.instagram || place.telegram || place.website) ? `
             <div class="flex flex-wrap gap-2 mb-4">
@@ -547,6 +567,34 @@ const App = {
               <div><label class="block text-xs font-medium text-gray-700 mb-1">رقم واتساب</label><input type="tel" id="placeWhatsapp" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="777123456"></div>
             </div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">البريد الإلكتروني</label><input type="email" id="placeEmail" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="info@example.com"></div>
+            
+            <!-- ساعات العمل -->
+            <div class="border-t border-gray-100 pt-3">
+              <label class="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
+                <i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i>ساعات العمل <span class="text-gray-400 font-normal">(اختياري)</span>
+              </label>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] text-gray-500 mb-1">وقت الفتح</label>
+                  <input type="time" id="placeOpenTime" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-gray-500 mb-1">وقت الإغلاق</label>
+                  <input type="time" id="placeCloseTime" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm">
+                </div>
+              </div>
+              <div class="mt-2">
+                <label class="block text-[10px] text-gray-500 mb-1">أيام العمل</label>
+                <div class="flex flex-wrap gap-1.5">
+                  ${['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'].map((day,i) => `
+                    <label class="flex items-center gap-1 cursor-pointer">
+                      <input type="checkbox" value="${day}" class="work-day-cb w-3.5 h-3.5 rounded border-gray-300 text-blue-600" ${i < 6 ? 'checked' : ''}>
+                      <span class="text-[10px] text-gray-600">${day}</span>
+                    </label>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
             
             <!-- الموقع على الخريطة -->
             <div>
@@ -1018,6 +1066,8 @@ const App = {
   submitPlace() {
     if (!this.validatePlaceForm()) return;
     const n = document.getElementById('placeName').value, c = document.getElementById('placeCategory').value, s = document.getElementById('placeSubCategory').value, ci = document.getElementById('placeCity').value;
+    // جمع أيام العمل المحددة
+    const workDays = Array.from(document.querySelectorAll('.work-day-cb:checked')).map(cb => cb.value);
     Data.addPlace({ 
       name:n, category:c, subcategory:s||null, city:ci, 
       description:document.getElementById('placeDesc').value, 
@@ -1029,6 +1079,9 @@ const App = {
       instagram:document.getElementById('placeInstagram').value || null,
       telegram:document.getElementById('placeTelegram').value || null,
       website:document.getElementById('placeWebsite').value || null,
+      openTime:document.getElementById('placeOpenTime').value || null,
+      closeTime:document.getElementById('placeCloseTime').value || null,
+      workDays:workDays.length > 0 ? workDays : null,
       lat:document.getElementById('placeLat').value || null,
       lng:document.getElementById('placeLng').value || null,
       images:this.placeImages, owner:Auth.currentUser.id, verified:false, featured:false 
