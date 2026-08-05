@@ -55,6 +55,10 @@ const App = {
       app.innerHTML = `<div class="min-h-screen ${bg}">${this.renderHeader(user)}${Ads.renderPosition('header')}<main class="fade-in">${this['render_' + this.currentView]?.() || ''}</main>${this.renderFooter()}</div>`;
       this.initIcons();
       this.initAllCustomSelects();
+      // Initialize map on add page
+      if (this.currentView === 'add') {
+        setTimeout(() => this.initPlaceMap(), 300);
+      }
       Ads.initAllSliders();
       // Scroll to top on navigation
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -464,6 +468,23 @@ const App = {
               <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(location.origin + '/#place/' + place.id)}" target="_blank" class="w-8 h-8 rounded-full bg-blue-800 text-white flex items-center justify-center hover:bg-blue-900" title="لينكدإن"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
             </div>
             ${place.address ? `<div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm flex items-start gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-gray-400 mt-0.5 shrink-0"></i><span>${place.address}</span></div>` : ''}
+            
+            <!-- Social Media Links -->
+            ${(place.facebook || place.instagram || place.telegram || place.website) ? `
+            <div class="flex flex-wrap gap-2 mb-4">
+              ${place.facebook ? `<a href="${place.facebook}" target="_blank" class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors" title="فيسبوك"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>` : ''}
+              ${place.instagram ? `<a href="${place.instagram}" target="_blank" class="w-9 h-9 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center hover:bg-pink-100 transition-colors" title="انستجرام"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
+              ${place.telegram ? `<a href="${place.telegram}" target="_blank" class="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center hover:bg-sky-100 transition-colors" title="تلجرام"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.504-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></a>` : ''}
+              ${place.website ? `<a href="${place.website}" target="_blank" class="w-9 h-9 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors" title="الموقع الإلكتروني"><i data-lucide="globe" class="w-5 h-5"></i></a>` : ''}
+            </div>` : ''}
+            
+            <!-- Map Location -->
+            ${(place.lat && place.lng) ? `
+            <div class="mb-4">
+              <h4 class="text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5"><i data-lucide="map" class="w-4 h-4 text-gray-500"></i>الموقع على الخريطة</h4>
+              <div id="placeDetailMap" class="rounded-xl overflow-hidden border border-gray-200" style="height:200px;"></div>
+              <a href="https://www.google.com/maps?q=${place.lat},${place.lng}" target="_blank" class="mt-2 text-blue-600 text-xs flex items-center gap-1 hover:underline"><i data-lucide="external-link" class="w-3 h-3"></i>فتح في خرائط جوجل</a>
+            </div>` : ''}
           </div>
         </div>
         <div class="bg-white rounded-xl p-4 md:p-6 mt-3 border border-gray-100">
@@ -482,6 +503,21 @@ const App = {
       </div>
     </section>${this.renderFooter()}</div>`;
     this.initIcons();
+    // Initialize map if coordinates exist
+    if (place.lat && place.lng) {
+      setTimeout(() => {
+        const mapEl = document.getElementById('placeDetailMap');
+        if (mapEl) {
+          const map = L.map('placeDetailMap').setView([parseFloat(place.lat), parseFloat(place.lng)], 15);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap',
+            maxZoom: 19
+          }).addTo(map);
+          L.marker([parseFloat(place.lat), parseFloat(place.lng)]).addTo(map)
+            .bindPopup(place.name);
+        }
+      }, 300);
+    }
   },
 
   // ====== ADD PLACE ======
@@ -506,6 +542,45 @@ const App = {
               <div><label class="block text-xs font-medium text-gray-700 mb-1">رقم واتساب</label><input type="tel" id="placeWhatsapp" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="777123456"></div>
             </div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">البريد الإلكتروني</label><input type="email" id="placeEmail" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="info@example.com"></div>
+            
+            <!-- الموقع على الخريطة -->
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-gray-500"></i>الموقع على الخريطة <span class="text-gray-400 font-normal">(اختياري)</span>
+              </label>
+              <div id="placeMapContainer" class="rounded-xl overflow-hidden border border-gray-200" style="height:250px;position:relative;">
+                <div id="placeMap" style="height:100%;width:100%;"></div>
+                <input type="hidden" id="placeLat">
+                <input type="hidden" id="placeLng">
+              </div>
+              <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><i data-lucide="info" class="w-3 h-3"></i>انقر على الخريطة لوضع دبوس موقعك</p>
+            </div>
+            
+            <!-- روابط التواصل الاجتماعي -->
+            <div class="border-t border-gray-100 pt-3">
+              <label class="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
+                <i data-lucide="link" class="w-3.5 h-3.5 text-gray-500"></i>روابط التواصل <span class="text-gray-400 font-normal">(اختياري)</span>
+              </label>
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div>
+                  <input type="url" id="placeFacebook" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="رابط صفحة فيسبوك">
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-pink-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></div>
+                  <input type="url" id="placeInstagram" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="رابط حساب انستجرام">
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center flex-shrink-0"><svg class="w-4 h-4 text-sky-600" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.504-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></div>
+                  <input type="url" id="placeTelegram" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="رابط حساب تلجرام">
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center flex-shrink-0"><i data-lucide="globe" class="w-4 h-4 text-green-600"></i></div>
+                  <input type="url" id="placeWebsite" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="رابط الموقع الإلكتروني">
+                </div>
+              </div>
+            </div>
+            
             <div>
               <label class="block text-xs font-medium text-gray-700 mb-1">صور المكان</label>
               <input type="file" id="placeImagesInput" accept="image/*" multiple onchange="App.handlePlaceImageUpload(this.files)" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm">
@@ -837,10 +912,99 @@ const App = {
     catch (x) { err.querySelector('span').textContent = x.message; err.classList.remove('hidden'); this.initIcons(); }
   },
   async doGoogleLogin() { try { await Auth.loginWithGoogle(); location.hash = 'home'; this.render(); } catch (e) { alert(e.message); } },
+  // ====== MAP INITIALIZATION ======
+  placeMap: null,
+  placeMarker: null,
+  
+  initPlaceMap() {
+    if (this.placeMap) return;
+    const mapEl = document.getElementById('placeMap');
+    if (!mapEl) return;
+    
+    // Initialize map centered on Yemen
+    this.placeMap = L.map('placeMap').setView([15.3694, 44.191], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap',
+      maxZoom: 19
+    }).addTo(this.placeMap);
+    
+    // Click to place marker
+    this.placeMap.on('click', (e) => {
+      const { lat, lng } = e.latlng;
+      document.getElementById('placeLat').value = lat.toFixed(6);
+      document.getElementById('placeLng').value = lng.toFixed(6);
+      
+      if (this.placeMarker) {
+        this.placeMarker.setLatLng([lat, lng]);
+      } else {
+        this.placeMarker = L.marker([lat, lng], { draggable: true }).addTo(this.placeMap);
+        this.placeMarker.on('dragend', (e) => {
+          const pos = e.target.getLatLng();
+          document.getElementById('placeLat').value = pos.lat.toFixed(6);
+          document.getElementById('placeLng').value = pos.lng.toFixed(6);
+        });
+      }
+    });
+    
+    // Fix map display
+    setTimeout(() => { this.placeMap.invalidateSize(); }, 200);
+  },
+
+  // ====== FORM VALIDATION ======
+  validatePlaceForm() {
+    let isValid = true;
+    const required = ['placeName', 'placeCategory', 'placeCity'];
+    
+    // Reset all borders
+    document.querySelectorAll('#placeName, #placeCategory, #placeCity').forEach(el => {
+      el.style.borderColor = '#e5e7eb';
+    });
+    document.querySelectorAll('.custom-select-trigger').forEach(el => {
+      el.style.borderColor = '#e5e7eb';
+    });
+    
+    required.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el || !el.value.trim()) {
+        isValid = false;
+        // Find the custom select trigger if exists
+        const wrapper = el?.closest('.custom-select-wrapper');
+        if (wrapper) {
+          const trigger = wrapper.querySelector('.custom-select-trigger');
+          if (trigger) trigger.style.borderColor = '#ef4444';
+        } else if (el) {
+          el.style.borderColor = '#ef4444';
+        }
+      }
+    });
+    
+    if (!isValid) {
+      // Scroll to first error
+      const firstError = document.querySelector('[style*="border-color: rgb(239, 68, 68)"], [style*="border-color: #ef4444"]');
+      if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    return isValid;
+  },
+
   submitPlace() {
+    if (!this.validatePlaceForm()) return;
     const n = document.getElementById('placeName').value, c = document.getElementById('placeCategory').value, s = document.getElementById('placeSubCategory').value, ci = document.getElementById('placeCity').value;
-    if (!n||!c||!ci) { alert('يرجى ملء الحقول المطلوبة'); return; }
-    Data.addPlace({ name:n, category:c, subcategory:s||null, city:ci, description:document.getElementById('placeDesc').value, address:document.getElementById('placeAddress').value, phone:document.getElementById('placePhone').value, whatsapp:document.getElementById('placeWhatsapp').value, email:document.getElementById('placeEmail').value, images:this.placeImages, owner:Auth.currentUser.id, verified:false, featured:false });
+    Data.addPlace({ 
+      name:n, category:c, subcategory:s||null, city:ci, 
+      description:document.getElementById('placeDesc').value, 
+      address:document.getElementById('placeAddress').value, 
+      phone:document.getElementById('placePhone').value, 
+      whatsapp:document.getElementById('placeWhatsapp').value, 
+      email:document.getElementById('placeEmail').value, 
+      facebook:document.getElementById('placeFacebook').value || null,
+      instagram:document.getElementById('placeInstagram').value || null,
+      telegram:document.getElementById('placeTelegram').value || null,
+      website:document.getElementById('placeWebsite').value || null,
+      lat:document.getElementById('placeLat').value || null,
+      lng:document.getElementById('placeLng').value || null,
+      images:this.placeImages, owner:Auth.currentUser.id, verified:false, featured:false 
+    });
     Admin.notifyNewPlace(n, Auth.currentUser.name);
     this.placeImages = [];
     alert('تم إضافة المكان بنجاح! سيتم مراجعته من قبل الإدارة.'); location.hash = 'myplaces';

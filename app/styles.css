@@ -193,6 +193,38 @@ select:hover {
   border-radius: 8px !important;
 }
 
+/* Map Container */
+#placeMap, #placeDetailMap {
+  z-index: 1;
+}
+
+#placeMapContainer {
+  position: relative;
+}
+
+/* Leaflet fixes for RTL */
+.leaflet-control-attribution {
+  font-size: 9px !important;
+}
+
+/* Form validation - red border */
+.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.custom-select-trigger.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Social media links container */
+.social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* Custom Dropdown - Professional Mobile Select */
 .custom-select-wrapper {
   position: relative;
