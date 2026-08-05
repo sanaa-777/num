@@ -334,7 +334,15 @@ const App = {
           </div>
         </div>
         <h3 class="text-xs font-bold text-gray-700 mb-3 flex items-center gap-1.5"><i data-lucide="map-pin" class="w-4 h-4 text-blue-600"></i>جميع الأماكن (${places.length})</h3>
-        ${places.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${places.map(p => this.renderPlaceCard(p)).join('')}</div>` : '<div class="text-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100 text-sm">لا توجد أماكن بعد</div>'}
+        <div class="mb-4">
+          <div class="custom-select-wrapper" style="max-width:280px;">
+            <select id="catCityFilter" onchange="App.filterCity(this.value)" style="position:absolute;opacity:0;pointer-events:none;">
+              <option value="">جميع المدن</option>
+              ${Data.cities.map(c => { const count = places.filter(p => p.city === c.id).length; if (!count) return ''; return `<option value="${c.id}" ${this.selectedCity===c.id?'selected':''}>${c.name} (${count})</option>`; }).join('')}
+            </select>
+          </div>
+        </div>
+        ${places.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${places.filter(p => !this.selectedCity || p.city === this.selectedCity).map(p => this.renderPlaceCard(p)).join('')}</div>` : '<div class="text-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100 text-sm">لا توجد أماكن بعد</div>'}
       </div>
     </section>`;
   },
@@ -362,19 +370,20 @@ const App = {
             <p class="text-xs text-gray-500">${cat.name} • ${places.length} مكان</p>
           </div>
         </div>
-        <div class="filter-buttons">
-          <button onclick="App.filterCity(null)" class="filter-btn ${!this.selectedCity ? 'active' : ''}">
-            <i data-lucide="layers"></i>
-            الكل
-          </button>
-          ${Data.cities.map(c => { const count = places.filter(p => p.city === c.id).length; if (!count) return ''; return `<button onclick="App.filterCity('${c.id}')" class="filter-btn ${this.selectedCity === c.id ? 'active' : ''}">${c.name} <span class="filter-btn-count">${count}</span></button>`; }).join('')}
+        <div class="mb-4">
+          <div class="custom-select-wrapper" style="max-width:280px;">
+            <select id="subCityFilter" onchange="App.filterCity(this.value)" style="position:absolute;opacity:0;pointer-events:none;">
+              <option value="">جميع المدن</option>
+              ${Data.cities.map(c => { const count = places.filter(p => p.city === c.id).length; if (!count) return ''; return `<option value="${c.id}" ${this.selectedCity===c.id?'selected':''}>${c.name} (${count})</option>`; }).join('')}
+            </select>
+          </div>
         </div>
         ${places.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${places.filter(p => !this.selectedCity || p.city === this.selectedCity).map(p => this.renderPlaceCard(p)).join('')}</div>` : '<div class="text-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100 text-sm">لا توجد أماكن</div>'}
       </div>
     </section>`;
   },
 
-  filterCity(id) { this.selectedCity = id; this.render(); },
+  filterCity(id) { this.selectedCity = id || null; this.render(); },
 
   // ====== SEARCH ======
   render_search() {
