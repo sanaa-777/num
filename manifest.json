@@ -1,0 +1,34 @@
+{
+  "name": "دليل اليمن - الدليل الشامل للأعمال والأماكن",
+  "short_name": "دليل اليمن",
+  "description": "دليل اليمن الشامل - ابحث عن المطاعم والفنادق والعيادات والمتاجر وجميع الخدمات في اليمن",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "dir": "rtl",
+  "lang": "ar",
+  "categories": ["business", "lifestyle", "navigation"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563eb'/><text x='50' y='65' text-anchor='middle' font-size='50' font-family='Arial' font-weight='bold' fill='white'>د</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "البحث",
+      "url": "/#search",
+      "icons": [{"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.35-4.35'/></svg>", "sizes": "96x96"}]
+    },
+    {
+      "name": "إضافة مكان",
+      "url": "/#add",
+      "icons": [{"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'><circle cx='12' cy='12' r='10'/><path d='M8 12h8'/><path d='M12 8v8'/></svg>", "sizes": "96x96"}]
+    }
+  ]
+}

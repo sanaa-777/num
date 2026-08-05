@@ -1,5 +1,5 @@
 // =============================================
-// نظام المصادقة - Auth System
+// نظام المصادقة - Auth System (محدث)
 // =============================================
 
 const Auth = {
@@ -15,9 +15,13 @@ const Auth = {
       name, email,
       phone: phone || '',
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=3b82f6&color=fff&size=128`,
+      coverImage: null,
       role: 'user',
       verified: false,
       suspended: false,
+      bio: '',
+      location: '',
+      website: '',
       createdAt: new Date().toISOString(),
     };
     const credentials = JSON.parse(localStorage.getItem('dy_credentials') || '{}');
@@ -29,9 +33,7 @@ const Auth = {
     this.currentUser = user;
     localStorage.setItem('dy_current_user', JSON.stringify(user));
 
-    // إشعار الأدمن بمستخدم جديد
     Admin.notifyVerificationRequest(name, user.id);
-
     return user;
   },
 
@@ -76,7 +78,6 @@ const Auth = {
     const saved = localStorage.getItem('dy_current_user');
     if (saved) {
       this.currentUser = JSON.parse(saved);
-      // تحديث من القائمة الرئيسية
       const users = JSON.parse(localStorage.getItem('dy_users') || '[]');
       const fresh = users.find(u => u.id === this.currentUser.id);
       if (fresh) this.currentUser = fresh;
@@ -98,8 +99,48 @@ const Auth = {
     localStorage.setItem('dy_current_user', JSON.stringify(this.currentUser));
   },
 
+  // رفع صورة الملف الشخصي
+  async uploadAvatar(file) {
+    const base64 = await this._compressImage(file, 400);
+    this.updateProfile({ avatar: base64 });
+    return base64;
+  },
+
+  // رفع صورة الغلاف
+  async uploadCover(file) {
+    const base64 = await this._compressImage(file, 800);
+    this.updateProfile({ coverImage: base64 });
+    return base64;
+  },
+
   isVerified() {
     return this.currentUser && this.currentUser.verified;
+  },
+
+  // ضغط الصورة
+  _compressImage(file, maxWidth = 400) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let w = img.width;
+          let h = img.height;
+          if (w > maxWidth) {
+            h = (maxWidth / w) * h;
+            w = maxWidth;
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
   },
 
   _hashPassword(password) {

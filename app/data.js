@@ -426,5 +426,100 @@ const Data = {
   },
   getReviews(pid) { return (JSON.parse(localStorage.getItem('dy_reviews') || '[]')).filter(r => r.placeId === pid).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)); },
   getStats() { return { places: this.getPlaces().length, users: JSON.parse(localStorage.getItem('dy_users')||'[]').length, reviews: JSON.parse(localStorage.getItem('dy_reviews')||'[]').length, cities: this.cities.length, categories: this.categories.length }; },
-  getSubCategory(id) { for (const c of this.categories) { const s = c.subs.find(x => x.id === id); if (s) return { ...s, parent: c }; } return null; }
+  getSubCategory(id) { for (const c of this.categories) { const s = c.subs.find(x => x.id === id); if (s) return { ...s, parent: c }; } return null; },
+
+  // رفع صور المكان
+  async uploadPlaceImages(files, maxWidth = 800) {
+    const images = [];
+    for (const file of files) {
+      const base64 = await this._compressImage(file, maxWidth);
+      images.push(base64);
+    }
+    return images;
+  },
+
+  // ضغط الصورة
+  _compressImage(file, maxWidth = 800) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let w = img.width;
+          let h = img.height;
+          if (w > maxWidth) {
+            h = (maxWidth / w) * h;
+            w = maxWidth;
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  },
+
+  // ====== نظام الترجمة ======
+  currentLang: localStorage.getItem('dy_lang') || 'ar',
+
+  translations: {
+    ar: {
+      home: 'الرئيسية', search: 'بحث', add: 'إضافة', favorites: 'المفضلة', profile: 'الملف الشخصي',
+      login: 'دخول', signup: 'حساب جديد', logout: 'تسجيل الخروج',
+      categories: 'الأقسام الرئيسية', featured: 'أماكن مميزة', cities: 'المدن', latest: 'أحدث الأماكن',
+      addPlace: 'إضافة مكان جديد', myPlaces: 'مواقعي', verified: 'موثّق', pending: 'بانتظار التوثيق',
+      darkMode: 'الوضع المظلم', language: 'اللغة', notifications: 'إشعارات',
+      searchPlaceholder: 'ابحث عن مكان، خدمة، أونشاط...', noResults: 'لا توجد نتائج',
+      name: 'الاسم', email: 'البريد الإلكتروني', phone: 'رقم الهاتف', password: 'كلمة المرور',
+      description: 'الوصف', address: 'العنوان', whatsapp: 'رقم واتساب',
+      category: 'القسم الرئيسي', subcategory: 'القسم الفرعي', city: 'المدينة',
+      save: 'حفظ', cancel: 'إلغاء', delete: 'حذف', edit: 'تعديل',
+      call: 'اتصال', map: 'خريطة', share: 'مشاركة',
+      reviews: 'المراجعات', writeReview: 'اكتب مراجعتك...', submit: 'إرسال',
+      addImages: 'إضافة صور', uploadFromDevice: 'رفع من الجهاز',
+      places: 'مكان', users: 'مستخدم', reviewCount: 'مراجعة',
+      discoverYemen: 'اكتشف اليمن', subtitle: 'الدليل الشامل للأعمال والأماكن في جميع أنحاء اليمن',
+      addYourPlace: 'أضف مكانك مجاناً', startNow: 'ابدأ الآن',
+      viewAll: 'عرض الكل', results: 'نتيجة',
+    },
+    en: {
+      home: 'Home', search: 'Search', add: 'Add', favorites: 'Favorites', profile: 'Profile',
+      login: 'Login', signup: 'Sign Up', logout: 'Logout',
+      categories: 'Categories', featured: 'Featured Places', cities: 'Cities', latest: 'Latest Places',
+      addPlace: 'Add New Place', myPlaces: 'My Places', verified: 'Verified', pending: 'Pending Verification',
+      darkMode: 'Dark Mode', language: 'Language', notifications: 'Notifications',
+      searchPlaceholder: 'Search for a place, service, or activity...', noResults: 'No results found',
+      name: 'Name', email: 'Email', phone: 'Phone', password: 'Password',
+      description: 'Description', address: 'Address', whatsapp: 'WhatsApp Number',
+      category: 'Main Category', subcategory: 'Sub Category', city: 'City',
+      save: 'Save', cancel: 'Cancel', delete: 'Delete', edit: 'Edit',
+      call: 'Call', map: 'Map', share: 'Share',
+      reviews: 'Reviews', writeReview: 'Write your review...', submit: 'Submit',
+      addImages: 'Add Images', uploadFromDevice: 'Upload from Device',
+      places: 'Places', users: 'Users', reviewCount: 'Reviews',
+      discoverYemen: 'Discover Yemen', subtitle: 'The comprehensive guide for businesses and places in Yemen',
+      addYourPlace: 'Add Your Place for Free', startNow: 'Start Now',
+      viewAll: 'View All', results: 'results',
+    }
+  },
+
+  t(key) {
+    return this.translations[this.currentLang]?.[key] || this.translations['ar']?.[key] || key;
+  },
+
+  setLang(lang) {
+    this.currentLang = lang;
+    localStorage.setItem('dy_lang', lang);
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  },
+
+  toggleLang() {
+    this.setLang(this.currentLang === 'ar' ? 'en' : 'ar');
+  }
 };

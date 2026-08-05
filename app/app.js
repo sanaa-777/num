@@ -8,6 +8,8 @@ const App = {
   init() {
     Auth.checkAuth();
     Admin.initDefaultAdmin();
+    this.initDarkMode();
+    this.initLang();
     this.render();
     window.addEventListener('hashchange', () => this.handleRoute());
     this.handleRoute();
@@ -52,25 +54,88 @@ const App = {
 
   initIcons() { try { lucide.createIcons(); } catch(e) {} },
 
+  // Dark Mode
+  initDarkMode() {
+    const isDark = localStorage.getItem('dy_dark_mode') === 'true';
+    if (isDark) document.documentElement.classList.add('dark');
+  },
+  toggleDarkMode() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('dy_dark_mode', isDark);
+    this.render();
+  },
+
+  // Language
+  initLang() {
+    const lang = localStorage.getItem('dy_lang') || 'ar';
+    Data.setLang(lang);
+  },
+  toggleLang() {
+    Data.toggleLang();
+    this.render();
+  },
+
+  // Image Upload
+  placeImages: [],
+  async handlePlaceImageUpload(files) {
+    const images = await Data.uploadPlaceImages(files, 800);
+    this.placeImages.push(...images);
+    this.updatePlaceImagePreview();
+  },
+  removePlaceImage(index) {
+    this.placeImages.splice(index, 1);
+    this.updatePlaceImagePreview();
+  },
+  updatePlaceImagePreview() {
+    const preview = document.getElementById('placeImagePreview');
+    if (preview) {
+      preview.innerHTML = this.placeImages.map((img, i) => `
+        <div class="relative">
+          <img src="${img}" class="w-20 h-16 object-cover rounded-lg border">
+          <button onclick="App.removePlaceImage(${i})" class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">
+            <i data-lucide="x" class="w-3 h-3"></i>
+          </button>
+        </div>
+      `).join('');
+      this.initIcons();
+    }
+  },
+
+  // Profile Image Upload
+  async handleAvatarUpload(file) {
+    await Auth.uploadAvatar(file);
+    this.render();
+  },
+
   // ====== HEADER ======
   renderHeader(user) {
+    const isDark = document.documentElement.classList.contains('dark');
+    const isAr = Data.currentLang === 'ar';
     return `
-    <header class="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">
+    <header class="bg-white dark:bg-dark-900 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-dark-700">
       <div class="max-w-7xl mx-auto px-3 py-2.5 flex items-center justify-between gap-2">
         <a href="#home" class="flex items-center gap-2 shrink-0">
           <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center"><span class="text-white font-bold text-lg">د</span></div>
-          <h1 class="text-lg font-bold text-gray-900 m-0 hidden sm:block">دليل اليمن</h1>
+          <h1 class="text-lg font-bold text-gray-900 dark:text-white m-0 hidden sm:block">${isAr ? 'دليل Yemen' : 'Yemen Guide'}</h1>
         </a>
         <div class="flex-1 max-w-sm mx-2 hidden md:block">
           <div class="relative">
-            <input type="text" id="headerSearch" placeholder="ابحث..." class="w-full px-3 py-2 pr-9 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" value="${this.searchQuery}" oninput="App.onSearchInput(this.value)" autocomplete="off">
+            <input type="text" id="headerSearch" placeholder="${Data.t('searchPlaceholder')}" class="w-full px-3 py-2 pr-9 rounded-lg border border-gray-200 dark:border-dark-600 dark:bg-dark-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" value="${this.searchQuery}" oninput="App.onSearchInput(this.value)" autocomplete="off">
             <i data-lucide="search" class="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400"></i>
-            <div id="headerSearchSuggestions" class="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 hidden"></div>
+            <div id="headerSearchSuggestions" class="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-gray-100 dark:border-dark-700 overflow-hidden z-50 hidden"></div>
           </div>
         </div>
         <nav class="flex items-center gap-1">
-          <a href="#home" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 flex items-center gap-1"><i data-lucide="home" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">الرئيسية</span></a>
-          <a href="#search" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 flex items-center gap-1"><i data-lucide="search" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">بحث</span></a>
+          <!-- Dark Mode Toggle -->
+          <button onclick="App.toggleDarkMode()" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700" title="${Data.t('darkMode')}">
+            <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4"></i>
+          </button>
+          <!-- Language Toggle -->
+          <button onclick="App.toggleLang()" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 text-xs font-medium" title="${Data.t('language')}">
+            ${isAr ? 'EN' : 'عربي'}
+          </button>
+          <a href="#home" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 flex items-center gap-1"><i data-lucide="home" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">${Data.t('home')}</span></a>
+          <a href="#search" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 flex items-center gap-1"><i data-lucide="search" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">${Data.t('search')}</span></a>
           ${user ? `
             <a href="#add" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">إضافة</span></a>
             <div class="relative group">
@@ -414,6 +479,11 @@ const App = {
               <div><label class="block text-xs font-medium text-gray-700 mb-1">رقم واتساب</label><input type="tel" id="placeWhatsapp" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="777123456"></div>
             </div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">البريد الإلكتروني</label><input type="email" id="placeEmail" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="info@example.com"></div>
+            <div>
+              <label class="block text-xs font-medium text-gray-700 mb-1">صور المكان</label>
+              <input type="file" id="placeImagesInput" accept="image/*" multiple onchange="App.handlePlaceImageUpload(this.files)" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm">
+              <div id="placeImagePreview" class="flex flex-wrap gap-2 mt-2"></div>
+            </div>
             <button onclick="App.submitPlace()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i>إضافة المكان</button>
           </div>
         </div>
@@ -483,12 +553,37 @@ const App = {
     if (!Auth.currentUser) return this.render_login();
     const u = Auth.currentUser;
     return `<section class="py-6 md:py-8"><div class="max-w-2xl mx-auto px-3">
-      <div class="bg-white rounded-xl p-4 md:p-6 border border-gray-100">
-        <div class="flex items-center gap-3 mb-5"><img src="${u.avatar}" class="w-12 h-12 rounded-full" alt=""><div><h3 class="text-lg font-bold">${u.name}</h3><p class="text-gray-500 text-xs">${u.email}</p></div></div>
-        <div class="space-y-3">
-          <div><label class="block text-xs font-medium text-gray-700 mb-1">الاسم</label><input type="text" id="profileName" value="${u.name}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
-          <div><label class="block text-xs font-medium text-gray-700 mb-1">الهاتف</label><input type="tel" id="profilePhone" value="${u.phone||''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
-          <button onclick="App.updateProfile()" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-700 text-sm flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i>حفظ</button>
+      <div class="bg-white rounded-xl overflow-hidden border border-gray-100">
+        <!-- Cover Image -->
+        <div class="h-32 bg-gradient-to-r from-blue-500 to-blue-700 relative">
+          ${u.coverImage ? `<img src="${u.coverImage}" class="w-full h-full object-cover" alt="">` : ''}
+          <label class="absolute bottom-2 right-2 bg-white/80 hover:bg-white text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer flex items-center gap-1">
+            <i data-lucide="camera" class="w-3.5 h-3.5"></i>تغيير الغلاف
+            <input type="file" accept="image/*" onchange="Auth.uploadCover(this.files[0]).then(()=>App.render())" class="hidden">
+          </label>
+        </div>
+        <div class="p-4 md:p-6 -mt-10">
+          <!-- Avatar -->
+          <div class="flex items-end gap-4 mb-5">
+            <div class="relative">
+              <img src="${u.avatar}" class="w-20 h-20 rounded-full border-4 border-white shadow-lg" alt="">
+              <label class="absolute bottom-0 left-0 w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700">
+                <i data-lucide="camera" class="w-3.5 h-3.5 text-white"></i>
+                <input type="file" accept="image/*" onchange="App.handleAvatarUpload(this.files[0])" class="hidden">
+              </label>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold">${u.name}</h3>
+              <p class="text-gray-500 text-xs">${u.email}</p>
+              ${u.verified ? '<span class="inline-flex items-center gap-1 text-blue-600 text-xs font-medium"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i>موثّق</span>' : '<span class="text-gray-400 text-xs">بانتظار التوثيق</span>'}
+            </div>
+          </div>
+          <div class="space-y-3">
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">الاسم</label><input type="text" id="profileName" value="${u.name}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">الهاتف</label><input type="tel" id="profilePhone" value="${u.phone||''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">نبذة عنك</label><textarea id="profileBio" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" rows="2">${u.bio||''}</textarea></div>
+            <button onclick="App.updateProfile()" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-700 text-sm flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i>حفظ التعديلات</button>
+          </div>
         </div>
       </div>
     </div></section>`;
@@ -612,15 +707,16 @@ const App = {
   submitPlace() {
     const n = document.getElementById('placeName').value, c = document.getElementById('placeCategory').value, s = document.getElementById('placeSubCategory').value, ci = document.getElementById('placeCity').value;
     if (!n||!c||!ci) { alert('يرجى ملء الحقول المطلوبة'); return; }
-    Data.addPlace({ name:n, category:c, subcategory:s||null, city:ci, description:document.getElementById('placeDesc').value, address:document.getElementById('placeAddress').value, phone:document.getElementById('placePhone').value, whatsapp:document.getElementById('placeWhatsapp').value, email:document.getElementById('placeEmail').value, owner:Auth.currentUser.id, verified:false, featured:false });
+    Data.addPlace({ name:n, category:c, subcategory:s||null, city:ci, description:document.getElementById('placeDesc').value, address:document.getElementById('placeAddress').value, phone:document.getElementById('placePhone').value, whatsapp:document.getElementById('placeWhatsapp').value, email:document.getElementById('placeEmail').value, images:this.placeImages, owner:Auth.currentUser.id, verified:false, featured:false });
     Admin.notifyNewPlace(n, Auth.currentUser.name);
+    this.placeImages = [];
     alert('تم إضافة المكان بنجاح! سيتم مراجعته من قبل الإدارة.'); location.hash = 'myplaces';
   },
   toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } Data.toggleFavorite(Auth.currentUser.id, pid); this.render(); },
   setRating(s) { document.querySelectorAll('[data-star]').forEach(b => { const v = parseInt(b.dataset.star); b.className = v <= s ? 'text-yellow-500' : 'text-gray-300'; b.querySelector('i')?.classList.toggle('fill-yellow-500', v <= s); }); this._selectedRating = s; },
   submitReview(pid) { if (!this._selectedRating) { alert('اختر تقييم'); return; } const c = document.getElementById('reviewComment').value; if (!c) { alert('اكتب تعليق'); return; } Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, this._selectedRating, c); this._selectedRating = 0; this.showPlace(pid); },
   deletePlaceConfirm(id) { if (confirm('هل أنت متأكد من الحذف؟')) { Data.deletePlace(id); alert('تم الحذف'); location.hash = 'myplaces'; } },
-  updateProfile() { Auth.updateProfile({ name:document.getElementById('profileName').value, phone:document.getElementById('profilePhone').value }); alert('تم التحديث'); this.render(); },
+  updateProfile() { Auth.updateProfile({ name:document.getElementById('profileName').value, phone:document.getElementById('profilePhone').value, bio:document.getElementById('profileBio')?.value||'' }); alert('تم التحديث'); this.render(); },
 
   // Admin moved to admin.html
   render_admin() { window.location.href = 'admin.html'; return ''; }
