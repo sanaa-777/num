@@ -268,8 +268,8 @@ const App = {
               <i data-lucide="search" class="absolute right-2.5 top-3 w-4 h-4 text-gray-400"></i>
             </div>
             <div class="flex gap-2">
-              <select id="searchCat" class="flex-1 px-2 py-2 rounded-lg border border-gray-200 focus:outline-none text-xs"><option value="">جميع الأقسام</option>${Data.categories.map(c => `<option value="${c.id}" ${this.selectedCategory===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
-              <select id="searchCity" class="flex-1 px-2 py-2 rounded-lg border border-gray-200 focus:outline-none text-xs"><option value="">جميع المدن</option>${Data.cities.map(c => `<option value="${c.id}" ${this.selectedCity===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
+              <select id="searchCat" class="flex-1 py-2.5 text-xs"><option value="">جميع الأقسام</option>${Data.categories.map(c => `<option value="${c.id}" ${this.selectedCategory===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
+              <select id="searchCity" class="flex-1 py-2.5 text-xs"><option value="">جميع المدن</option>${Data.cities.map(c => `<option value="${c.id}" ${this.selectedCity===c.id?'selected':''}>${c.name}</option>`).join('')}</select>
               <button onclick="App.doSearch()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold text-xs flex items-center gap-1"><i data-lucide="search" class="w-3.5 h-3.5"></i></button>
             </div>
           </div>
@@ -365,10 +365,10 @@ const App = {
           <div class="space-y-3">
             <div><label class="block text-xs font-medium text-gray-700 mb-1">اسم المكان *</label><input type="text" id="placeName" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" placeholder="مثال: مطعم البركة"></div>
             <div class="grid grid-cols-2 gap-3">
-              <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الرئيسي *</label><select id="placeCategory" onchange="App.updateSubs()" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-xs"><option value="">اختر القسم</option>${Data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
-              <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الفرعي *</label><select id="placeSubCategory" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-xs"><option value="">اختر القسم الفرعي</option></select></div>
+              <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الرئيسي *</label><select id="placeCategory" onchange="App.updateSubs()" class="w-full py-2.5 text-xs"><option value="">اختر القسم</option>${Data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+              <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الفرعي *</label><select id="placeSubCategory" class="w-full py-2.5 text-xs"><option value="">اختر القسم الفرعي</option></select></div>
             </div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">المدينة *</label><select id="placeCity" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-xs"><option value="">اختر المدينة</option>${Data.cities.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">المدينة *</label><select id="placeCity" class="w-full py-2.5 text-xs"><option value="">اختر المدينة</option>${Data.cities.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">الوصف</label><textarea id="placeDesc" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" rows="3" placeholder="وصف المكان..."></textarea></div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">العنوان</label><input type="text" id="placeAddress" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="الشارع، المدينة"></div>
             <div class="grid grid-cols-2 gap-3">
