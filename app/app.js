@@ -242,15 +242,6 @@ const App = {
       </div>
     </section>
 
-    <section class="py-6 md:py-10">
-      <div class="max-w-7xl mx-auto px-3">
-        <h3 class="text-base md:text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="map-pin" class="w-5 h-5 text-blue-600"></i>المدن</h3>
-        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2">
-          ${Data.cities.map(c => { const count = places.filter(p => p.city === c.id).length; return `<a href="#city/${c.id}" class="bg-white rounded-lg p-2 md:p-3 text-center hover:shadow-md transition-all cursor-pointer border border-gray-100 active-scale"><div class="text-xs md:text-sm font-bold text-gray-900">${c.name}</div><div class="text-[10px] text-gray-400">${count} مكان</div></a>`; }).join('')}
-        </div>
-      </div>
-    </section>
-
     <section class="bg-white py-6 md:py-10">
       <div class="max-w-7xl mx-auto px-3">
         <h3 class="text-base md:text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5 text-blue-600"></i>أحدث الأماكن</h3>
