@@ -44,12 +44,23 @@ const App = {
     else this.render();
   },
 
+  // Dark mode helper
+  C(light, dark) { return document.documentElement.classList.contains('dark') ? dark : light; },
+
   render() {
-    const app = document.getElementById('app');
-    const user = Auth.currentUser;
-    app.innerHTML = `<div class="min-h-screen bg-gray-50">${this.renderHeader(user)}${Ads.renderPosition('header')}<main>${this['render_' + this.currentView]?.() || ''}</main>${this.renderFooter()}</div>`;
-    this.initIcons();
-    Ads.initAllSliders();
+    try {
+      const app = document.getElementById('app');
+      const user = Auth.currentUser;
+      const bg = this.C('bg-gray-50', 'bg-dark-950');
+      app.innerHTML = `<div class="min-h-screen ${bg}">${this.renderHeader(user)}${Ads.renderPosition('header')}<main class="fade-in">${this['render_' + this.currentView]?.() || ''}</main>${this.renderFooter()}</div>`;
+      this.initIcons();
+      Ads.initAllSliders();
+      // Scroll to top on navigation
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {
+      console.error('Render error:', e);
+      document.getElementById('app').innerHTML = `<div class="min-h-screen flex items-center justify-center"><div class="text-center"><p class="text-red-500 mb-4">حدث خطأ</p><button onclick="location.hash='home';location.reload()" class="btn-primary">العودة للرئيسية</button></div></div>`;
+    }
   },
 
   initIcons() { try { lucide.createIcons(); } catch(e) {} },
