@@ -350,6 +350,10 @@ const Auth = {
       'auth/popup-blocked': 'تم حظر النافذة المنبثقة',
       'auth/invalid-credential': 'بيانات الدخول غير صحيحة'
     };
-    return new Error(messages[error.code] || error.message || 'حدث خطأ غير متوقع');
+    return ErrorTracker.createUserError(error, {
+      operation: 'auth.firebase',
+      code: error.code || 'AUTH-UNEXPECTED',
+      userMessage: messages[error.code] || error.message || 'تعذر إكمال عملية المصادقة حالياً'
+    });
   }
 };

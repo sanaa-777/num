@@ -23,6 +23,10 @@ const db = firebase.firestore();
 const storage = firebase.storage();
 const messaging = firebase.messaging();
 
+if (window.ErrorTracker) {
+  ErrorTracker.attachFirestore(db, firebase);
+}
+
 // إعدادات Firestore
 db.settings({
   cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
@@ -30,6 +34,13 @@ db.settings({
 
 // تمكين الـ Offline Persistence
 db.enablePersistence().catch((err) => {
+  if (window.ErrorTracker) {
+    ErrorTracker.capture(err, {
+      operation: 'firebase.persistence.enable',
+      code: err.code || 'FIRESTORE-PERSISTENCE-FAILED',
+      userMessage: 'تعذر تفعيل التخزين المحلي للتطبيق'
+    });
+  }
   if (err.code === 'failed-precondition') {
     console.log('Multiple tabs open - persistence disabled');
   } else if (err.code === 'unimplemented') {

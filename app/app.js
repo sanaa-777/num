@@ -3,36 +3,43 @@
 // =============================================
 
 const App = {
-  currentView: 'home', searchQuery: '', selectedCategory: null, selectedSubCategory: null, selectedCity: null, _selectedRating: 0,
+  currentView: 'home', searchQuery: '', selectedCategory: null, selectedSubCategory: null, selectedCity: null, _selectedRating: 0, _initialized: false,
 
   async init() {
-    await Auth.init();
-    await Admin.initDefaultAdmin();
-    await Data.preloadAll();
-    await Admin.refreshUnreadCount();
-    this.initDarkMode();
-    this.initLang();
-    this.render();
-    window.addEventListener('hashchange', () => this.handleRoute());
-    this.handleRoute();
+    if (this._initialized) return;
+    this._initialized = true;
+    try {
+      await Auth.init();
+      await Admin.initDefaultAdmin();
+      await Data.preloadAll();
+      await Admin.refreshUnreadCount();
+      this.initDarkMode();
+      this.initLang();
+      this.render();
+      window.addEventListener('hashchange', () => this.handleRoute());
+      this.handleRoute();
 
-    // إخفاء الاقتراحات عند النقر خارجها
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('#heroSearch') && !e.target.closest('#headerSearch') && !e.target.closest('#searchSuggestions') && !e.target.closest('#headerSearchSuggestions')) {
-        this.hideSuggestions();
-      }
-    });
-
-    // اختصارات لوحة المفاتيح
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') this.hideSuggestions();
-      if (e.key === 'Enter') {
-        const active = document.activeElement;
-        if (active && (active.id === 'heroSearch' || active.id === 'headerSearch')) {
-          this.doSearch();
+      // إخفاء الاقتراحات عند النقر خارجها
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('#heroSearch') && !e.target.closest('#headerSearch') && !e.target.closest('#searchSuggestions') && !e.target.closest('#headerSearchSuggestions')) {
+          this.hideSuggestions();
         }
-      }
-    });
+      });
+
+      // اختصارات لوحة المفاتيح
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') this.hideSuggestions();
+        if (e.key === 'Enter') {
+          const active = document.activeElement;
+          if (active && (active.id === 'heroSearch' || active.id === 'headerSearch')) {
+            this.doSearch();
+          }
+        }
+      });
+    } catch (e) {
+      this._initialized = false;
+      throw e;
+    }
   },
 
   handleRoute() {
@@ -70,11 +77,22 @@ const App = {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
       console.error('Render error:', e);
-      document.getElementById('app').innerHTML = `<div class="min-h-screen flex items-center justify-center"><div class="text-center"><p class="text-red-500 mb-4">حدث خطأ</p><button onclick="location.hash='home';location.reload()" class="btn-primary">العودة للرئيسية</button></div></div>`;
+      const payload = ErrorTracker.normalize(e, {
+        operation: `app.render.${this.currentView || 'unknown'}`,
+        code: e.code || 'APP-RENDER-FAILED',
+        userMessage: 'تعذر عرض هذه الصفحة حالياً'
+      });
+      ErrorTracker.writeLog(payload);
+      document.getElementById('app').innerHTML = ErrorTracker.buildErrorCard(payload, {
+        title: 'تعذر عرض الصفحة',
+        message: 'تعذر عرض هذه الصفحة حالياً',
+        action: "location.hash='home';location.reload()",
+        actionLabel: 'العودة للرئيسية'
+      });
     }
   },
 
-  initIcons() { try { lucide.createIcons(); } catch(e) {} },
+  initIcons() { try { lucide.createIcons(); } catch(e) { ErrorTracker.capture(e, { operation: 'app.icons.init', source: 'app_ui' }); } },
 
   // Dark Mode
   initDarkMode() {
@@ -974,20 +992,36 @@ const App = {
       if (el) { el.classList.add('hidden'); el.innerHTML = ''; }
     });
   },
-  doLogin() {
+  async doLogin() {
     const err = document.getElementById('loginError');
-    try { Auth.login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value); err.classList.add('hidden'); location.hash = 'home'; this.render(); }
-    catch (e) { err.querySelector('span').textContent = e.message; err.classList.remove('hidden'); this.initIcons(); }
+    try {
+      await Auth.login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
+      err.classList.add('hidden');
+      location.hash = 'home';
+      this.render();
+    } catch (e) {
+      err.querySelector('span').textContent = ErrorTracker.getInlineMessage(e);
+      err.classList.remove('hidden');
+      this.initIcons();
+    }
   },
-  doSignup() {
+  async doSignup() {
     const err = document.getElementById('signupError');
     const n = document.getElementById('signupName').value, e = document.getElementById('signupEmail').value, p = document.getElementById('signupPhone').value, pw = document.getElementById('signupPassword').value;
     if (!n||!e||!pw) { err.querySelector('span').textContent = 'يرجى ملء الحقول المطلوبة'; err.classList.remove('hidden'); this.initIcons(); return; }
     if (pw.length < 6) { err.querySelector('span').textContent = 'كلمة المرور 6 أحرف على الأقل'; err.classList.remove('hidden'); this.initIcons(); return; }
-    try { Auth.signup(n, e, pw, p); err.classList.add('hidden'); location.hash = 'home'; this.render(); }
-    catch (x) { err.querySelector('span').textContent = x.message; err.classList.remove('hidden'); this.initIcons(); }
+    try {
+      await Auth.signup(n, e, pw, p);
+      err.classList.add('hidden');
+      location.hash = 'home';
+      this.render();
+    } catch (x) {
+      err.querySelector('span').textContent = ErrorTracker.getInlineMessage(x);
+      err.classList.remove('hidden');
+      this.initIcons();
+    }
   },
-  async doGoogleLogin() { try { await Auth.loginWithGoogle(); location.hash = 'home'; this.render(); } catch (e) { alert(e.message); } },
+  async doGoogleLogin() { try { await Auth.loginWithGoogle(); location.hash = 'home'; this.render(); } catch (e) { alert(ErrorTracker.getInlineMessage(e)); } },
   // ====== MAP INITIALIZATION ======
   placeMap: null,
   placeMarker: null,
@@ -1112,7 +1146,7 @@ const App = {
         title: place.name + ' - الدليل اليمني التجاري',
         text: shareText,
         url: shareUrl
-      }).catch(() => {});
+      }).catch((shareError) => { ErrorTracker.capture(shareError, { operation: 'app.place.share', source: 'navigator.share' }); });
     } else {
       // نسخ الرابط كبديل
       this.copyPlaceLink(pid);
@@ -1129,7 +1163,8 @@ const App = {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareText).then(() => {
         this.showCopyToast();
-      }).catch(() => {
+      }).catch((copyError) => {
+        ErrorTracker.capture(copyError, { operation: 'app.place.copy_link', source: 'navigator.clipboard' });
         this.fallbackCopy(shareText);
       });
     } else {
@@ -1154,7 +1189,7 @@ const App = {
     toast.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium z-50 shadow-lg fade-in';
     toast.innerHTML = '<span class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>تم نسخ الرابط بنجاح</span>';
     document.body.appendChild(toast);
-    try { lucide.createIcons({ nodes: [toast] }); } catch(e) {}
+    try { lucide.createIcons({ nodes: [toast] }); } catch(e) { ErrorTracker.capture(e, { operation: 'app.toast.icons', source: 'app_ui' }); }
     setTimeout(() => { toast.remove(); }, 2000);
   },
 

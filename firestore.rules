@@ -53,6 +53,12 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ====== سجلات الأخطاء ======
+    match /error_logs/{logId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+
     // ====== الإعلانات ======
     match /ads/{adId} {
       allow read: if true; // الإعلانات النشطة للعامة

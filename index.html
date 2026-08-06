@@ -111,6 +111,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js" defer></script>
 
+  <!-- Error Tracker -->
+  <script src="app/error-tracker.js" defer></script>
+
   <!-- Firebase Config -->
   <script src="app/firebase-config.js" defer></script>
 
@@ -136,8 +139,16 @@
   <script>
     window.addEventListener('load', async () => {
       if (typeof firebase === 'undefined') {
-        console.error('Firebase not loaded');
-        document.getElementById('app').innerHTML = '<div style="text-align:center;padding:40px;color:red;">خطأ في تحميل Firebase</div>';
+        const payload = ErrorTracker.normalize(new Error('Firebase SDK not loaded'), {
+          operation: 'app.bootstrap.firebase',
+          code: 'APP-FIREBASE-NOT-LOADED',
+          userMessage: 'تعذر تحميل خدمات التطبيق الأساسية'
+        });
+        ErrorTracker.writeLog(payload);
+        document.getElementById('app').innerHTML = ErrorTracker.buildErrorCard(payload, {
+          title: 'تعذر تحميل التطبيق',
+          message: 'تعذر تحميل خدمات التطبيق الأساسية'
+        });
         return;
       }
       try {
@@ -148,9 +159,18 @@
         // محاولة أخيرة بدون Firestore
         try {
           Data._placesCache = Data.defaultPlaces || [];
-          App.init();
+          await App.init();
         } catch(e2) {
-          document.getElementById('app').innerHTML = '<div style="text-align:center;padding:60px;"><h2>خطأ في التحميل</h2><p>يرجى المحاولة لاحقاً</p><button onclick="location.reload()" style="padding:10px 20px;background:#3b82f6;color:white;border:none;border-radius:8px;cursor:pointer;">إعادة المحاولة</button></div>';
+          const payload = ErrorTracker.normalize(e2, {
+            operation: 'app.bootstrap.init',
+            code: e2.code || 'APP-INIT-FAILED',
+            userMessage: 'تعذر تشغيل التطبيق حالياً'
+          });
+          ErrorTracker.writeLog(payload);
+          document.getElementById('app').innerHTML = ErrorTracker.buildErrorCard(payload, {
+            title: 'خطأ في تحميل التطبيق',
+            message: 'تعذر تشغيل التطبيق حالياً'
+          });
         }
       }
     });

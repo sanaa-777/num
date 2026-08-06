@@ -223,7 +223,11 @@ const FirebaseAuth = {
       'auth/popup-blocked': 'تم حظر النافذة المنبثقة'
     };
 
-    return new Error(messages[error.code] || error.message || 'حدث خطأ غير متوقع');
+    return ErrorTracker.createUserError(error, {
+      operation: 'firebase_auth',
+      code: error.code || 'AUTH-UNEXPECTED',
+      userMessage: messages[error.code] || error.message || 'تعذر إكمال عملية المصادقة حالياً'
+    });
   },
 
   // التحقق من حالة المستخدم

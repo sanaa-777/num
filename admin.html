@@ -41,6 +41,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
+  <!-- Error Tracker -->
+  <script src="app/error-tracker.js"></script>
+
   <!-- Firebase Config -->
   <script src="app/firebase-config.js"></script>
 
@@ -83,7 +86,17 @@
           this.render();
         } catch (e) {
           console.error('Admin init error:', e);
-          this.renderLogin();
+          const payload = ErrorTracker.normalize(e, {
+            operation: 'admin.init',
+            code: e.code || 'ADMIN-INIT-FAILED',
+            userMessage: 'تعذر تحميل لوحة التحكم حالياً'
+          });
+          ErrorTracker.writeLog(payload);
+          document.getElementById('admin-app').innerHTML = ErrorTracker.buildErrorCard(payload, {
+            title: 'خطأ في لوحة التحكم',
+            message: 'تعذر تحميل لوحة التحكم حالياً',
+            action: 'location.reload()'
+          });
         }
       },
 
@@ -153,7 +166,7 @@
           this.render();
         } catch (e) {
           errEl.classList.remove('hidden');
-          errEl.querySelector('span').textContent = e.message;
+          errEl.querySelector('span').textContent = ErrorTracker.getInlineMessage(e);
         }
       },
 
@@ -167,7 +180,7 @@
           await Auth.resetPassword(email);
           alert('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني');
         } catch (e) {
-          alert(e.message);
+          alert(ErrorTracker.getInlineMessage(e));
         }
       },
 
@@ -415,7 +428,7 @@
       async approvePlace(placeId) { await Admin.approvePlace(placeId); this.render(); },
       async rejectPlace(placeId) { const note = prompt('سبب الرفض (اختياري):'); await Admin.rejectPlace(placeId, note); this.render(); },
 
-      initIcons() { try { lucide.createIcons(); } catch(e) {} }
+      initIcons() { try { lucide.createIcons(); } catch(e) { ErrorTracker.capture(e, { operation: 'admin.icons.init', source: 'admin_panel' }); } }
     };
 
     // بدء التطبيق

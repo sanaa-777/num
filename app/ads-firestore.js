@@ -116,7 +116,9 @@ const Ads = {
       await db.collection('ads').doc(id).update({
         views: firebase.firestore.FieldValue.increment(1)
       });
-    } catch (e) {}
+    } catch (e) {
+      ErrorTracker.capture(e, { operation: 'ads.record_view', requestData: { adId: id } });
+    }
   },
 
   async recordClick(id) {
@@ -124,7 +126,9 @@ const Ads = {
       await db.collection('ads').doc(id).update({
         clicks: firebase.firestore.FieldValue.increment(1)
       });
-    } catch (e) {}
+    } catch (e) {
+      ErrorTracker.capture(e, { operation: 'ads.record_click', requestData: { adId: id } });
+    }
   },
 
   // ====== رفع صورة الإعلان ======
