@@ -1,90 +1,117 @@
 // =============================================
-// Service Worker - دليل Yemen PWA (Optimized)
+// Service Worker - دليل Yemen PWA (Versioned)
 // =============================================
 
-const CACHE_NAME = 'dalil-yemen-v2';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/admin.html',
-  '/manifest.json',
-  '/app/styles.css',
-  '/app/data.js',
-  '/app/auth.js',
-  '/app/admin.js',
-  '/app/ads.js',
-  '/app/app.js',
+const BUILD_VERSION = '20260806204514';
+const CACHE_PREFIX = 'dalil-yemen-static-';
+const CACHE_NAME = `${CACHE_PREFIX}${BUILD_VERSION}`;
+const OFFLINE_FALLBACK = `/index.html?v=${BUILD_VERSION}`;
+const APP_SHELL = [
+  OFFLINE_FALLBACK,
+  `/admin.html?v=${BUILD_VERSION}`,
+  `/manifest.json?v=${BUILD_VERSION}`,
+  `/app/styles.css?v=${BUILD_VERSION}`,
+  `/app/build-meta.js`,
+  `/app/version-manager.js?v=${BUILD_VERSION}`,
+  `/app/error-tracker.js?v=${BUILD_VERSION}`,
+  `/app/firebase-config.js?v=${BUILD_VERSION}`,
+  `/app/data-firestore.js?v=${BUILD_VERSION}`,
+  `/app/auth-firestore.js?v=${BUILD_VERSION}`,
+  `/app/admin-firestore.js?v=${BUILD_VERSION}`,
+  `/app/ads-firestore.js?v=${BUILD_VERSION}`,
+  `/app/app.js?v=${BUILD_VERSION}`
 ];
 
-// التثبيت - تخزين الملفات الأساسية
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(STATIC_ASSETS))
+      .then((cache) => cache.addAll(APP_SHELL))
+      .catch(() => undefined)
       .then(() => self.skipWaiting())
   );
 });
 
-// التفعيل - حذف التخزين القديم
+async function cleanupOldCaches() {
+  const keys = await caches.keys();
+  await Promise.all(
+    keys
+      .filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+      .map((key) => caches.delete(key))
+  );
+}
+
+async function broadcastVersionActivated() {
+  const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  for (const client of clientsList) {
+    client.postMessage({ type: 'DY_VERSION_ACTIVATED', version: BUILD_VERSION });
+  }
+}
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((names) => {
-      return Promise.all(
-        names.filter((name) => name !== CACHE_NAME)
-             .map((name) => caches.delete(name))
-      );
-    }).then(() => self.clients.claim())
+    cleanupOldCaches()
+      .then(() => self.clients.claim())
+      .then(() => broadcastVersionActivated())
   );
 });
 
-// الجلب - Network First مع Cache Fallback
+function isNavigationRequest(request) {
+  return request.mode === 'navigate' || request.destination === 'document';
+}
+
+async function networkFirst(request, fallbackUrl = null) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response && response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    if (fallbackUrl) {
+      const fallback = await caches.match(fallbackUrl);
+      if (fallback) return fallback;
+    }
+    throw error;
+  }
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  const response = await fetch(request);
+  if (response && response.ok) {
+    const cache = await caches.open(CACHE_NAME);
+    cache.put(request, response.clone());
+  }
+  return response;
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  // للملفات المحلية: Cache First
-  if (event.request.url.startsWith(self.location.origin)) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        if (cached) {
-          // تحديث الكاش في الخلفية
-          fetch(event.request).then((response) => {
-            if (response.ok) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response));
-            }
-          }).catch(() => {});
-          return cached;
-        }
-        return fetch(event.request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        }).catch(() => {
-          if (event.request.destination === 'document') {
-            return caches.match('/index.html');
-          }
-        });
-      })
-    );
+  const url = new URL(event.request.url);
+
+  if (url.origin !== self.location.origin) {
+    event.respondWith(networkFirst(event.request).catch(() => caches.match(event.request)));
     return;
   }
 
-  // للـ CDN: Network First
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      })
-      .catch(() => caches.match(event.request))
-  );
+  if (url.pathname === '/sw.js' || url.pathname === '/app/build-meta.js' || url.pathname === '/manifest.json') {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+    return;
+  }
+
+  if (isNavigationRequest(event.request)) {
+    event.respondWith(networkFirst(event.request, OFFLINE_FALLBACK));
+    return;
+  }
+
+  event.respondWith(cacheFirst(event.request));
 });
 
-// Push Notifications
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
   event.waitUntil(
@@ -92,7 +119,7 @@ self.addEventListener('push', (event) => {
       body: data.body || 'إشعار جديد',
       icon: '/manifest.json',
       vibrate: [200, 100, 200],
-      data: data.url || '/',
+      data: data.url || '/'
     })
   );
 });

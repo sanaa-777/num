@@ -136,9 +136,10 @@ const Ads = {
     try {
       const compressed = await this._compressImage(file, 1200);
       const blob = await fetch(compressed).then(r => r.blob());
-      const fileName = `ads/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+      const ownerSegment = (window.Auth && Auth.currentUser && Auth.currentUser.id) ? Auth.currentUser.id : 'admin';
+      const fileName = `ads/${ownerSegment}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
       const ref = storage.ref(fileName);
-      await ref.put(blob);
+      await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
       return await ref.getDownloadURL();
     } catch (e) {
       console.error('Ads uploadImage error:', e);

@@ -32,7 +32,9 @@
   <meta name="twitter:description" content="الدليل الشامل للأعمال والأماكن في اليمن - سجّل عملك مجاناً">
 
   <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json?v=20260806204514">
+  <script src="app/build-meta.js"></script>
+  <script src="app/version-manager.js?v=20260806204514"></script>
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232563eb'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-size='40' font-family='Arial' font-weight='bold' fill='white'%3E%D8%A7%D9%84%D8%AF%D9%84%D9%8A%D9%84%3C/text%3E%3C/svg%3E">
   <link rel="canonical" href="https://dalil-yemen-deel.web.app/">
 
@@ -53,7 +55,7 @@
   }
   </script>
 
-  <link rel="stylesheet" href="app/styles.css">
+  <link rel="stylesheet" href="app/styles.css?v=20260806204514">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -112,25 +114,26 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js" defer></script>
 
   <!-- Error Tracker -->
-  <script src="app/error-tracker.js" defer></script>
+  <script src="app/error-tracker.js?v=20260806204514" defer></script>
 
   <!-- Firebase Config -->
-  <script src="app/firebase-config.js" defer></script>
+  <script src="app/firebase-config.js?v=20260806204514" defer></script>
 
   <!-- App Modules (Firestore-based) -->
-  <script src="app/data-firestore.js" defer></script>
-  <script src="app/auth-firestore.js" defer></script>
-  <script src="app/admin-firestore.js" defer></script>
-  <script src="app/ads-firestore.js" defer></script>
-  <script src="app/app.js" defer></script>
+  <script src="app/data-firestore.js?v=20260806204514" defer></script>
+  <script src="app/auth-firestore.js?v=20260806204514" defer></script>
+  <script src="app/admin-firestore.js?v=20260806204514" defer></script>
+  <script src="app/ads-firestore.js?v=20260806204514" defer></script>
+  <script src="app/app.js?v=20260806204514" defer></script>
 
   <!-- PWA Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('SW registered:', reg.scope))
-          .catch(err => console.log('SW registration failed:', err));
+        const buildVersion = (window.__APP_BUILD__ && window.__APP_BUILD__.version) || 'dev';
+        navigator.serviceWorker.register(`/sw.js?v=${encodeURIComponent(buildVersion)}`, { updateViaCache: 'none' })
+          .then((reg) => reg.update().then(() => console.log('SW registered:', reg.scope)))
+          .catch((err) => console.log('SW registration failed:', err));
       });
     }
   </script>
@@ -138,6 +141,7 @@
   <!-- App Initialization -->
   <script>
     window.addEventListener('load', async () => {
+      await (window.VersionManager?.ready || Promise.resolve());
       if (typeof firebase === 'undefined') {
         const payload = ErrorTracker.normalize(new Error('Firebase SDK not loaded'), {
           operation: 'app.bootstrap.firebase',

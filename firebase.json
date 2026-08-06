@@ -21,11 +21,83 @@
       ],
       "headers": [
         {
+          "source": "/",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/admin.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/about.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/privacy.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/manifest.json",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/sw.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/app/build-meta.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
           "source": "**/*.js",
           "headers": [
             {
               "key": "Cache-Control",
-              "value": "public, max-age=3600, stale-while-revalidate=86400"
+              "value": "public, max-age=31536000, immutable"
             },
             {
               "key": "Content-Type",
@@ -38,7 +110,7 @@
           "headers": [
             {
               "key": "Cache-Control",
-              "value": "public, max-age=3600, stale-while-revalidate=86400"
+              "value": "public, max-age=31536000, immutable"
             }
           ]
         },
@@ -47,7 +119,7 @@
           "headers": [
             {
               "key": "Cache-Control",
-              "value": "public, max-age=604800, stale-while-revalidate=86400"
+              "value": "public, max-age=31536000, immutable"
             }
           ]
         },
@@ -83,11 +155,83 @@
       ],
       "headers": [
         {
+          "source": "/",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/admin.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/about.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/privacy.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/manifest.json",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/sw.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
+          "source": "/app/build-meta.js",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store, max-age=0"
+            }
+          ]
+        },
+        {
           "source": "**/*.js",
           "headers": [
             {
               "key": "Cache-Control",
-              "value": "public, max-age=3600, stale-while-revalidate=86400"
+              "value": "public, max-age=31536000, immutable"
             },
             {
               "key": "Content-Type",
@@ -100,7 +244,7 @@
           "headers": [
             {
               "key": "Cache-Control",
-              "value": "public, max-age=3600, stale-while-revalidate=86400"
+              "value": "public, max-age=31536000, immutable"
             }
           ]
         },
@@ -109,7 +253,7 @@
           "headers": [
             {
               "key": "Cache-Control",
-              "value": "public, max-age=604800, stale-while-revalidate=86400"
+              "value": "public, max-age=31536000, immutable"
             }
           ]
         },

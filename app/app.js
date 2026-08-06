@@ -540,7 +540,7 @@ const App = {
           ${reviews.length ? reviews.map(r => `<div class="border-b border-gray-100 py-2.5 last:border-0">
             <div class="flex items-center justify-between mb-1"><span class="font-semibold text-xs">${r.userName}</span><span class="flex">${Array(r.rating).fill(0).map(() => '<i data-lucide="star" class="w-3.5 h-3.5 text-yellow-500 fill-yellow-500"></i>').join('')}</span></div>
             <p class="text-gray-600 text-xs">${r.comment}</p>
-            <span class="text-[10px] text-gray-400 flex items-center gap-1 mt-1"><i data-lucide="clock" class="w-3 h-3"></i>${new Date(r.createdAt).toLocaleDateString('ar')}</span>
+            <span class="text-[10px] text-gray-400 flex items-center gap-1 mt-1"><i data-lucide="clock" class="w-3 h-3"></i>${r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('ar') : (r.createdAt ? new Date(r.createdAt).toLocaleDateString('ar') : '')}</span>
           </div>`).join('') : '<p class="text-gray-400 text-center py-4 text-xs">لا توجد مراجعات</p>'}
         </div>
       </div>
@@ -1097,37 +1097,41 @@ const App = {
     return isValid;
   },
 
-  submitPlace() {
+  async submitPlace() {
     if (!this.validatePlaceForm()) return;
     const n = document.getElementById('placeName').value, c = document.getElementById('placeCategory').value, s = document.getElementById('placeSubCategory').value, ci = document.getElementById('placeCity').value;
-    // جمع أيام العمل المحددة
     const workDays = Array.from(document.querySelectorAll('.work-day-cb:checked')).map(cb => cb.value);
-    Data.addPlace({ 
-      name:n, category:c, subcategory:s||null, city:ci, 
-      description:document.getElementById('placeDesc').value, 
-      address:document.getElementById('placeAddress').value, 
-      phone:document.getElementById('placePhone').value, 
-      whatsapp:document.getElementById('placeWhatsapp').value, 
-      email:document.getElementById('placeEmail').value, 
-      facebook:document.getElementById('placeFacebook').value || null,
-      instagram:document.getElementById('placeInstagram').value || null,
-      telegram:document.getElementById('placeTelegram').value || null,
-      website:document.getElementById('placeWebsite').value || null,
-      openTime:document.getElementById('placeOpenTime').value || null,
-      closeTime:document.getElementById('placeCloseTime').value || null,
-      workDays:workDays.length > 0 ? workDays : null,
-      lat:document.getElementById('placeLat').value || null,
-      lng:document.getElementById('placeLng').value || null,
-      images:this.placeImages, owner:Auth.currentUser.id, verified:false, featured:false 
-    });
-    Admin.notifyNewPlace(n, Auth.currentUser.name);
-    this.placeImages = [];
-    alert('✅ تم إرسال طلبك بنجاح!\n\nسيتم مراجعة النشاط من قبل الإدارة قبل النشر.\nستظهر حالة الطلب في "مواقعي".');
-    location.hash = 'myplaces';
+    try {
+      await Data.addPlace({ 
+        name:n, category:c, subcategory:s||null, city:ci, 
+        description:document.getElementById('placeDesc').value, 
+        address:document.getElementById('placeAddress').value, 
+        phone:document.getElementById('placePhone').value, 
+        whatsapp:document.getElementById('placeWhatsapp').value, 
+        email:document.getElementById('placeEmail').value, 
+        facebook:document.getElementById('placeFacebook').value || null,
+        instagram:document.getElementById('placeInstagram').value || null,
+        telegram:document.getElementById('placeTelegram').value || null,
+        website:document.getElementById('placeWebsite').value || null,
+        openTime:document.getElementById('placeOpenTime').value || null,
+        closeTime:document.getElementById('placeCloseTime').value || null,
+        workDays:workDays.length > 0 ? workDays : null,
+        lat:document.getElementById('placeLat').value || null,
+        lng:document.getElementById('placeLng').value || null,
+        images:this.placeImages, owner:Auth.currentUser.id, verified:false, featured:false 
+      });
+      Admin.notifyNewPlace(n, Auth.currentUser.name);
+      this.placeImages = [];
+      alert('✅ تم إرسال طلبك بنجاح!\n\nسيتم مراجعة النشاط من قبل الإدارة قبل النشر.\nستظهر حالة الطلب في "مواقعي".');
+      location.hash = 'myplaces';
+    } catch (error) {
+      ErrorTracker.capture(error, { operation: 'app.place.submit', source: 'submit_place_form' });
+      alert(ErrorTracker.getInlineMessage(error));
+    }
   },
   async toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } await Data.toggleFavorite(Auth.currentUser.id, pid); await Data.preloadAll(); this.render(); },
   setRating(s) { document.querySelectorAll('[data-star]').forEach(b => { const v = parseInt(b.dataset.star); b.className = v <= s ? 'text-yellow-500' : 'text-gray-300'; b.querySelector('i')?.classList.toggle('fill-yellow-500', v <= s); }); this._selectedRating = s; },
-  submitReview(pid) { if (!this._selectedRating) { alert('اختر تقييم'); return; } const c = document.getElementById('reviewComment').value; if (!c) { alert('اكتب تعليق'); return; } Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, this._selectedRating, c); this._selectedRating = 0; this.showPlace(pid); },
+  async submitReview(pid) { if (!this._selectedRating) { alert('اختر تقييم'); return; } const c = document.getElementById('reviewComment').value; if (!c) { alert('اكتب تعليق'); return; } try { await Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, Auth.currentUser.avatar || '', this._selectedRating, c); this._selectedRating = 0; await Data.preloadAll(); this.showPlace(pid); } catch (error) { ErrorTracker.capture(error, { operation: 'app.review.submit', source: 'place_detail_review_form' }); alert(ErrorTracker.getInlineMessage(error)); } },
   deletePlaceConfirm(id) { if (confirm('هل أنت متأكد من الحذف؟')) { Data.deletePlace(id); alert('تم الحذف'); location.hash = 'myplaces'; } },
   updateProfile() { Auth.updateProfile({ name:document.getElementById('profileName').value, phone:document.getElementById('profilePhone').value, bio:document.getElementById('profileBio')?.value||'' }); alert('تم التحديث'); this.render(); },
 

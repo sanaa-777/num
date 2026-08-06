@@ -253,8 +253,8 @@ const Auth = {
       const user = auth.currentUser;
       const compressed = await this._compressImage(file, 400);
       const blob = await fetch(compressed).then(r => r.blob());
-      const ref = storage.ref(`avatars/${user.uid}`);
-      await ref.put(blob);
+      const ref = storage.ref(`avatars/${user.uid}/avatar.jpg`);
+      await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
       const url = await ref.getDownloadURL();
       await this.updateProfile({ avatar: url });
       return url;
@@ -270,8 +270,8 @@ const Auth = {
       const user = auth.currentUser;
       const compressed = await this._compressImage(file, 800);
       const blob = await fetch(compressed).then(r => r.blob());
-      const ref = storage.ref(`covers/${user.uid}`);
-      await ref.put(blob);
+      const ref = storage.ref(`covers/${user.uid}/cover.jpg`);
+      await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
       const url = await ref.getDownloadURL();
       await this.updateProfile({ coverImage: url });
       return url;

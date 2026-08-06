@@ -21,7 +21,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
-const messaging = firebase.messaging();
+const messaging = typeof firebase.messaging === 'function' ? firebase.messaging() : null;
 
 if (window.ErrorTracker) {
   ErrorTracker.attachFirestore(db, firebase);
@@ -29,11 +29,12 @@ if (window.ErrorTracker) {
 
 // إعدادات Firestore
 db.settings({
-  cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED
+  cacheSizeBytes: 20 * 1024 * 1024,
+  ignoreUndefinedProperties: true
 });
 
 // تمكين الـ Offline Persistence
-db.enablePersistence().catch((err) => {
+db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
   if (window.ErrorTracker) {
     ErrorTracker.capture(err, {
       operation: 'firebase.persistence.enable',

@@ -603,9 +603,10 @@ const Data = {
       try {
         const compressed = await this._compressImage(file, maxWidth);
         const blob = await fetch(compressed).then(r => r.blob());
-        const fileName = `places/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+        if (!Auth.currentUser) throw new Error('AUTH_REQUIRED_FOR_PLACE_UPLOAD');
+        const fileName = `places/${Auth.currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
         const ref = storage.ref(fileName);
-        await ref.put(blob);
+        await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
         const url = await ref.getDownloadURL();
         urls.push(url);
       } catch (e) {
