@@ -24,18 +24,28 @@
   <meta property="og:description" content="الدليل اليمني التجاري - ابحث عن المطاعم والفنادق والعيادات والصيدليات والمتاجر وجميع الخدمات التجارية في اليمن.">
   <meta property="og:locale" content="ar_YE">
   <meta property="og:site_name" content="الدليل اليمني التجاري">
+  <meta property="og:image" content="https://dalil-yemen-deel.web.app/assets/branding/logo-social.png">
+  <meta property="og:image:secure_url" content="https://dalil-yemen-deel.web.app/assets/branding/logo-social.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1024">
+  <meta property="og:image:height" content="559">
+  <meta property="og:image:alt" content="الدليل اليمني التجاري - الهوية البصرية الرسمية">
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://dalil-yemen-deel.web.app/">
   <meta name="twitter:title" content="الدليل اليمني التجاري">
   <meta name="twitter:description" content="الدليل الشامل للأعمال والأماكن في اليمن - سجّل عملك مجاناً">
+  <meta name="twitter:image" content="https://dalil-yemen-deel.web.app/assets/branding/logo-social.png">
+  <meta name="twitter:image:alt" content="الدليل اليمني التجاري">
 
   <!-- PWA -->
-  <link rel="manifest" href="manifest.json?v=20260806204514">
+  <link rel="manifest" href="manifest.json?v=20260806215237">
   <script src="app/build-meta.js"></script>
-  <script src="app/version-manager.js?v=20260806204514"></script>
-  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232563eb'/%3E%3Ctext x='50' y='68' text-anchor='middle' font-size='40' font-family='Arial' font-weight='bold' fill='white'%3E%D8%A7%D9%84%D8%AF%D9%84%D9%8A%D9%84%3C/text%3E%3C/svg%3E">
+  <script src="app/version-manager.js?v=20260806215237"></script>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/favicon-32x32.png?v=20260806215237">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png?v=20260806215237">
+  <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png?v=20260806215237">
   <link rel="canonical" href="https://dalil-yemen-deel.web.app/">
 
   <!-- Structured Data -->
@@ -46,6 +56,15 @@
     "name": "الدليل اليمني التجاري",
     "url": "https://dalil-yemen-deel.web.app/",
     "description": "الدليل الشامل للأعمال والأماكن في اليمن",
+    "image": "https://dalil-yemen-deel.web.app/assets/branding/logo-social.png",
+    "publisher": {
+      "@type": "Organization",
+      "name": "الدليل اليمني التجاري",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://dalil-yemen-deel.web.app/assets/branding/logo-transparent.png"
+      }
+    },
     "inLanguage": "ar",
     "potentialAction": {
       "@type": "SearchAction",
@@ -55,22 +74,8 @@
   }
   </script>
 
-  <link rel="stylesheet" href="app/styles.css?v=20260806204514">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            primary: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
-            accent: { 400:'#fbbf24',500:'#f59e0b',600:'#d97706' },
-            dark: { 50:'#f8fafc',100:'#f1f5f9',200:'#e2e8f0',300:'#cbd5e1',400:'#94a3b8',500:'#64748b',600:'#475569',700:'#334155',800:'#1e293b',900:'#0f172a',950:'#020617' }
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="stylesheet" href="app/styles.css?v=20260806215237">
+  <link rel="stylesheet" href="app/tailwind.css?v=20260806215237">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
@@ -114,17 +119,17 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js" defer></script>
 
   <!-- Error Tracker -->
-  <script src="app/error-tracker.js?v=20260806204514" defer></script>
+  <script src="app/error-tracker.js?v=20260806215237" defer></script>
 
   <!-- Firebase Config -->
-  <script src="app/firebase-config.js?v=20260806204514" defer></script>
+  <script src="app/firebase-config.js?v=20260806215237" defer></script>
 
   <!-- App Modules (Firestore-based) -->
-  <script src="app/data-firestore.js?v=20260806204514" defer></script>
-  <script src="app/auth-firestore.js?v=20260806204514" defer></script>
-  <script src="app/admin-firestore.js?v=20260806204514" defer></script>
-  <script src="app/ads-firestore.js?v=20260806204514" defer></script>
-  <script src="app/app.js?v=20260806204514" defer></script>
+  <script src="app/data-firestore.js?v=20260806215237" defer></script>
+  <script src="app/auth-firestore.js?v=20260806215237" defer></script>
+  <script src="app/admin-firestore.js?v=20260806215237" defer></script>
+  <script src="app/ads-firestore.js?v=20260806215237" defer></script>
+  <script src="app/app.js?v=20260806215237" defer></script>
 
   <!-- PWA Service Worker -->
   <script>

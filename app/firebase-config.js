@@ -19,18 +19,19 @@ firebase.initializeApp(firebaseConfig);
 
 // الخدمات
 const auth = firebase.auth();
+auth.useDeviceLanguage();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((err) => {
+  console.warn('Auth persistence fallback:', err?.code || err?.message || err);
+});
 const db = firebase.firestore();
 const storage = firebase.storage();
 const messaging = typeof firebase.messaging === 'function' ? firebase.messaging() : null;
 
-if (window.ErrorTracker) {
-  ErrorTracker.attachFirestore(db, firebase);
-}
-
 // إعدادات Firestore
 db.settings({
   cacheSizeBytes: 20 * 1024 * 1024,
-  ignoreUndefinedProperties: true
+  ignoreUndefinedProperties: true,
+  merge: true
 });
 
 // تمكين الـ Offline Persistence
@@ -48,5 +49,9 @@ db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
     console.log('Browser does not support persistence');
   }
 });
+
+if (window.ErrorTracker) {
+  ErrorTracker.attachFirestore(db, firebase);
+}
 
 console.log('Firebase initialized successfully');

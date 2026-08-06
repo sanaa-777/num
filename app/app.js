@@ -153,10 +153,13 @@ const App = {
     const isAr = Data.currentLang === 'ar';
     return `
     <header class="bg-white dark:bg-dark-900 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-dark-700">
-      <div class="max-w-7xl mx-auto px-3 py-2.5 flex items-center justify-between gap-2">
-        <a href="#home" class="flex items-center gap-2 shrink-0">
-          <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center"><span class="text-white font-bold text-lg">د</span></div>
-          <h1 class="text-lg font-bold text-gray-900 dark:text-white m-0 hidden sm:block">${isAr ? 'دليل Yemen' : 'Yemen Guide'}</h1>
+      <div class="max-w-7xl mx-auto px-3 py-3 flex items-center justify-between gap-2 md:gap-4">
+        <a href="#home" class="flex items-center gap-3 shrink-0 min-w-0">
+          <img src="assets/branding/logo-transparent.png?v=20260806204514" alt="${isAr ? 'شعار الدليل اليمني التجاري' : 'Yemeni Guide logo'}" class="brand-logo brand-logo-header shrink-0" width="1024" height="559" fetchpriority="high">
+          <div class="hidden lg:block min-w-0">
+            <h1 class="text-lg font-bold text-gray-900 dark:text-white m-0 truncate">${isAr ? 'الدليل اليمني التجاري' : 'The Yemeni Guide'}</h1>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 truncate">${isAr ? 'الدليل الشامل للأعمال والأماكن في اليمن' : 'Yemen business and places directory'}</p>
+          </div>
         </a>
         <div class="flex-1 max-w-sm mx-2 hidden md:block">
           <div class="relative">
@@ -214,6 +217,7 @@ const App = {
     <section class="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-10 md:py-14 relative overflow-hidden">
       <div class="absolute inset-0 opacity-10"><div class="absolute top-10 right-10 w-48 h-48 bg-white rounded-full blur-3xl"></div><div class="absolute bottom-10 left-10 w-64 h-64 bg-yellow-500 rounded-full blur-3xl"></div></div>
       <div class="max-w-7xl mx-auto px-4 text-center relative z-10">
+        <img src="assets/branding/logo-transparent.png?v=20260806204514" alt="شعار الدليل اليمني التجاري" class="brand-logo brand-logo-hero mx-auto mb-5 drop-shadow-2xl" width="1024" height="559">
         <h2 class="text-3xl md:text-5xl font-bold mb-3">الدليل اليمني التجاري</h2>
         <p class="text-base md:text-lg text-blue-100 mb-6 max-w-xl mx-auto">الدليل الشامل للأعمال والأماكن في جميع أنحاء اليمن</p>
         <div class="max-w-xl mx-auto relative">
@@ -1021,7 +1025,7 @@ const App = {
       this.initIcons();
     }
   },
-  async doGoogleLogin() { try { await Auth.loginWithGoogle(); location.hash = 'home'; this.render(); } catch (e) { alert(ErrorTracker.getInlineMessage(e)); } },
+  async doGoogleLogin() { try { const result = await Auth.loginWithGoogle(); if (result && result.redirecting) return; location.hash = 'home'; this.render(); } catch (e) { alert(ErrorTracker.getInlineMessage(e)); } },
   // ====== MAP INITIALIZATION ======
   placeMap: null,
   placeMarker: null,

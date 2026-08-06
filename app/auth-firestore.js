@@ -7,6 +7,7 @@ const Auth = {
   currentUser: null,
   _authListenerAttached: false,
   _initResolve: null,
+  _redirectResultHandled: false,
 
   // ====== التهيئة (تستدعى مرة واحدة) ======
   init() {
@@ -25,6 +26,9 @@ const Auth = {
       }, 5000);
 
       try {
+      this._consumeRedirectResult().catch((redirectError) => {
+        console.warn('Redirect result error:', redirectError?.message || redirectError);
+      });
       auth.onAuthStateChanged(async (user) => {
         clearTimeout(timeout);
         if (user) {
@@ -170,41 +174,32 @@ const Auth = {
 
   // ====== تسجيل الدخول بـ Google ======
   async loginWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+
     try {
-      const provider = new firebase.auth.GoogleAuthProvider();
-      const userCredential = await auth.signInWithPopup(provider);
-      const user = userCredential.user;
-
-      const userDoc = await db.collection('users').doc(user.uid).get();
-
-      if (!userDoc.exists) {
-        await db.collection('users').doc(user.uid).set({
-          name: user.displayName || 'مستخدم',
-          email: user.email,
-          phone: user.phoneNumber || '',
-          avatar: user.photoURL,
-          coverImage: null,
-          role: 'user',
-          verified: false,
-          suspended: false,
-          bio: '',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+      if (this._shouldUseRedirectAuth()) {
+        sessionStorage.setItem('dy_pending_auth_provider', 'google');
+        await auth.signInWithRedirect(provider);
+        return { redirecting: true };
       }
 
-      const userData = userDoc.exists ? userDoc.data() : {};
-      this.currentUser = {
-        id: user.uid, uid: user.uid,
-        name: userData.name || user.displayName,
-        email: user.email,
-        phone: userData.phone || '',
-        avatar: userData.avatar || user.photoURL,
-        role: userData.role || 'user',
-        verified: userData.verified || false
-      };
-
-      return this.currentUser;
+      const userCredential = await auth.signInWithPopup(provider);
+      return await this._normalizeSocialUser(userCredential.user);
     } catch (error) {
+      const fallbackCodes = new Set([
+        'auth/popup-blocked',
+        'auth/popup-closed-by-user',
+        'auth/cancelled-popup-request',
+        'auth/operation-not-supported-in-this-environment'
+      ]);
+
+      if (fallbackCodes.has(error?.code)) {
+        sessionStorage.setItem('dy_pending_auth_provider', 'google');
+        await auth.signInWithRedirect(provider);
+        return { redirecting: true };
+      }
+
       throw this._handleError(error);
     }
   },
@@ -290,6 +285,82 @@ const Auth = {
     }
   },
 
+  async _normalizeSocialUser(user) {
+    const userRef = db.collection('users').doc(user.uid);
+    const userDoc = await userRef.get();
+
+    if (!userDoc.exists) {
+      await userRef.set({
+        name: user.displayName || 'مستخدم',
+        email: user.email,
+        phone: user.phoneNumber || '',
+        avatar: user.photoURL,
+        coverImage: null,
+        role: 'user',
+        verified: false,
+        suspended: false,
+        bio: '',
+        location: '',
+        website: '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
+        providerId: (user.providerData && user.providerData[0] && user.providerData[0].providerId) || 'google.com'
+      }, { merge: true });
+    } else {
+      const existing = userDoc.data();
+      await userRef.set({
+        email: user.email,
+        avatar: user.photoURL || existing.avatar || '',
+        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
+        providerId: (user.providerData && user.providerData[0] && user.providerData[0].providerId) || existing.providerId || 'google.com',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
+
+    const freshDoc = await userRef.get();
+    const userData = freshDoc.exists ? freshDoc.data() : {};
+    this.currentUser = {
+      id: user.uid,
+      uid: user.uid,
+      name: userData.name || user.displayName || 'مستخدم',
+      email: user.email,
+      phone: userData.phone || '',
+      avatar: userData.avatar || user.photoURL,
+      role: userData.role || 'user',
+      verified: userData.verified || false
+    };
+
+    return this.currentUser;
+  },
+
+  async _consumeRedirectResult() {
+    if (this._redirectResultHandled) return null;
+    this._redirectResultHandled = true;
+
+    try {
+      const result = await auth.getRedirectResult();
+      if (result && result.user) {
+        sessionStorage.removeItem('dy_pending_auth_provider');
+        await this._normalizeSocialUser(result.user);
+      }
+      return result;
+    } catch (error) {
+      sessionStorage.removeItem('dy_pending_auth_provider');
+      throw this._handleError(error);
+    }
+  },
+
+  _shouldUseRedirectAuth() {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(ua);
+    const isAndroid = /Android/.test(ua);
+    const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR\//.test(ua);
+    const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    return isIOS || isAndroid || isSafari || isStandalone;
+  },
+
   // ====== مساعدات ======
   isVerified() {
     return this.currentUser && this.currentUser.verified;
@@ -348,6 +419,9 @@ const Auth = {
       'auth/network-request-failed': 'خطأ في الاتصال بالشبكة',
       'auth/popup-closed-by-user': 'تم إغلاق نافذة تسجيل الدخول',
       'auth/popup-blocked': 'تم حظر النافذة المنبثقة',
+      'auth/cancelled-popup-request': 'تم إلغاء محاولة تسجيل الدخول السابقة',
+      'auth/operation-not-supported-in-this-environment': 'المتصفح الحالي يحتاج استخدام التحويل المباشر لتسجيل الدخول',
+      'auth/web-storage-unsupported': 'المتصفح لا يدعم التخزين المطلوب لإكمال تسجيل الدخول',
       'auth/invalid-credential': 'بيانات الدخول غير صحيحة'
     };
     return ErrorTracker.createUserError(error, {

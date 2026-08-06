@@ -897,3 +897,39 @@ html {
     box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
   }
 }
+
+
+/* Brand Assets */
+.brand-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.brand-logo-header {
+  width: clamp(152px, 22vw, 248px);
+}
+
+.brand-logo-hero {
+  width: min(100%, 360px);
+}
+
+.brand-logo-static-header {
+  width: clamp(140px, 20vw, 220px);
+}
+
+.brand-logo-static-hero {
+  width: min(100%, 320px);
+}
+
+@media (max-width: 640px) {
+  .brand-logo-header {
+    width: min(56vw, 210px);
+  }
+
+  .brand-logo-hero,
+  .brand-logo-static-hero {
+    width: min(78vw, 280px);
+  }
+}

@@ -17,9 +17,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
-      - name: Stamp build version
-        run: node scripts/stamp-build.js
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production assets
+        run: npm run build
 
       - name: Deploy to dalil-yemen-deel.web.app
         uses: FirebaseExtended/action-hosting-deploy@v0
