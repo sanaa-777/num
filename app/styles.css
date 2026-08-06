@@ -902,34 +902,78 @@ html {
 /* Brand Assets */
 .brand-logo {
   display: block;
-  width: 100%;
+  max-width: 100%;
   height: auto;
   object-fit: contain;
 }
 
 .brand-logo-header {
   width: clamp(152px, 22vw, 248px);
+  max-width: 100%;
 }
 
 .brand-logo-hero {
   width: min(100%, 360px);
+  max-width: 100%;
 }
 
 .brand-logo-static-header {
   width: clamp(140px, 20vw, 220px);
+  max-width: 100%;
 }
 
 .brand-logo-static-hero {
   width: min(100%, 320px);
+  max-width: 100%;
 }
 
 @media (max-width: 640px) {
   .brand-logo-header {
     width: min(56vw, 210px);
+    max-width: 100%;
   }
 
   .brand-logo-hero,
   .brand-logo-static-hero {
     width: min(78vw, 280px);
+    max-width: 100%;
+  }
+}
+
+/* Hero / Search overflow containment */
+.hero-section,
+.hero-section * {
+  max-width: 100%;
+}
+
+.hero-search-wrap {
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .hero-section .brand-logo {
+    width: min(60vw, 200px) !important;
+    max-width: 100%;
+  }
+  .hero-section h2 {
+    font-size: 1.5rem !important;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+  .hero-section p {
+    font-size: 0.85rem !important;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .hero-search-wrap input {
+    font-size: 0.8rem !important;
+    padding: 0.5rem 0.75rem !important;
+    min-width: 0 !important;
+  }
+  .hero-search-wrap button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    white-space: nowrap;
   }
 }

@@ -1,5 +1,5 @@
 window.__APP_BUILD__ = Object.freeze({
-  version: '20260806215237',
-  commit: '54e55ed',
-  deployedAt: '2026-08-06T21:52:37.188Z'
+  version: '20260806235254',
+  commit: '267c2c1',
+  deployedAt: '2026-08-06T23:52:54.116Z'
 });
