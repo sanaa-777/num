@@ -214,16 +214,16 @@ const App = {
     const latest = places.slice(0, 8);
 
     return `
-    <section class="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-10 md:py-14 relative overflow-hidden">
+    <section class="hero-section bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-10 md:py-14 relative overflow-hidden">
       <div class="absolute inset-0 opacity-10"><div class="absolute top-10 right-10 w-48 h-48 bg-white rounded-full blur-3xl"></div><div class="absolute bottom-10 left-10 w-64 h-64 bg-yellow-500 rounded-full blur-3xl"></div></div>
-      <div class="max-w-7xl mx-auto px-4 text-center relative z-10">
+      <div class="max-w-7xl mx-auto px-3 md:px-4 text-center relative z-10">
         <img src="assets/branding/logo-transparent.png?v=20260806204514" alt="شعار الدليل اليمني التجاري" class="brand-logo brand-logo-hero mx-auto mb-5 drop-shadow-2xl" width="1024" height="559">
-        <h2 class="text-3xl md:text-5xl font-bold mb-3">الدليل اليمني التجاري</h2>
-        <p class="text-base md:text-lg text-blue-100 mb-6 max-w-xl mx-auto">الدليل الشامل للأعمال والأماكن في جميع أنحاء اليمن</p>
-        <div class="max-w-xl mx-auto relative">
-          <div class="flex bg-white rounded-xl shadow-2xl overflow-hidden">
-            <input type="text" id="heroSearch" placeholder="ابحث عن مكان، خدمة، أونشاط..." class="flex-1 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none text-sm" oninput="App.onSearchInput(this.value)" autocomplete="off">
-            <button onclick="App.doSearch()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-5 font-semibold transition-colors text-sm flex items-center gap-1"><i data-lucide="search" class="w-4 h-4"></i>بحث</button>
+        <h2 class="text-2xl md:text-5xl font-bold mb-3 px-2">الدليل اليمني التجاري</h2>
+        <p class="text-sm md:text-lg text-blue-100 mb-6 max-w-xl mx-auto px-2">الدليل الشامل للأعمال والأماكن في جميع أنحاء اليمن</p>
+        <div class="hero-search-wrap max-w-xl mx-auto relative px-1">
+          <div class="flex bg-white rounded-xl shadow-2xl overflow-hidden items-stretch w-full">
+            <input type="text" id="heroSearch" placeholder="ابحث عن مكان، خدمة، أو نشاط..." class="flex-1 min-w-0 px-3 md:px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none text-sm" oninput="App.onSearchInput(this.value)" autocomplete="off">
+            <button onclick="App.doSearch()" class="shrink-0 bg-yellow-500 hover:bg-yellow-600 text-white px-4 md:px-5 font-semibold transition-colors text-sm flex items-center gap-1"><i data-lucide="search" class="w-4 h-4"></i>بحث</button>
           </div>
           <div id="searchSuggestions" class="search-suggestions hidden"></div>
         </div>
