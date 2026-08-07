@@ -2,7 +2,7 @@
 // Service Worker - دليل Yemen PWA (Versioned)
 // =============================================
 
-const BUILD_VERSION = '20260807000602';
+const BUILD_VERSION = '20260807002155';
 const CACHE_PREFIX = 'dalil-yemen-static-';
 const CACHE_NAME = `${CACHE_PREFIX}${BUILD_VERSION}`;
 const OFFLINE_FALLBACK = `/index.html?v=${BUILD_VERSION}`;

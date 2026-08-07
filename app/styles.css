@@ -987,3 +987,170 @@ html {
     white-space: nowrap;
   }
 }
+
+/* ===== Additional Mobile Responsive Fixes ===== */
+
+/* Very small phones (320px - 374px) */
+@media (max-width: 374px) {
+  /* Header: shrink logo and nav items further */
+  .brand-logo-header {
+    width: 100px !important;
+  }
+  header nav a,
+  header nav button {
+    padding: 4px 6px !important;
+    font-size: 10px !important;
+  }
+  /* Hero text smaller */
+  .hero-section h2 {
+    font-size: 1.2rem !important;
+  }
+  .hero-section p {
+    font-size: 0.75rem !important;
+  }
+  /* Category grid: 2 columns on tiny screens */
+  .grid.grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  /* Place cards: single column on tiny screens */
+  .grid.grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Mobile navigation compact mode */
+@media (max-width: 480px) {
+  header .max-w-7xl {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  header nav {
+    gap: 2px !important;
+  }
+  header nav a span,
+  header nav button span {
+    /* Hide text labels on small mobile, keep icons */
+  }
+}
+
+/* Fix place detail page on mobile */
+@media (max-width: 640px) {
+  /* Action buttons: full width on mobile */
+  .grid.grid-cols-2.sm\:grid-cols-3 {
+    gap: 6px !important;
+  }
+  /* Social share row: prevent overflow */
+  .flex.flex-wrap.gap-2.mb-4 {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  /* Review section compact */
+  .bg-white.rounded-xl.p-4.md\:p-6.mt-3 {
+    padding: 12px !important;
+  }
+}
+
+/* Fix search page on mobile */
+@media (max-width: 640px) {
+  /* Search filters stack */
+  .search-filter-row {
+    flex-direction: column !important;
+  }
+  /* Filter buttons scroll horizontally */
+  .filter-buttons {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+}
+
+/* Fix add place form on mobile */
+@media (max-width: 640px) {
+  /* Form inputs full width */
+  .grid.grid-cols-1.sm\:grid-cols-2 {
+    gap: 12px !important;
+  }
+  /* Map container shorter on mobile */
+  #placeMapContainer {
+    height: 200px !important;
+  }
+}
+
+/* Fix footer on mobile */
+@media (max-width: 640px) {
+  footer .grid {
+    gap: 16px !important;
+  }
+  footer .grid > div {
+    padding: 0 4px;
+  }
+}
+
+/* Fix about.html and admin.html tables on mobile */
+@media (max-width: 640px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  thead, tbody, tr, th, td {
+    display: block;
+  }
+  tr {
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px;
+  }
+  td {
+    border: none;
+    padding: 2px 0;
+    text-align: right;
+  }
+  td::before {
+    content: attr(data-label) ': ';
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+}
+
+/* Prevent horizontal overflow on key containers */
+section {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Fix custom dropdown on mobile */
+@media (max-width: 640px) {
+  .custom-select-options {
+    max-height: 200px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    border-radius: 16px 16px 0 0;
+    z-index: 9999;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+  }
+}
+
+/* Fix WhatsApp floating button position on mobile */
+@media (max-width: 640px) {
+  a.fixed.bottom-6.left-6 {
+    bottom: 16px !important;
+    left: 16px !important;
+    width: 48px !important;
+    height: 48px !important;
+  }
+}
+
+/* RTL-specific mobile fixes */
+@media (max-width: 640px) {
+  [dir="rtl"] .custom-select-options {
+    text-align: right;
+  }
+}

@@ -168,7 +168,7 @@ const App = {
             <div id="headerSearchSuggestions" class="search-suggestions hidden"></div>
           </div>
         </div>
-        <nav class="flex items-center gap-1">
+        <nav class="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
           <!-- Dark Mode Toggle -->
           <button onclick="App.toggleDarkMode()" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700" title="${Data.t('darkMode')}">
             <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4"></i>
@@ -234,7 +234,7 @@ const App = {
     ${Ads.renderPosition('below_hero')}
 
     <section class="bg-white py-4 border-b">
-      <div class="max-w-7xl mx-auto px-4 grid grid-cols-4 gap-3 text-center">
+      <div class="max-w-7xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
         <div><div class="text-lg md:text-2xl font-bold text-blue-600">${stats.places}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>مكان</div></div>
         <div><div class="text-lg md:text-2xl font-bold text-blue-600">${stats.users}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-1"><i data-lucide="users" class="w-3 h-3"></i>مستخدم</div></div>
         <div><div class="text-lg md:text-2xl font-bold text-blue-600">${stats.reviews}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-1"><i data-lucide="star" class="w-3 h-3"></i>مراجعة</div></div>
@@ -245,7 +245,7 @@ const App = {
     <section class="py-6 md:py-10">
       <div class="max-w-7xl mx-auto px-3">
         <h3 class="text-base md:text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="grid-3x3" class="w-5 h-5 text-blue-600"></i>الأقسام الرئيسية</h3>
-        <div class="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-2 md:gap-3">
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-2 md:gap-3">
           ${Data.categories.map(c => {
             const count = places.filter(p => p.category === c.id).length;
             return `<a href="#category/${c.id}" class="bg-white rounded-xl p-2 md:p-3 text-center hover:shadow-md transition-all cursor-pointer border border-gray-100 active-scale">
@@ -417,7 +417,7 @@ const App = {
               <i data-lucide="search" class="absolute right-2.5 top-3 w-4 h-4 text-gray-400"></i>
               <div id="searchSuggestions" class="search-suggestions hidden"></div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-col sm:flex-row gap-2">
               <div class="flex-1 custom-select-wrapper"><select id="searchCat" style="position:absolute;opacity:0;pointer-events:none;"><option value="">جميع الأقسام</option>${Data.categories.map(c => `<option value="${c.id}" ${this.selectedCategory===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
               <div class="flex-1 custom-select-wrapper"><select id="searchCity" style="position:absolute;opacity:0;pointer-events:none;"><option value="">جميع المدن</option>${Data.cities.map(c => `<option value="${c.id}" ${this.selectedCity===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
               <button onclick="App.doSearch()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold text-xs flex items-center gap-1"><i data-lucide="search" class="w-3.5 h-3.5"></i></button>
@@ -477,7 +477,7 @@ const App = {
             </div>
             ${place.description ? `<p class="text-gray-600 mb-4 text-sm leading-relaxed">${place.description}</p>` : ''}
             <!-- Action Buttons -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 px-1">
               ${place.phone ? `<a href="tel:${place.phone}" class="bg-green-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="phone" class="w-4 h-4"></i>اتصال</a>` : ''}
               ${place.whatsapp ? `<a href="https://wa.me/967${place.whatsapp}" target="_blank" class="bg-green-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="message-circle" class="w-4 h-4"></i>واتساب</a>` : ''}
               ${place.email ? `<a href="mailto:${place.email}" class="bg-blue-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-blue-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="mail" class="w-4 h-4"></i>إيميل</a>` : ''}
@@ -577,14 +577,14 @@ const App = {
         <div class="bg-white rounded-xl p-4 md:p-6 border border-gray-100">
           <div class="space-y-3">
             <div><label class="block text-xs font-medium text-gray-700 mb-1">اسم المكان *</label><input type="text" id="placeName" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" placeholder="مثال: مطعم البركة"></div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الرئيسي *</label><div class="custom-select-wrapper"><select id="placeCategory" onchange="App.updateSubs()" style="position:absolute;opacity:0;pointer-events:none;"><option value="">اختر القسم</option>${Data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div></div>
               <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الفرعي *</label><div class="custom-select-wrapper"><select id="placeSubCategory" style="position:absolute;opacity:0;pointer-events:none;"><option value="">اختر القسم الفرعي</option></select></div></div>
             </div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">المدينة *</label><div class="custom-select-wrapper"><select id="placeCity" style="position:absolute;opacity:0;pointer-events:none;"><option value="">اختر المدينة</option>${Data.cities.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div></div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">الوصف</label><textarea id="placeDesc" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" rows="3" placeholder="وصف المكان..."></textarea></div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">العنوان</label><input type="text" id="placeAddress" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="الشارع، المدينة"></div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label class="block text-xs font-medium text-gray-700 mb-1">رقم الهاتف</label><input type="tel" id="placePhone" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="777123456"></div>
               <div><label class="block text-xs font-medium text-gray-700 mb-1">رقم واتساب</label><input type="tel" id="placeWhatsapp" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="777123456"></div>
             </div>
@@ -595,7 +595,7 @@ const App = {
               <label class="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
                 <i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i>ساعات العمل <span class="text-gray-400 font-normal">(اختياري)</span>
               </label>
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label class="block text-[10px] text-gray-500 mb-1">وقت الفتح</label>
                   <input type="time" id="placeOpenTime" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm">
