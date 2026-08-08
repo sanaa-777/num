@@ -939,14 +939,24 @@ html {
 
 @media (max-width: 640px) {
   .brand-logo-header {
-    width: min(56vw, 210px);
+    width: clamp(80px, 22vw, 120px) !important;
     max-width: 100%;
   }
 
-  .brand-logo-hero,
-  .brand-logo-static-hero {
-    width: min(78vw, 280px);
-    max-width: 100%;
+  .hero-section h2 {
+    font-size: 1.15rem !important;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+  .hero-search-wrap input {
+    font-size: 0.75rem !important;
+    padding: 0.4rem 0.5rem !important;
+    min-width: 0 !important;
+  }
+  .hero-search-wrap button {
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.7rem !important;
+    white-space: nowrap;
   }
 }
 
@@ -962,28 +972,19 @@ html {
 }
 
 @media (max-width: 640px) {
-  .hero-section .brand-logo {
-    width: min(60vw, 200px) !important;
-    max-width: 100%;
-  }
   .hero-section h2 {
-    font-size: 1.5rem !important;
+    font-size: 1.15rem !important;
     line-height: 1.2;
     word-break: break-word;
   }
-  .hero-section p {
-    font-size: 0.85rem !important;
-    line-height: 1.4;
-    word-break: break-word;
-  }
   .hero-search-wrap input {
-    font-size: 0.8rem !important;
-    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    padding: 0.4rem 0.5rem !important;
     min-width: 0 !important;
   }
   .hero-search-wrap button {
-    padding: 0.5rem 0.75rem !important;
-    font-size: 0.75rem !important;
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.7rem !important;
     white-space: nowrap;
   }
 }
@@ -994,19 +995,15 @@ html {
 @media (max-width: 374px) {
   /* Header: shrink logo and nav items further */
   .brand-logo-header {
-    width: 100px !important;
+    width: 70px !important;
   }
   header nav a,
   header nav button {
-    padding: 4px 6px !important;
-    font-size: 10px !important;
+    padding: 3px 4px !important;
+    font-size: 9px !important;
   }
-  /* Hero text smaller */
   .hero-section h2 {
-    font-size: 1.2rem !important;
-  }
-  .hero-section p {
-    font-size: 0.75rem !important;
+    font-size: 1rem !important;
   }
   /* Category grid: 2 columns on tiny screens */
   .grid.grid-cols-3 {

@@ -152,9 +152,9 @@ const App = {
     const isDark = document.documentElement.classList.contains('dark');
     const isAr = Data.currentLang === 'ar';
     return `
-    <header class="bg-white dark:bg-dark-900 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-dark-700">
-      <div class="max-w-7xl mx-auto px-3 py-3 flex items-center justify-between gap-2 md:gap-4">
-        <a href="#home" class="flex items-center gap-3 shrink-0 min-w-0">
+    <header class="header-mobile bg-white dark:bg-dark-900 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-dark-700">
+      <div class="max-w-7xl mx-auto px-2 sm:px-3 py-1.5 sm:py-3 flex items-center justify-between gap-1.5 sm:gap-4">
+        <a href="#home" class="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
           <img src="assets/branding/logo-transparent.png?v=20260806204514" alt="${isAr ? 'شعار الدليل اليمني التجاري' : 'Yemeni Guide logo'}" class="brand-logo brand-logo-header shrink-0" width="1024" height="559" fetchpriority="high">
           <div class="hidden lg:block min-w-0">
             <h1 class="text-lg font-bold text-gray-900 dark:text-white m-0 truncate">${isAr ? 'الدليل اليمني التجاري' : 'The Yemeni Guide'}</h1>
@@ -168,7 +168,7 @@ const App = {
             <div id="headerSearchSuggestions" class="search-suggestions hidden"></div>
           </div>
         </div>
-        <nav class="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+        <nav class="header-nav flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
           <!-- Dark Mode Toggle -->
           <button onclick="App.toggleDarkMode()" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700" title="${Data.t('darkMode')}">
             <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-4 h-4"></i>
@@ -214,16 +214,15 @@ const App = {
     const latest = places.slice(0, 8);
 
     return `
-    <section class="hero-section bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-10 md:py-14 relative overflow-hidden">
+    <section class="hero-section bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-4 md:py-10 relative overflow-hidden">
       <div class="absolute inset-0 opacity-10"><div class="absolute top-10 right-10 w-48 h-48 bg-white rounded-full blur-3xl"></div><div class="absolute bottom-10 left-10 w-64 h-64 bg-yellow-500 rounded-full blur-3xl"></div></div>
       <div class="max-w-7xl mx-auto px-3 md:px-4 text-center relative z-10">
-        <img src="assets/branding/logo-transparent.png?v=20260806204514" alt="شعار الدليل اليمني التجاري" class="brand-logo brand-logo-hero mx-auto mb-5 drop-shadow-2xl" width="1024" height="559">
-        <h2 class="text-2xl md:text-5xl font-bold mb-3 px-2">الدليل اليمني التجاري</h2>
-        <p class="text-sm md:text-lg text-blue-100 mb-6 max-w-xl mx-auto px-2">الدليل الشامل للأعمال والأماكن في جميع أنحاء اليمن</p>
+        <h2 class="text-lg sm:text-2xl md:text-5xl font-bold mb-1.5 md:mb-3 px-2">الدليل اليمني التجاري</h2>
+        <p class="hidden md:block text-sm md:text-lg text-blue-100 mb-4 max-w-xl mx-auto px-2">الدليل الشامل للأعمال والأماكن في جميع أنحاء اليمن</p>
         <div class="hero-search-wrap max-w-xl mx-auto relative px-1">
-          <div class="flex bg-white rounded-xl shadow-2xl overflow-hidden items-stretch w-full">
-            <input type="text" id="heroSearch" placeholder="ابحث عن مكان، خدمة، أو نشاط..." class="flex-1 min-w-0 px-3 md:px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none text-sm" oninput="App.onSearchInput(this.value)" autocomplete="off">
-            <button onclick="App.doSearch()" class="shrink-0 bg-yellow-500 hover:bg-yellow-600 text-white px-4 md:px-5 font-semibold transition-colors text-sm flex items-center gap-1"><i data-lucide="search" class="w-4 h-4"></i>بحث</button>
+          <div class="flex bg-white rounded-lg md:rounded-xl shadow-2xl overflow-hidden items-stretch w-full">
+            <input type="text" id="heroSearch" placeholder="ابحث عن مكان، خدمة، أو نشاط..." class="flex-1 min-w-0 px-3 md:px-4 py-2 md:py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none text-xs md:text-sm" oninput="App.onSearchInput(this.value)" autocomplete="off">
+            <button onclick="App.doSearch()" class="shrink-0 bg-yellow-500 hover:bg-yellow-600 text-white px-3 md:px-5 font-semibold transition-colors text-xs md:text-sm flex items-center gap-1"><i data-lucide="search" class="w-3.5 h-3.5 md:w-4 md:h-4"></i>بحث</button>
           </div>
           <div id="searchSuggestions" class="search-suggestions hidden"></div>
         </div>
@@ -233,19 +232,19 @@ const App = {
     <!-- Ad: Below Hero -->
     ${Ads.renderPosition('below_hero')}
 
-    <section class="bg-white py-4 border-b">
-      <div class="max-w-7xl mx-auto px-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-        <div><div class="text-lg md:text-2xl font-bold text-blue-600">${stats.places}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>مكان</div></div>
-        <div><div class="text-lg md:text-2xl font-bold text-blue-600">${stats.users}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-1"><i data-lucide="users" class="w-3 h-3"></i>مستخدم</div></div>
-        <div><div class="text-lg md:text-2xl font-bold text-blue-600">${stats.reviews}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-1"><i data-lucide="star" class="w-3 h-3"></i>مراجعة</div></div>
-        <div><div class="text-lg md:text-2xl font-bold text-blue-600">${stats.categories}</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-1"><i data-lucide="layers" class="w-3 h-3"></i>قسم</div></div>
+    <section class="bg-white py-2 md:py-4 border-b">
+      <div class="max-w-7xl mx-auto px-3 md:px-4 grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3 text-center">
+        <div><div class="text-base md:text-2xl font-bold text-blue-600">${stats.places}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="map-pin" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>مكان</div></div>
+        <div><div class="text-base md:text-2xl font-bold text-blue-600">${stats.users}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="users" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>مستخدم</div></div>
+        <div><div class="text-base md:text-2xl font-bold text-blue-600">${stats.reviews}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="star" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>مراجعة</div></div>
+        <div><div class="text-base md:text-2xl font-bold text-blue-600">${stats.categories}</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="layers" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>قسم</div></div>
       </div>
     </section>
 
-    <section class="py-6 md:py-10">
+    <section class="py-4 md:py-10">
       <div class="max-w-7xl mx-auto px-3">
-        <h3 class="text-base md:text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="grid-3x3" class="w-5 h-5 text-blue-600"></i>الأقسام الرئيسية</h3>
-        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-2 md:gap-3">
+        <h3 class="text-sm md:text-lg font-bold text-gray-900 mb-2 md:mb-4 flex items-center gap-2"><i data-lucide="grid-3x3" class="w-4 h-4 md:w-5 md:h-5 text-blue-600"></i>الأقسام الرئيسية</h3>
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-1.5 md:gap-3">
           ${Data.categories.map(c => {
             const count = places.filter(p => p.category === c.id).length;
             return `<a href="#category/${c.id}" class="bg-white rounded-xl p-2 md:p-3 text-center hover:shadow-md transition-all cursor-pointer border border-gray-100 active-scale">
@@ -261,27 +260,27 @@ const App = {
     <!-- Ad: Between Sections -->
     ${Ads.renderPosition('between_sections')}
 
-    <section class="bg-white py-6 md:py-10">
+    <section class="bg-white py-4 md:py-10">
       <div class="max-w-7xl mx-auto px-3">
-        <h3 class="text-base md:text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="star" class="w-5 h-5 text-yellow-500"></i>أماكن مميزة</h3>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${featured.map(p => this.renderPlaceCard(p)).join('')}</div>
+        <h3 class="text-sm md:text-lg font-bold text-gray-900 mb-2 md:mb-4 flex items-center gap-2"><i data-lucide="star" class="w-4 h-4 md:w-5 md:h-5 text-yellow-500"></i>أماكن مميزة</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">${featured.map(p => this.renderPlaceCard(p)).join('')}</div>
         <!-- Ad: Inside Places Grid -->
         ${Ads.renderPosition('inside_places')}
       </div>
     </section>
 
-    <section class="bg-white py-6 md:py-10">
+    <section class="bg-white py-4 md:py-10">
       <div class="max-w-7xl mx-auto px-3">
-        <h3 class="text-base md:text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5 text-blue-600"></i>أحدث الأماكن</h3>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${latest.map(p => this.renderPlaceCard(p)).join('')}</div>
+        <h3 class="text-sm md:text-lg font-bold text-gray-900 mb-2 md:mb-4 flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4 md:w-5 md:h-5 text-blue-600"></i>أحدث الأماكن</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">${latest.map(p => this.renderPlaceCard(p)).join('')}</div>
       </div>
     </section>
 
-    <section class="bg-gradient-to-r from-yellow-500 to-yellow-600 py-8 md:py-10">
+    <section class="bg-gradient-to-r from-yellow-500 to-yellow-600 py-5 md:py-10">
       <div class="max-w-7xl mx-auto px-4 text-center">
-        <h3 class="text-xl md:text-2xl font-bold text-white mb-2 flex items-center justify-center gap-2"><i data-lucide="plus-circle" class="w-6 h-6"></i>أضف مكانك مجاناً</h3>
-        <p class="text-yellow-100 mb-4 text-sm">سجّل عملك في دليل Yemen واحصل على المزيد من العملاء</p>
-        <a href="${Auth.currentUser ? '#add' : '#signup'}" class="bg-white text-yellow-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors shadow-xl inline-block text-sm">ابدأ الآن</a>
+        <h3 class="text-base md:text-2xl font-bold text-white mb-1 md:mb-2 flex items-center justify-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5 md:w-6 md:h-6"></i>أضف مكانك مجاناً</h3>
+        <p class="text-yellow-100 mb-3 md:mb-4 text-xs md:text-sm">سجّل عملك في دليل اليمن واحصل على المزيد من العملاء</p>
+        <a href="${Auth.currentUser ? '#add' : '#signup'}" class="bg-white text-yellow-600 px-5 md:px-6 py-2 md:py-3 rounded-xl font-bold hover:bg-gray-100 transition-colors shadow-xl inline-block text-xs md:text-sm">ابدأ الآن</a>
       </div>
     </section>
 
