@@ -54,13 +54,13 @@
         btn.disabled = true; btn.textContent = 'جاري الدخول...'; btn.style.opacity = '0.7';
         errEl.style.display = 'none';
         try {
-          // انتظر Firebase إذا لم يُحمّل بعد
+          // انتظر Firebase + firebase-config.js (يُعيّن persistence)
           var waitStart = Date.now();
-          while (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) {
+          while (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length || typeof auth === 'undefined') {
             if (Date.now() - waitStart > 15000) throw new Error('انتهت مهلة تحميل Firebase');
             await new Promise(function(r) { setTimeout(r, 300); });
           }
-          await firebase.auth().signInWithEmailAndPassword(email, pass);
+          await auth.signInWithEmailAndPassword(email, pass);
           location.reload();
         } catch (e) {
           var msgs = {
