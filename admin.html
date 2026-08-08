@@ -26,10 +26,61 @@
 </head>
 <body>
   <div id="admin-app">
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;">
-      <div class="loading-spinner"></div>
-      <p style="color:#94a3b8;font-size:13px;">جاري تحميل لوحة التحكم...</p>
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f9fafb;">
+      <div style="background:#fff;border-radius:16px;padding:32px;max-width:400px;width:90%;box-shadow:0 1px 3px rgba(0,0,0,0.1);text-align:center;">
+        <h1 style="font-size:20px;font-weight:700;margin:0 0 8px;">لوحة التحكم</h1>
+        <p style="color:#6b7280;font-size:13px;margin:0 0 24px;">الدليل اليمني التجاري</p>
+        <div style="text-align:right;margin-bottom:12px;">
+          <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:4px;">البريد الإلكتروني</label>
+          <input type="email" id="adminEmail" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;" placeholder="admin@yemendirectory.net" value="admin@yemendirectory.net">
+        </div>
+        <div style="text-align:right;margin-bottom:16px;">
+          <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:4px;">كلمة المرور</label>
+          <input type="password" id="adminPassword" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;" placeholder="••••••••">
+        </div>
+        <div id="adminLoginError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:12px;margin-bottom:12px;text-align:right;"></div>
+        <button id="adminLoginBtn" style="width:100%;background:#dc2626;color:#fff;padding:10px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">دخول لوحة التحكم</button>
+        <p style="margin-top:16px;"><a href="/" style="color:#6b7280;font-size:12px;text-decoration:none;">العودة للموقع</a></p>
+      </div>
     </div>
+    <script>
+      // فورم الدخول يعمل فوراً — ينتظر Firebase SDK فقط عند الضغط
+      document.getElementById('adminLoginBtn').addEventListener('click', async function() {
+        var btn = this;
+        var email = document.getElementById('adminEmail').value;
+        var pass = document.getElementById('adminPassword').value;
+        var errEl = document.getElementById('adminLoginError');
+        if (!email || !pass) { errEl.textContent = 'أدخل البريد وكلمة المرور'; errEl.style.display = 'block'; return; }
+        btn.disabled = true; btn.textContent = 'جاري الدخول...'; btn.style.opacity = '0.7';
+        errEl.style.display = 'none';
+        try {
+          // انتظر Firebase Auth إذا لم يُحمّل بعد
+          var waitStart = Date.now();
+          while (typeof firebase === 'undefined' || !firebase.apps.length || typeof firebase.auth !== 'function') {
+            if (Date.now() - waitStart > 10000) throw new Error('انتهت مهلة تحميل Firebase');
+            await new Promise(function(r) { setTimeout(r, 200); });
+          }
+          var auth = firebase.auth();
+          await auth.signInWithEmailAndPassword(email, pass);
+          location.reload();
+        } catch (e) {
+          var msgs = {
+            'auth/user-not-found': 'البريد الإلكتروني غير مسجل',
+            'auth/wrong-password': 'كلمة المرور غير صحيحة',
+            'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
+            'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
+            'auth/network-request-failed': 'خطأ في الاتصال بالشبكة'
+          };
+          errEl.textContent = msgs[e.code] || e.message || 'خطأ غير معروف';
+          errEl.style.display = 'block';
+          btn.disabled = false; btn.textContent = 'دخول لوحة التحكم'; btn.style.opacity = '1';
+        }
+      });
+      // Enter key triggers login
+      document.getElementById('adminPassword').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') document.getElementById('adminLoginBtn').click();
+      });
+    </script>
   </div>
 
   <!-- Firebase SDK -->
