@@ -787,9 +787,9 @@ const App = {
             <div><label class="block text-xs font-medium text-gray-700 mb-1">كلمة المرور</label><input type="password" id="loginPassword" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" placeholder="••••••••"></div>
             <button onclick="App.doLogin()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700 text-sm flex items-center justify-center gap-2"><i data-lucide="log-in" class="w-4 h-4"></i>دخول</button>
             <div class="relative my-3"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div><div class="relative flex justify-center"><span class="bg-white px-3 text-xs text-gray-400">أو</span></div></div>
-            <button onclick="App.doGoogleLogin()" class="w-full bg-white border-2 border-gray-200 text-gray-700 py-2.5 rounded-lg font-bold hover:bg-gray-50 flex items-center justify-center gap-2 text-sm">
+            <button id="googleLoginBtn" onclick="App.doGoogleLogin()" class="w-full bg-white border-2 border-gray-200 text-gray-700 py-2.5 rounded-lg font-bold hover:bg-gray-50 flex items-center justify-center gap-2 text-sm">
               <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-              تسجيل بـ Google
+              المتابعة باستخدام Google
             </button>
             <p class="text-center text-xs text-gray-500">ليس لديك حساب؟ <a href="#signup" class="text-blue-600 font-semibold">سجّل الآن</a></p>
           </div>
@@ -813,9 +813,9 @@ const App = {
             <div><label class="block text-xs font-medium text-gray-700 mb-1">كلمة المرور *</label><input type="password" id="signupPassword" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="6 أحرف على الأقل"></div>
             <button onclick="App.doSignup()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700 text-sm flex items-center justify-center gap-2"><i data-lucide="user-plus" class="w-4 h-4"></i>إنشاء الحساب</button>
             <div class="relative my-3"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div><div class="relative flex justify-center"><span class="bg-white px-3 text-xs text-gray-400">أو</span></div></div>
-            <button onclick="App.doGoogleLogin()" class="w-full bg-white border-2 border-gray-200 text-gray-700 py-2.5 rounded-lg font-bold hover:bg-gray-50 flex items-center justify-center gap-2 text-sm">
+            <button id="googleSignupBtn" onclick="App.doGoogleLogin()" class="w-full bg-white border-2 border-gray-200 text-gray-700 py-2.5 rounded-lg font-bold hover:bg-gray-50 flex items-center justify-center gap-2 text-sm">
               <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-              التسجيل بـ Google
+              المتابعة باستخدام Google
             </button>
             <p class="text-center text-xs text-gray-500">لديك حساب؟ <a href="#login" class="text-blue-600 font-semibold">سجّل دخول</a></p>
           </div>
@@ -1024,7 +1024,39 @@ const App = {
       this.initIcons();
     }
   },
-  async doGoogleLogin() { try { const result = await Auth.loginWithGoogle(); if (result && result.redirecting) return; location.hash = 'home'; this.render(); } catch (e) { alert(ErrorTracker.getInlineMessage(e)); } },
+  async doGoogleLogin() {
+    const btn = document.getElementById('googleLoginBtn') || document.getElementById('googleSignupBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.dataset.originalHtml = btn.innerHTML;
+      btn.innerHTML = '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"/></svg> جاري تسجيل الدخول...';
+      btn.style.opacity = '0.7';
+      btn.style.pointerEvents = 'none';
+    }
+    try {
+      const result = await Auth.loginWithGoogle();
+      if (result && result.redirecting) return;
+      location.hash = 'home';
+      this.render();
+    } catch (e) {
+      const msg = ErrorTracker.getInlineMessage(e);
+      if (msg && !msg.includes('تم إغلاق')) {
+        const errEl = document.getElementById('loginError') || document.getElementById('signupError');
+        if (errEl) {
+          errEl.textContent = msg;
+          errEl.classList.remove('hidden');
+        } else {
+          alert(msg);
+        }
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      }
+    }
+  },
   // ====== MAP INITIALIZATION ======
   placeMap: null,
   placeMarker: null,

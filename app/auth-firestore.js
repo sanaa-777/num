@@ -174,11 +174,29 @@ const Auth = {
     provider.setCustomParameters({ prompt: 'select_account' });
 
     try {
-      // دائماً نحاول popup أولاً (لا يعتمد على sessionStorage)
       const userCredential = await auth.signInWithPopup(provider);
       return await this._normalizeSocialUser(userCredential.user);
     } catch (error) {
-      // إذا فشل popup، نحاول redirect كخيار أخير
+      // ربط الحساب: إذا كان البريد مسجل بطريقة أخرى
+      if (error && error.code === 'auth/account-exists-with-different-credential') {
+        try {
+          const email = error.email || (error.customData && error.customData.email);
+          if (email) {
+            const methods = await auth.fetchSignInMethodsForEmail(email);
+            if (methods && methods.length > 0) {
+              // المستخدم مسجل بكلمة مرور — نطلب منه الدخول بكلمة المرور ثم نربط الحساب
+              throw this._handleError({
+                code: 'auth/account-exists-with-different-credential',
+                message: 'هذا البريد مسجل بطريقة أخرى. سجّل دخول بالإيميل وكلمة المرور أولاً ثم يمكنك ربط حساب Google من الملف الشخصي.'
+              });
+            }
+          }
+        } catch (linkErr) {
+          if (linkErr.code === 'auth/account-exists-with-different-credential') throw linkErr;
+          // fallback
+        }
+      }
+      // popup blocked — نحاول redirect كخيار أخير
       if (error && (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment')) {
         try {
           await auth.signInWithRedirect(provider);
