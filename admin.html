@@ -25,120 +25,7 @@
   </style>
 </head>
 <body>
-  <div id="admin-app">
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f9fafb;">
-      <div style="background:#fff;border-radius:16px;padding:32px;max-width:400px;width:90%;box-shadow:0 1px 3px rgba(0,0,0,0.1);text-align:center;">
-        <h1 style="font-size:20px;font-weight:700;margin:0 0 8px;">لوحة التحكم</h1>
-        <p style="color:#6b7280;font-size:13px;margin:0 0 24px;">الدليل اليمني التجاري</p>
-        <div style="text-align:right;margin-bottom:12px;">
-          <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:4px;">البريد الإلكتروني</label>
-          <input type="email" id="adminEmail" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;" placeholder="admin@yemendirectory.net" value="admin@yemendirectory.net">
-        </div>
-        <div style="text-align:right;margin-bottom:16px;">
-          <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:4px;">كلمة المرور</label>
-          <input type="password" id="adminPassword" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;" placeholder="••••••••">
-        </div>
-        <div id="adminLoginError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:12px;margin-bottom:12px;text-align:right;"></div>
-        <button id="adminLoginBtn" style="width:100%;background:#dc2626;color:#fff;padding:10px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">دخول لوحة التحكم</button>
-        <p style="margin-top:16px;"><a href="/" style="color:#6b7280;font-size:12px;text-decoration:none;">العودة للموقع</a></p>
-      </div>
-    </div>
-    <script>
-      // الفورم يعمل فوراً — ينتظر Firebase فقط عند الضغط
-      document.getElementById('adminLoginBtn').addEventListener('click', async function() {
-        var btn = this;
-        var email = document.getElementById('adminEmail').value;
-        var pass = document.getElementById('adminPassword').value;
-        var errEl = document.getElementById('adminLoginError');
-        if (!email || !pass) { errEl.textContent = 'أدخل البريد وكلمة المرور'; errEl.style.display = 'block'; return; }
-        btn.disabled = true; btn.textContent = 'جاري الدخول...'; btn.style.opacity = '0.7';
-        errEl.style.display = 'none';
-        try {
-          // انتظار تحميل Firebase + config
-          var waitStart = Date.now();
-          while (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length || typeof auth === 'undefined') {
-            if (Date.now() - waitStart > 15000) throw new Error('انتهت مهلة تحميل Firebase');
-            await new Promise(function(r) { setTimeout(r, 300); });
-          }
-          try {
-            await auth.signInWithEmailAndPassword(email, pass);
-          } catch (signInErr) {
-            // إذا لم يكن الحساب موجوداً في Firebase Auth، أنشئه تلقائياً
-            if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential' || signInErr.code === 'auth/wrong-password' || signInErr.code === 'auth/invalid-login-credentials') {
-              try {
-                var cred = await auth.createUserWithEmailAndPassword(email, pass);
-                var user = cred.user;
-                await user.updateProfile({ displayName: 'مدير النظام' });
-                // إنشاء مستند المستخدم في Firestore مع صلاحيات الأدمن
-                await db.collection('users').doc(user.uid).set({
-                  name: 'مدير النظام',
-                  email: email,
-                  phone: '777000000',
-                  avatar: 'https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff&size=128',
-                  role: 'admin',
-                  verified: true,
-                  suspended: false,
-                  bio: '',
-                  location: '',
-                  website: '',
-                  createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-              } catch (createErr) {
-                // إذا فشل الإنشاء أيضاً (مثلاً البريد مستخدم بكلمة مرور مختلفة)
-                throw signInErr;
-              }
-            } else {
-              throw signInErr;
-            }
-          }
-          // التأكد من أن المستخدم الحالي أدمن في Firestore
-          var currentUser = auth.currentUser;
-          if (currentUser) {
-            try {
-              var userDoc = await db.collection('users').doc(currentUser.uid).get();
-              if (userDoc.exists && userDoc.data().role !== 'admin') {
-                await db.collection('users').doc(currentUser.uid).update({ role: 'admin' });
-              } else if (!userDoc.exists) {
-                await db.collection('users').doc(currentUser.uid).set({
-                  name: currentUser.displayName || 'مدير النظام',
-                  email: currentUser.email,
-                  phone: '',
-                  avatar: currentUser.photoURL || 'https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff&size=128',
-                  role: 'admin',
-                  verified: true,
-                  suspended: false,
-                  createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-              }
-            } catch (roleErr) {
-              console.warn('Admin role check skipped:', roleErr.message);
-            }
-          }
-          location.reload();
-        } catch (e) {
-          var msgs = {
-            'auth/user-not-found': 'البريد الإلكتروني غير مسجل',
-            'auth/wrong-password': 'كلمة المرور غير صحيحة',
-            'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
-            'auth/invalid-login-credentials': 'بيانات الدخول غير صحيحة',
-            'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
-            'auth/network-request-failed': 'خطأ في الاتصال بالشبكة',
-            'auth/email-already-in-use': 'البريد مستخدم مسبقاً بكلمة مرور مختلفة'
-          };
-          errEl.textContent = msgs[e.code] || e.message || 'خطأ غير معروف';
-          errEl.style.display = 'block';
-          btn.disabled = false; btn.textContent = 'دخول لوحة التحكم'; btn.style.opacity = '1';
-        }
-      });
-      document.getElementById('adminPassword').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') document.getElementById('adminLoginBtn').click();
-      });
-    </script>
-  </div>
-
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK (يُحمّل أولاً) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -155,6 +42,27 @@
   <script src="app/auth-firestore.js?v=20260808202200"></script>
   <script src="app/admin-firestore.js?v=20260808202200"></script>
   <script src="app/ads-firestore.js?v=20260808202200"></script>
+
+  <div id="admin-app">
+    <!-- شاشة التحميل -->
+    <div id="loginScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f9fafb;">
+      <div style="background:#fff;border-radius:16px;padding:32px;max-width:400px;width:90%;box-shadow:0 1px 3px rgba(0,0,0,0.1);text-align:center;">
+        <h1 style="font-size:20px;font-weight:700;margin:0 0 8px;">لوحة التحكم</h1>
+        <p style="color:#6b7280;font-size:13px;margin:0 0 24px;">الدليل اليمني التجاري</p>
+        <div style="text-align:right;margin-bottom:12px;">
+          <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:4px;">البريد الإلكتروني</label>
+          <input type="email" id="adminEmail" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;" placeholder="admin@yemendirectory.net" value="admin@yemendirectory.net">
+        </div>
+        <div style="text-align:right;margin-bottom:16px;">
+          <label style="display:block;font-size:12px;font-weight:500;color:#374151;margin-bottom:4px;">كلمة المرور</label>
+          <input type="password" id="adminPassword" style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;" placeholder="••••••••">
+        </div>
+        <div id="adminLoginError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:12px;margin-bottom:12px;text-align:right;"></div>
+        <button id="adminLoginBtn" style="width:100%;background:#dc2626;color:#fff;padding:10px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">دخول لوحة التحكم</button>
+        <p style="margin-top:16px;"><a href="/" style="color:#6b7280;font-size:12px;text-decoration:none;">العودة للموقع</a></p>
+      </div>
+    </div>
+  </div>
 
   <script>
     // =============================================
@@ -175,7 +83,7 @@
           await Admin.initDefaultAdmin();
 
           if (!Auth.currentUser) {
-            this.renderLogin();
+            this.setupLoginForm();
             return;
           }
           if (Auth.currentUser.role !== 'admin') {
@@ -203,121 +111,116 @@
         }
       },
 
-      renderLogin() {
-        // الفورم موجود مسبقاً في HTML — فقط نوصل الزر بـ Firebase
+      setupLoginForm() {
         var btn = document.getElementById('adminLoginBtn');
+        var emailInput = document.getElementById('adminEmail');
+        var passInput = document.getElementById('adminPassword');
+        var errEl = document.getElementById('adminLoginError');
         if (!btn) return;
-        // منع الربط المزدوج
+
+        // معالج النقر - يُربط مرة واحدة فقط
         if (btn.dataset.bound) return;
         btn.dataset.bound = '1';
+
         btn.addEventListener('click', async function() {
-          var email = document.getElementById('adminEmail').value;
-          var pass = document.getElementById('adminPassword').value;
-          var errEl = document.getElementById('adminLoginError');
-          if (!email || !pass) { errEl.textContent = 'أدخل البريد وكلمة المرور'; errEl.style.display = 'block'; return; }
-          btn.disabled = true; btn.textContent = 'جاري الدخول...'; btn.style.opacity = '0.7';
+          var email = emailInput.value;
+          var pass = passInput.value;
+
+          if (!email || !pass) {
+            errEl.textContent = 'أدخل البريد وكلمةمرور';
+            errEl.style.display = 'block';
+            return;
+          }
+
+          btn.disabled = true;
+          btn.textContent = 'جاري الدخول...';
+          btn.style.opacity = '0.7';
           errEl.style.display = 'none';
+
           try {
+            // محاولة تسجيل الدخول
             await auth.signInWithEmailAndPassword(email, pass);
+
+            // التأكد من أن المستخدم أدمن في Firestore
+            var currentUser = auth.currentUser;
+            if (currentUser) {
+              try {
+                var userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists && userDoc.data().role !== 'admin') {
+                  await db.collection('users').doc(currentUser.uid).update({ role: 'admin' });
+                } else if (!userDoc.exists) {
+                  await db.collection('users').doc(currentUser.uid).set({
+                    name: currentUser.displayName || 'مدير النظام',
+                    email: currentUser.email,
+                    phone: '',
+                    avatar: currentUser.photoURL || 'https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff&size=128',
+                    role: 'admin',
+                    verified: true,
+                    suspended: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                  });
+                }
+              } catch (roleErr) {
+                console.warn('Admin role check skipped:', roleErr.message);
+              }
+            }
+
             location.reload();
+
           } catch (e) {
+            console.error('Login error:', e.code, e.message);
+
+            // إذا لم يكن الحساب موجوداً، أنشئه تلقائياً
+            if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential' ||
+                e.code === 'auth/wrong-password' || e.code === 'auth/invalid-login-credentials') {
+              try {
+                var cred = await auth.createUserWithEmailAndPassword(email, pass);
+                var user = cred.user;
+                await user.updateProfile({ displayName: 'مدير النظام' });
+                await db.collection('users').doc(user.uid).set({
+                  name: 'مدير النظام',
+                  email: email,
+                  phone: '777000000',
+                  avatar: 'https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff&size=128',
+                  role: 'admin',
+                  verified: true,
+                  suspended: false,
+                  bio: '',
+                  location: '',
+                  website: '',
+                  createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                location.reload();
+                return;
+              } catch (createErr) {
+                console.error('Auto-create admin failed:', createErr.code, createErr.message);
+                // استخدم رسالة الخطأ الأصلي
+              }
+            }
+
             var msgs = {
               'auth/user-not-found': 'البريد الإلكتروني غير مسجل',
               'auth/wrong-password': 'كلمة المرور غير صحيحة',
               'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
+              'auth/invalid-login-credentials': 'بيانات الدخول غير صحيحة',
               'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
-              'auth/network-request-failed': 'خطأ في الاتصال بالشبكة'
+              'auth/network-request-failed': 'خطأ في الاتصال بالشبكة - تأكد من اتصالك بالإنترنت',
+              'auth/email-already-in-use': 'البريد مستخدم مسبقاً بكلمة مرور مختلفة'
             };
             errEl.textContent = msgs[e.code] || e.message || 'خطأ غير معروف';
             errEl.style.display = 'block';
-            btn.disabled = false; btn.textContent = 'دخول لوحة التحكم'; btn.style.opacity = '1';
+            btn.disabled = false;
+            btn.textContent = 'دخول لوحة التحكم';
+            btn.style.opacity = '1';
           }
         });
-        // لا نستبدل الـ HTML — الفورم الافتراضي يبقى ظاهراً
-        return;
 
-        // الكود القديم (لن يُنفذ):
-        const app = document.getElementById('admin-app');
-        app.innerHTML = `
-        <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
-          <div class="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl">
-            <div class="text-center mb-6">
-              <div class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                <i data-lucide="shield" class="w-8 h-8 text-white"></i>
-              </div>
-              <h1 class="text-2xl font-bold text-gray-900">لوحة التحكم</h1>
-              <p class="text-gray-500 text-sm mt-1">دليل اليمن - إدارة النظام</p>
-            </div>
-            <div id="loginError" class="hidden bg-red-50 text-red-600 p-3 rounded-xl mb-4 text-sm flex items-center gap-2">
-              <i data-lucide="alert-circle" class="w-4 h-4"></i><span></span>
-            </div>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">البريد الإلكتروني</label>
-                <input type="email" id="adminEmail" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500" placeholder="admin@yemendirectory.net">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">كلمة المرور</label>
-                <input type="password" id="adminPassword" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500" placeholder="••••••••">
-              </div>
-              <button onclick="AdminPanel.doLogin()" class="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
-                <i data-lucide="log-in" class="w-5 h-5"></i>دخول لوحة التحكم
-              </button>
-            </div>
-            <div class="mt-4 text-center">
-              <button onclick="AdminPanel.forgotPassword()" class="text-sm text-gray-400 hover:text-gray-600">نسيت كلمة المرور؟</button>
-            </div>
-            <a href="index.html" class="block text-center text-sm text-gray-400 hover:text-gray-600 mt-6 flex items-center justify-center gap-1">
-              <i data-lucide="arrow-right" class="w-4 h-4"></i>العودة للموقع
-            </a>
-          </div>
-        </div>`;
-        this.initIcons();
-      },
-
-      async doLogin() {
-        const email = document.getElementById('adminEmail').value;
-        const password = document.getElementById('adminPassword').value;
-        const errEl = document.getElementById('loginError');
-
-        if (!email || !password) {
-          errEl.classList.remove('hidden');
-          errEl.querySelector('span').textContent = 'أدخل البريد وكلمة المرور';
-          return;
-        }
-
-        try {
-          errEl.classList.add('hidden');
-          await Auth.login(email, password);
-
-          if (Auth.currentUser.role !== 'admin') {
-            await Auth.logout();
-            errEl.classList.remove('hidden');
-            errEl.querySelector('span').textContent = 'ليس لديك صلاحيات الأدمن';
-            return;
-          }
-
-          await Data.getPlaces();
-          this._dataLoaded = true;
-          this.render();
-        } catch (e) {
-          errEl.classList.remove('hidden');
-          errEl.querySelector('span').textContent = ErrorTracker.getInlineMessage(e);
-        }
-      },
-
-      async forgotPassword() {
-        const email = document.getElementById('adminEmail').value;
-        if (!email) {
-          alert('أدخل البريد الإلكتروني أولاً');
-          return;
-        }
-        try {
-          await Auth.resetPassword(email);
-          alert('تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني');
-        } catch (e) {
-          alert(ErrorTracker.getInlineMessage(e));
-        }
+        // Enter key support
+        passInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') btn.click();
+        });
       },
 
       renderUnauthorized() {
@@ -358,7 +261,7 @@
                   <img src="${Auth.currentUser.avatar}" class="w-6 h-6 rounded-full" alt="">
                   <span class="text-xs font-medium">${Auth.currentUser.name}</span>
                 </div>
-                <button onclick="Auth.logout().then(()=>AdminPanel.renderLogin())" class="text-red-500 hover:text-red-700"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+                <button onclick="Auth.logout().then(()=>location.reload())" class="text-red-500 hover:text-red-700"><i data-lucide="log-out" class="w-5 h-5"></i></button>
               </div>
             </div>
           </header>
