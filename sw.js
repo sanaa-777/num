@@ -2,7 +2,7 @@
 // Service Worker - دليل Yemen PWA (Versioned)
 // =============================================
 
-const BUILD_VERSION = '20260808183000';
+const BUILD_VERSION = '20260808185600';
 const CACHE_PREFIX = 'dalil-yemen-static-';
 const CACHE_NAME = `${CACHE_PREFIX}${BUILD_VERSION}`;
 const OFFLINE_FALLBACK = `/index.html?v=${BUILD_VERSION}`;
@@ -95,6 +95,13 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   if (url.origin !== self.location.origin) {
+    // Never cache Firebase Auth, Firestore, Storage, or Google API calls
+    const host = url.hostname;
+    if (host.includes('googleapis.com') || host.includes('firebaseio.com') ||
+        host.includes('firebase.google.com') || host.includes('gstatic.com/firebase')) {
+      event.respondWith(fetch(event.request, { cache: 'no-store' }));
+      return;
+    }
     event.respondWith(networkFirst(event.request).catch(() => caches.match(event.request)));
     return;
   }
