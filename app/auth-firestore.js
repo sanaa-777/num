@@ -7,7 +7,6 @@ const Auth = {
   currentUser: null,
   _authListenerAttached: false,
   _initResolve: null,
-  _redirectResultHandled: false,
 
   // ====== التهيئة (تستدعى مرة واحدة) ======
   init() {
@@ -16,74 +15,71 @@ const Auth = {
       if (this._authListenerAttached) { resolve(this.currentUser); return; }
       this._authListenerAttached = true;
 
-      // Timeout: إذا لم يستجب Firebase خلال 5 ثوانٍ
+      // Timeout: إذا لم يستجب Firebase خلال 8 ثوانٍ
       const timeout = setTimeout(() => {
-        console.log('Auth init timeout - continuing without auth');
+        console.warn('Auth init timeout - continuing without auth');
         if (this._initResolve) {
           this._initResolve(null);
           this._initResolve = null;
         }
-      }, 5000);
+      }, 8000);
 
       try {
-      this._consumeRedirectResult().catch((redirectError) => {
-        console.warn('Redirect result error:', redirectError?.message || redirectError);
-      });
-      auth.onAuthStateChanged(async (user) => {
-        clearTimeout(timeout);
-        if (user) {
-          try {
-            const userDoc = await db.collection('users').doc(user.uid).get();
-            const userData = userDoc.exists ? userDoc.data() : {};
+        auth.onAuthStateChanged(async (user) => {
+          clearTimeout(timeout);
+          if (user) {
+            try {
+              const userDoc = await db.collection('users').doc(user.uid).get();
+              const userData = userDoc.exists ? userDoc.data() : {};
 
-            this.currentUser = {
-              id: user.uid,
-              uid: user.uid,
-              name: userData.name || user.displayName || 'مستخدم',
-              email: user.email,
-              phone: userData.phone || '',
-              avatar: userData.avatar || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=3b82f6&color=fff&size=128`,
-              coverImage: userData.coverImage || null,
-              role: userData.role || 'user',
-              verified: userData.verified || false,
-              suspended: userData.suspended || false,
-              bio: userData.bio || '',
-              location: userData.location || '',
-              website: userData.website || '',
-              createdAt: userData.createdAt
-            };
+              this.currentUser = {
+                id: user.uid,
+                uid: user.uid,
+                name: userData.name || user.displayName || 'مستخدم',
+                email: user.email,
+                phone: userData.phone || '',
+                avatar: userData.avatar || user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || 'U')}&background=3b82f6&color=fff&size=128`,
+                coverImage: userData.coverImage || null,
+                role: userData.role || 'user',
+                verified: userData.verified || false,
+                suspended: userData.suspended || false,
+                bio: userData.bio || '',
+                location: userData.location || '',
+                website: userData.website || '',
+                createdAt: userData.createdAt
+              };
 
-            // إذا كان موقوفاً
-            if (userData.suspended) {
-              await auth.signOut();
-              this.currentUser = null;
+              // إذا كان موقوفاً
+              if (userData.suspended) {
+                await auth.signOut();
+                this.currentUser = null;
+              }
+            } catch (e) {
+              console.error('Auth state error:', e);
+              this.currentUser = {
+                id: user.uid, uid: user.uid,
+                name: user.displayName || 'مستخدم',
+                email: user.email,
+                avatar: user.photoURL || '',
+                role: 'user', verified: false
+              };
             }
-          } catch (e) {
-            console.error('Auth state error:', e);
-            this.currentUser = {
-              id: user.uid, uid: user.uid,
-              name: user.displayName || 'مستخدم',
-              email: user.email,
-              avatar: user.photoURL || '',
-              role: 'user', verified: false
-            };
+          } else {
+            this.currentUser = null;
           }
-        } else {
-          this.currentUser = null;
-        }
 
-        if (this._initResolve) {
-          this._initResolve(this.currentUser);
-          this._initResolve = null;
-        }
+          if (this._initResolve) {
+            this._initResolve(this.currentUser);
+            this._initResolve = null;
+          }
 
-        // تحديث الواجهة إذا كان التطبيق مُحمّلاً
-        if (typeof App !== 'undefined' && App.render) {
-          App.render();
-        }
-      });
-      } catch(e) {
-        console.log('Auth listener error:', e.message);
+          // تحديث الواجهة إذا كان التطبيق مُحمّلاً
+          if (typeof App !== 'undefined' && App.render) {
+            App.render();
+          }
+        });
+      } catch (e) {
+        console.error('Auth listener error:', e.message);
         resolve(null);
       }
     });
@@ -178,28 +174,19 @@ const Auth = {
     provider.setCustomParameters({ prompt: 'select_account' });
 
     try {
-      if (this._shouldUseRedirectAuth()) {
-        sessionStorage.setItem('dy_pending_auth_provider', 'google');
-        await auth.signInWithRedirect(provider);
-        return { redirecting: true };
-      }
-
+      // دائماً نحاول popup أولاً (لا يعتمد على sessionStorage)
       const userCredential = await auth.signInWithPopup(provider);
       return await this._normalizeSocialUser(userCredential.user);
     } catch (error) {
-      const fallbackCodes = new Set([
-        'auth/popup-blocked',
-        'auth/popup-closed-by-user',
-        'auth/cancelled-popup-request',
-        'auth/operation-not-supported-in-this-environment'
-      ]);
-
-      if (fallbackCodes.has(error?.code)) {
-        sessionStorage.setItem('dy_pending_auth_provider', 'google');
-        await auth.signInWithRedirect(provider);
-        return { redirecting: true };
+      // إذا فشل popup، نحاول redirect كخيار أخير
+      if (error && (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment')) {
+        try {
+          await auth.signInWithRedirect(provider);
+          return { redirecting: true };
+        } catch (redirectError) {
+          throw this._handleError(redirectError);
+        }
       }
-
       throw this._handleError(error);
     }
   },
@@ -334,33 +321,6 @@ const Auth = {
     return this.currentUser;
   },
 
-  async _consumeRedirectResult() {
-    if (this._redirectResultHandled) return null;
-    this._redirectResultHandled = true;
-
-    try {
-      const result = await auth.getRedirectResult();
-      if (result && result.user) {
-        sessionStorage.removeItem('dy_pending_auth_provider');
-        await this._normalizeSocialUser(result.user);
-      }
-      return result;
-    } catch (error) {
-      sessionStorage.removeItem('dy_pending_auth_provider');
-      throw this._handleError(error);
-    }
-  },
-
-  _shouldUseRedirectAuth() {
-    if (typeof navigator === 'undefined') return false;
-    const ua = navigator.userAgent || '';
-    const isIOS = /iPad|iPhone|iPod/.test(ua);
-    const isAndroid = /Android/.test(ua);
-    const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|EdgiOS|OPR\//.test(ua);
-    const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
-    return isIOS || isAndroid || isSafari || isStandalone;
-  },
-
   // ====== مساعدات ======
   isVerified() {
     return this.currentUser && this.currentUser.verified;
@@ -372,7 +332,6 @@ const Auth = {
 
   async _notifyAdmin(type, message) {
     try {
-      // إرسال إشعار لجميع الأدمنات
       const adminsSnap = await db.collection('users').where('role', '==', 'admin').get();
       for (const adminDoc of adminsSnap.docs) {
         await db.collection('notifications').add({
@@ -415,14 +374,16 @@ const Auth = {
       'auth/user-disabled': 'تم تعطيل هذا الحساب',
       'auth/user-not-found': 'البريد الإلكتروني غير مسجل',
       'auth/wrong-password': 'كلمة المرور غير صحيحة',
+      'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
       'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
       'auth/network-request-failed': 'خطأ في الاتصال بالشبكة',
       'auth/popup-closed-by-user': 'تم إغلاق نافذة تسجيل الدخول',
       'auth/popup-blocked': 'تم حظر النافذة المنبثقة',
-      'auth/cancelled-popup-request': 'تم إلغاء محاولة تسجيل الدخول السابقة',
-      'auth/operation-not-supported-in-this-environment': 'المتصفح الحالي يحتاج استخدام التحويل المباشر لتسجيل الدخول',
-      'auth/web-storage-unsupported': 'المتصفح لا يدعم التخزين المطلوب لإكمال تسجيل الدخول',
-      'auth/invalid-credential': 'بيانات الدخول غير صحيحة'
+      'auth/cancelled-popup-request': 'تم إلغاء محاولة تسجيل الدخول',
+      'auth/operation-not-supported-in-this-environment': 'المتصفح لا يدعم هذه الطريقة',
+      'auth/web-storage-unsupported': 'المتصفح لا يدعم التخزين المطلوب',
+      'auth/missing-initial-state': 'حدث خطأ في عملية تسجيل الدخول، يرجى المحاولة مرة أخرى',
+      'auth/account-exists-with-different-credential': 'يوجد حساب بنفس البريد الإلكتروني بطريقة دخول مختلفة'
     };
     return ErrorTracker.createUserError(error, {
       operation: 'auth.firebase',

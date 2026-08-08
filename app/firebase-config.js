@@ -1,8 +1,6 @@
 // =============================================
 // Firebase Configuration - الدليل اليمني التجاري
 // =============================================
-// ⚠️ استبدل هذه القيم بإعدادات مشروعك على Firebase
-// https://console.firebase.google.com
 
 const firebaseConfig = {
   apiKey: "AIzaSyBAGdUGSb1tAVNA_PC6LbNM_jTG6P6VdG4",
@@ -14,35 +12,47 @@ const firebaseConfig = {
   measurementId: "G-12LQHJMSP6"
 };
 
-// تهيئة Firebase
-firebase.initializeApp(firebaseConfig);
+// تهيئة Firebase (مرة واحدة فقط)
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
 // الخدمات
 const auth = firebase.auth();
-auth.useDeviceLanguage();
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((err) => {
-  console.warn('Auth persistence fallback:', err?.code || err?.message || err);
-});
 const db = firebase.firestore();
 const storage = firebase.storage();
 const messaging = typeof firebase.messaging === 'function' ? firebase.messaging() : null;
 
+// إعداد Auth persistence مع fallback
+(async function initAuthPersistence() {
+  try {
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    console.log('Auth persistence: LOCAL');
+  } catch (err) {
+    console.warn('LOCAL persistence failed, trying NONE:', err?.code || err?.message);
+    try {
+      await auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+      console.log('Auth persistence: NONE (fallback)');
+    } catch (err2) {
+      console.warn('Persistence setup failed completely:', err2?.code || err2?.message);
+    }
+  }
+})();
+
+// استخدام لغة الجهاز
+try { auth.useDeviceLanguage(); } catch (e) { /* ignore */ }
+
 // إعدادات Firestore
-db.settings({
-  cacheSizeBytes: 20 * 1024 * 1024,
-  ignoreUndefinedProperties: true,
-  merge: true
-});
+try {
+  db.settings({
+    cacheSizeBytes: 20 * 1024 * 1024,
+    ignoreUndefinedProperties: true,
+    merge: true
+  });
+} catch (e) { /* settings already applied */ }
 
 // تمكين الـ Offline Persistence
 db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
-  if (window.ErrorTracker) {
-    ErrorTracker.capture(err, {
-      operation: 'firebase.persistence.enable',
-      code: err.code || 'FIRESTORE-PERSISTENCE-FAILED',
-      userMessage: 'تعذر تفعيل التخزين المحلي للتطبيق'
-    });
-  }
   if (err.code === 'failed-precondition') {
     console.log('Multiple tabs open - persistence disabled');
   } else if (err.code === 'unimplemented') {
