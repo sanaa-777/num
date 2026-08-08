@@ -44,38 +44,6 @@
       </div>
     </div>
     <script>
-      // فورم الدخول يعمل فوراً — ينتظر Firebase SDK فقط عند الضغط
-      document.getElementById('adminLoginBtn').addEventListener('click', async function() {
-        var btn = this;
-        var email = document.getElementById('adminEmail').value;
-        var pass = document.getElementById('adminPassword').value;
-        var errEl = document.getElementById('adminLoginError');
-        if (!email || !pass) { errEl.textContent = 'أدخل البريد وكلمة المرور'; errEl.style.display = 'block'; return; }
-        btn.disabled = true; btn.textContent = 'جاري الدخول...'; btn.style.opacity = '0.7';
-        errEl.style.display = 'none';
-        try {
-          // انتظر Firebase Auth إذا لم يُحمّل بعد
-          var waitStart = Date.now();
-          while (typeof firebase === 'undefined' || !firebase.apps.length || typeof firebase.auth !== 'function') {
-            if (Date.now() - waitStart > 10000) throw new Error('انتهت مهلة تحميل Firebase');
-            await new Promise(function(r) { setTimeout(r, 200); });
-          }
-          var auth = firebase.auth();
-          await auth.signInWithEmailAndPassword(email, pass);
-          location.reload();
-        } catch (e) {
-          var msgs = {
-            'auth/user-not-found': 'البريد الإلكتروني غير مسجل',
-            'auth/wrong-password': 'كلمة المرور غير صحيحة',
-            'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
-            'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
-            'auth/network-request-failed': 'خطأ في الاتصال بالشبكة'
-          };
-          errEl.textContent = msgs[e.code] || e.message || 'خطأ غير معروف';
-          errEl.style.display = 'block';
-          btn.disabled = false; btn.textContent = 'دخول لوحة التحكم'; btn.style.opacity = '1';
-        }
-      });
       // Enter key triggers login
       document.getElementById('adminPassword').addEventListener('keydown', function(e) {
         if (e.key === 'Enter') document.getElementById('adminLoginBtn').click();
@@ -149,6 +117,39 @@
       },
 
       renderLogin() {
+        // الفورم موجود مسبقاً في HTML — فقط نوصل الزر بـ Firebase
+        var btn = document.getElementById('adminLoginBtn');
+        if (!btn) return;
+        // منع الربط المزدوج
+        if (btn.dataset.bound) return;
+        btn.dataset.bound = '1';
+        btn.addEventListener('click', async function() {
+          var email = document.getElementById('adminEmail').value;
+          var pass = document.getElementById('adminPassword').value;
+          var errEl = document.getElementById('adminLoginError');
+          if (!email || !pass) { errEl.textContent = 'أدخل البريد وكلمة المرور'; errEl.style.display = 'block'; return; }
+          btn.disabled = true; btn.textContent = 'جاري الدخول...'; btn.style.opacity = '0.7';
+          errEl.style.display = 'none';
+          try {
+            await auth.signInWithEmailAndPassword(email, pass);
+            location.reload();
+          } catch (e) {
+            var msgs = {
+              'auth/user-not-found': 'البريد الإلكتروني غير مسجل',
+              'auth/wrong-password': 'كلمة المرور غير صحيحة',
+              'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
+              'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
+              'auth/network-request-failed': 'خطأ في الاتصال بالشبكة'
+            };
+            errEl.textContent = msgs[e.code] || e.message || 'خطأ غير معروف';
+            errEl.style.display = 'block';
+            btn.disabled = false; btn.textContent = 'دخول لوحة التحكم'; btn.style.opacity = '1';
+          }
+        });
+        // لا نستبدل الـ HTML — الفورم الافتراضي يبقى ظاهراً
+        return;
+
+        // الكود القديم (لن يُنفذ):
         const app = document.getElementById('admin-app');
         app.innerHTML = `
         <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 p-4">
