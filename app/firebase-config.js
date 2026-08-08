@@ -2,7 +2,7 @@
 // Firebase Configuration - الدليل اليمني التجاري
 // =============================================
 
-const firebaseConfig = {
+var firebaseConfig = {
   apiKey: "AIzaSyBAGdUGSb1tAVNA_PC6LbNM_jTG6P6VdG4",
   authDomain: "deel-39f2e.firebaseapp.com",
   projectId: "deel-39f2e",
@@ -17,11 +17,11 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
-// الخدمات
-const auth = firebase.auth();
-const db = firebase.firestore();
-const storage = firebase.storage();
-const messaging = typeof firebase.messaging === 'function' ? firebase.messaging() : null;
+// الخدمات (var for global access from inline scripts)
+var auth = firebase.auth();
+var db = firebase.firestore();
+var storage = firebase.storage();
+var messaging = typeof firebase.messaging === 'function' ? firebase.messaging() : null;
 
 // إعداد Auth persistence مع fallback
 (async function initAuthPersistence() {
