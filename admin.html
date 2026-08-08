@@ -11,12 +11,17 @@
   <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png">
   <link rel="stylesheet" href="app/tailwind.css">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <style>
     * { font-family: 'Noto Kufi Arabic', sans-serif; box-sizing: border-box; }
-    body { margin: 0; background: #f9fafb; }
+    body { margin: 0; background: #f1f5f9; }
+    a { text-decoration: none; }
+    select { -webkit-appearance:none; -moz-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 12px center; background-size:12px; padding-left:32px; padding-right:12px; cursor:pointer; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; color:#374151; background-color:#fff; }
+    select:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
+    .icon-sm { width:18px; height:18px; } .icon-md { width:22px; height:22px; } .icon-lg { width:28px; height:28px; }
+    .loading-spinner { width:40px; height:40px; border:3px solid #e2e8f0; border-top-color:#dc2626; border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .login-box { background: #fff; border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-    .login-box h1 { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
-    .login-box p.sub { color: #6b7280; font-size: 13px; margin: 0 0 24px; }
     .field-label { display: block; font-size: 12px; font-weight: 500; color: #374151; margin-bottom: 4px; text-align: right; }
     .field-input { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; outline: none; }
     .field-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
@@ -24,275 +29,514 @@
     .btn-login:hover { background: #b91c1c; }
     .btn-login:disabled { background: #f87171; cursor: not-allowed; opacity: 0.7; }
     .error-box { display: none; background: #fef2f2; color: #dc2626; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; text-align: right; }
-    .success-box { display: none; background: #f0fdf4; color: #16a34a; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; text-align: right; }
     .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-left: 8px; vertical-align: middle; }
-    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;">
-    <div class="login-box">
-      <h1>لوحة التحكم</h1>
-      <p class="sub">الدليل اليمني التجاري</p>
-
-      <div style="text-align:right;margin-bottom:12px;">
-        <label class="field-label">البريد الإلكتروني</label>
-        <input type="email" id="email" class="field-input" value="admin@yemendirectory.net">
-      </div>
-
-      <div style="text-align:right;margin-bottom:16px;">
-        <label class="field-label">كلمة المرور</label>
-        <input type="password" id="password" class="field-input" placeholder="••••••••">
-      </div>
-
-      <div id="errorBox" class="error-box"></div>
-      <div id="successBox" class="success-box"></div>
-
-      <button id="loginBtn" class="btn-login" onclick="doLogin()">
-        دخول لوحة التحكم
-      </button>
-
-      <p style="margin-top:16px;"><a href="/" style="color:#6b7280;font-size:12px;text-decoration:none;">العودة للموقع</a></p>
-
-      <div id="debugInfo" style="display:none;margin-top:12px;padding:8px;background:#f3f4f6;border-radius:6px;font-size:10px;color:#6b7280;text-align:right;direction:ltr;font-family:monospace;"></div>
+  <!-- شاشة التحميل -->
+  <div id="loadingScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f9fafb;">
+    <div style="text-align:center;">
+      <div class="loading-spinner" style="margin:0 auto 16px;"></div>
+      <p style="color:#6b7280;font-size:14px;">جاري التحميل...</p>
     </div>
   </div>
 
+  <!-- شاشة الدخول -->
+  <div id="loginScreen" style="display:none;min-height:100vh;display:none;align-items:center;justify-content:center;background:#f9fafb;">
+    <div class="login-box">
+      <h1 style="font-size:20px;font-weight:700;margin:0 0 8px;">لوحة التحكم</h1>
+      <p style="color:#6b7280;font-size:13px;margin:0 0 24px;">الدليل اليمني التجاري</p>
+      <div style="text-align:right;margin-bottom:12px;">
+        <label class="field-label">البريد الإلكتروني</label>
+        <input type="email" id="adminEmail" class="field-input" value="admin@yemendirectory.net">
+      </div>
+      <div style="text-align:right;margin-bottom:16px;">
+        <label class="field-label">كلمة المرور</label>
+        <input type="password" id="adminPassword" class="field-input" placeholder="••••••••">
+      </div>
+      <div id="loginError" class="error-box"></div>
+      <button id="loginBtn" class="btn-login">دخول لوحة التحكم</button>
+      <p style="margin-top:16px;"><a href="/" style="color:#6b7280;font-size:12px;">العودة للموقع</a></p>
+    </div>
+  </div>
+
+  <!-- لوحة التحكم -->
+  <div id="admin-app" style="display:none;"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
+  <!-- Error Tracker -->
+  <script src="app/error-tracker.js"></script>
+
+  <!-- Firebase Config -->
+  <script src="app/firebase-config.js"></script>
+
+  <!-- App Modules -->
+  <script src="app/data-firestore.js"></script>
+  <script src="app/auth-firestore.js"></script>
+  <script src="app/admin-firestore.js"></script>
+  <script src="app/ads-firestore.js"></script>
+
   <script>
     // =============================================
-    // Firebase Login via REST API (no SDK dependency)
+    // Admin Panel Controller
     // =============================================
+    var API_KEY = '***';
 
-    var API_KEY = 'AIzaSyBAGdUGSb1tAVNA_PC6LbNM_jTG6P6VdG4';
-    var PROJECT_ID = 'deel-39f2e';
+    var AdminController = {
+      init: async function() {
+        var loadingScreen = document.getElementById('loadingScreen');
+        var loginScreen = document.getElementById('loginScreen');
+        var adminApp = document.getElementById('admin-app');
 
-    function showError(msg) {
-      var el = document.getElementById('errorBox');
-      el.textContent = msg;
-      el.style.display = 'block';
-      document.getElementById('successBox').style.display = 'none';
-    }
+        try {
+          // محاولة تهيئة Firebase Auth
+          await Auth.init();
 
-    function showSuccess(msg) {
-      var el = document.getElementById('successBox');
-      el.textContent = msg;
-      el.style.display = 'block';
-      document.getElementById('errorBox').style.display = 'none';
-    }
+          // التحقق من حالة تسجيل الدخول
+          if (Auth.currentUser) {
+            // المستخدم مسجل دخول بالفعل
+            if (Auth.currentUser.role === 'admin') {
+              await this.showAdminPanel();
+            } else {
+              this.showUnauthorized();
+            }
+          } else {
+            // التحقق من token محفوظ
+            var savedToken = localStorage.getItem('adminToken');
+            var savedUid = localStorage.getItem('adminUid');
 
-    function debug(msg) {
-      var el = document.getElementById('debugInfo');
-      el.style.display = 'block';
-      el.textContent += '\n' + new Date().toLocaleTimeString() + ' | ' + msg;
-    }
-
-    function setButtonLoading(loading) {
-      var btn = document.getElementById('loginBtn');
-      if (loading) {
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span>جاري الدخول...';
-      } else {
-        btn.disabled = false;
-        btn.textContent = 'دخول لوحة التحكم';
-      }
-    }
-
-    async function doLogin() {
-      var email = document.getElementById('email').value.trim();
-      var pass = document.getElementById('password').value;
-
-      if (!email || !pass) {
-        showError('أدخل البريد وكلمة المرور');
-        return;
-      }
-
-      setButtonLoading(true);
-      document.getElementById('errorBox').style.display = 'none';
-      document.getElementById('successBox').style.display = 'none';
-      document.getElementById('debugInfo').style.display = 'none';
-
-      debug('Starting login...');
-
-      try {
-        // Step 1: Sign in with Firebase REST API
-        debug('Calling Firebase signInWithPassword...');
-        var signInUrl = 'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY;
-
-        var response = await fetch(signInUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email,
-            password: pass,
-            returnSecureToken: true
-          })
-        });
-
-        var data = await response.json();
-        debug('Response status: ' + response.status);
-
-        if (!response.ok) {
-          var errorMsgs = {
-            'EMAIL_NOT_FOUND': 'البريد الإلكتروني غير مسجل',
-            'INVALID_PASSWORD': 'كلمة المرور غير صحيحة',
-            'INVALID_LOGIN_CREDENTIALS': 'بيانات الدخول غير صحيحة',
-            'USER_DISABLED': 'تم تعطيل هذا الحساب',
-            'TOO_MANY_ATTEMPTS_TRY_LATER': 'محاولات كثيرة، حاول لاحقاً'
-          };
-          throw new Error(errorMsgs[data.error?.message] || data.error?.message || 'فشل تسجيل الدخول');
-        }
-
-        debug('Login success! UID: ' + data.localId);
-        showSuccess('تم تسجيل الدخول بنجاح! جاري التحويل...');
-
-        // Step 2: Store auth data
-        localStorage.setItem('adminToken', data.idToken);
-        localStorage.setItem('adminRefreshToken', data.refreshToken);
-        localStorage.setItem('adminUid', data.localId);
-        localStorage.setItem('adminEmail', data.email);
-
-        // Step 3: Initialize Firebase SDK with the token
-        debug('Initializing Firebase SDK...');
-        await initFirebaseSDK(data);
-
-        // Step 4: Redirect to admin dashboard
-        debug('Redirecting...');
-        setTimeout(function() {
-          window.location.reload();
-        }, 500);
-
-      } catch (e) {
-        debug('ERROR: ' + e.message);
-        showError(e.message);
-        setButtonLoading(false);
-      }
-    }
-
-    async function initFirebaseSDK(authData) {
-      return new Promise(function(resolve, reject) {
-        // Load Firebase SDK dynamically
-        var scripts = [
-          'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
-          'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js',
-          'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js'
-        ];
-
-        var loaded = 0;
-        scripts.forEach(function(src) {
-          var s = document.createElement('script');
-          s.src = src;
-          s.onload = function() {
-            loaded++;
-            if (loaded === scripts.length) {
-              try {
-                // Initialize Firebase
-                if (!firebase.apps.length) {
-                  firebase.initializeApp({
-                    apiKey: API_KEY,
-                    authDomain: 'deel-39f2e.firebaseapp.com',
-                    projectId: PROJECT_ID,
-                    storageBucket: 'deel-39f2e.firebasestorage.app',
-                    messagingSenderId: '915094552048',
-                    appId: '1:915094552048:web:08c78c6c0a26d43534f135'
-                  });
-                }
-
-                // Set auth token
-                var auth = firebase.auth();
-                var db = firebase.firestore();
-
-                // Store for later use
-                window.firebase = firebase;
-                window.auth = auth;
-                window.db = db;
-
-                debug('Firebase SDK initialized');
-                resolve();
-              } catch (e) {
-                debug('Firebase init error: ' + e.message);
-                resolve(); // Continue anyway
+            if (savedToken && savedUid) {
+              // محاولة استعادة الجلسة
+              var restored = await this.restoreSession(savedToken, savedUid);
+              if (restored) {
+                await this.showAdminPanel();
+                return;
               }
             }
-          };
-          s.onerror = function() {
-            loaded++;
-            debug('Failed to load: ' + src);
-            if (loaded === scripts.length) resolve();
-          };
-          document.head.appendChild(s);
-        });
-      });
-    }
 
-    // Handle Enter key
-    document.getElementById('password').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') doLogin();
-    });
-
-    // Check if already logged in
-    (function() {
-      var token = localStorage.getItem('adminToken');
-      if (token) {
-        debug('Found existing token, verifying...');
-        // Try to load admin panel directly
-        loadAdminPanel();
-      }
-    })();
-
-    async function loadAdminPanel() {
-      try {
-        // Load all required scripts
-        var scripts = [
-          'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
-          'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js',
-          'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js',
-          'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js',
-          'app/error-tracker.js',
-          'app/firebase-config.js',
-          'app/data-firestore.js',
-          'app/auth-firestore.js',
-          'app/admin-firestore.js',
-          'app/ads-firestore.js'
-        ];
-
-        for (var i = 0; i < scripts.length; i++) {
-          await loadScript(scripts[i]);
+            // إظهار شاشة الدخول
+            this.showLogin();
+          }
+        } catch (e) {
+          console.error('Init error:', e);
+          this.showLogin();
         }
+      },
 
-        // Initialize auth
-        await Auth.init();
+      restoreSession: async function(token, uid) {
+        try {
+          // التحقق من صلاحية الـ token
+          var response = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + API_KEY, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: token })
+          });
 
-        if (Auth.currentUser && Auth.currentUser.role === 'admin') {
-          // Load admin panel
-          await Data.getPlaces();
-          // Render admin panel (simplified)
-          document.body.innerHTML = '<div id="admin-app"></div>';
-          AdminPanel.currentTab = 'dashboard';
-          AdminPanel._dataLoaded = true;
-          await AdminPanel.render();
+          if (response.ok) {
+            var data = await response.json();
+            if (data.users && data.users.length > 0) {
+              // Token صالح - تعيين حالة المصادقة
+              var user = data.users[0];
+              Auth.currentUser = {
+                id: user.localId,
+                uid: user.localId,
+                name: user.displayName || 'مدير النظام',
+                email: user.email,
+                phone: '',
+                avatar: user.photoURL || 'https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff&size=128',
+                role: 'admin',
+                verified: true,
+                suspended: false
+              };
+
+              // التحقق من Firestore
+              try {
+                var userDoc = await db.collection('users').doc(uid).get();
+                if (userDoc.exists) {
+                  var userData = userDoc.data();
+                  Auth.currentUser.name = userData.name || Auth.currentUser.name;
+                  Auth.currentUser.role = userData.role || 'admin';
+                  Auth.currentUser.avatar = userData.avatar || Auth.currentUser.avatar;
+                }
+              } catch (firestoreErr) {
+                console.warn('Firestore check skipped:', firestoreErr.message);
+              }
+
+              return true;
+            }
+          }
+
+          // Token غير صالح
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUid');
+          localStorage.removeItem('adminEmail');
+          return false;
+        } catch (e) {
+          console.error('Session restore error:', e);
+          return false;
         }
-      } catch (e) {
-        debug('Auto-load failed: ' + e.message);
-        // Show login form (already visible)
-      }
-    }
+      },
 
-    function loadScript(src) {
-      return new Promise(function(resolve, reject) {
-        var s = document.createElement('script');
-        s.src = src;
-        s.onload = resolve;
-        s.onerror = function() {
-          debug('Script load failed: ' + src);
-          resolve(); // Continue anyway
+      showLogin: function() {
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('admin-app').style.display = 'none';
+
+        // ربط زر الدخول
+        var btn = document.getElementById('loginBtn');
+        var self = this;
+
+        btn.onclick = async function() {
+          var email = document.getElementById('adminEmail').value.trim();
+          var pass = document.getElementById('adminPassword').value;
+          var errEl = document.getElementById('loginError');
+
+          if (!email || !pass) {
+            errEl.textContent = 'أدخل البريد وكلمة المرور';
+            errEl.style.display = 'block';
+            return;
+          }
+
+          btn.disabled = true;
+          btn.innerHTML = '<span class="spinner"></span>جاري الدخول...';
+          errEl.style.display = 'none';
+
+          try {
+            // تسجيل الدخول عبر REST API
+            var response = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: email, password: pass, returnSecureToken: true })
+            });
+
+            var data = await response.json();
+
+            if (!response.ok) {
+              var errorMsgs = {
+                'EMAIL_NOT_FOUND': 'البريد الإلكتروني غير مسجل',
+                'INVALID_PASSWORD': 'كلمة المرور غير صحيحة',
+                'INVALID_LOGIN_CREDENTIALS': 'بيانات الدخول غير صحيحة',
+                'USER_DISABLED': 'تم تعطيل هذا الحساب',
+                'TOO_MANY_ATTEMPTS_TRY_LATER': 'محاولات كثيرة، حاول لاحقاً'
+              };
+              throw new Error(errorMsgs[data.error?.message] || 'فشل تسجيل الدخول');
+            }
+
+            // حفظ بيانات الجلسة
+            localStorage.setItem('adminToken', data.idToken);
+            localStorage.setItem('adminRefreshToken', data.refreshToken);
+            localStorage.setItem('adminUid', data.localId);
+            localStorage.setItem('adminEmail', data.email);
+
+            // تعيين حالة المصادقة
+            Auth.currentUser = {
+              id: data.localId,
+              uid: data.localId,
+              name: data.displayName || 'مدير النظام',
+              email: data.email,
+              phone: '',
+              avatar: 'https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff&size=128',
+              role: 'admin',
+              verified: true,
+              suspended: false
+            };
+
+            // التحقق من Firestore
+            try {
+              var userDoc = await db.collection('users').doc(data.localId).get();
+              if (userDoc.exists) {
+                var userData = userDoc.data();
+                Auth.currentUser.name = userData.name || Auth.currentUser.name;
+                Auth.currentUser.role = userData.role || 'admin';
+                Auth.currentUser.avatar = userData.avatar || Auth.currentUser.avatar;
+              } else {
+                // إنشاء مستند المستخدم
+                await db.collection('users').doc(data.localId).set({
+                  name: 'مدير النظام',
+                  email: data.email,
+                  phone: '777000000',
+                  avatar: Auth.currentUser.avatar,
+                  role: 'admin',
+                  verified: true,
+                  suspended: false,
+                  bio: '',
+                  location: '',
+                  website: '',
+                  createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                  updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+              }
+            } catch (firestoreErr) {
+              console.warn('Firestore setup skipped:', firestoreErr.message);
+            }
+
+            // إظهار لوحة التحكم
+            await self.showAdminPanel();
+
+          } catch (e) {
+            errEl.textContent = e.message;
+            errEl.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'دخول لوحة التحكم';
+          }
         };
-        document.head.appendChild(s);
-      });
-    }
 
-    // Enter key support
-    document.getElementById('password').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') document.getElementById('loginBtn').click();
+        // Enter key
+        document.getElementById('adminPassword').onkeydown = function(e) {
+          if (e.key === 'Enter') btn.click();
+        };
+      },
+
+      showAdminPanel: async function() {
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('admin-app').style.display = 'block';
+
+        try {
+          await Data.getPlaces();
+          await AdminPanel.render();
+        } catch (e) {
+          console.error('Admin panel error:', e);
+          document.getElementById('admin-app').innerHTML =
+            '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;">' +
+            '<div style="text-align:center;padding:32px;">' +
+            '<h2 style="color:#dc2626;margin-bottom:16px;">خطأ في تحميل لوحة التحكم</h2>' +
+            '<p style="color:#6b7280;margin-bottom:16px;">' + e.message + '</p>' +
+            '<button onclick="location.reload()" style="background:#dc2626;color:#fff;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;">إعادة المحاولة</button>' +
+            '</div></div>';
+        }
+      },
+
+      showUnauthorized: function() {
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('admin-app').style.display = 'block';
+        document.getElementById('admin-app').innerHTML =
+          '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;">' +
+          '<div style="text-align:center;padding:32px;">' +
+          '<h2 style="color:#dc2626;margin-bottom:16px;">غير مصرح</h2>' +
+          '<p style="color:#6b7280;margin-bottom:16px;">ليس لديك صلاحية الوصول لهذه الصفحة</p>' +
+          '<a href="/" style="color:#3b82f6;">العودة للموقع</a>' +
+          '</div></div>';
+      }
+    };
+
+    // AdminPanel object (for rendering)
+    var AdminPanel = {
+      currentTab: 'dashboard',
+
+      render: async function() {
+        var app = document.getElementById('admin-app');
+        var stats = await Admin.getStats();
+        var users = await Admin.getAllUsers();
+        var places = await Admin.getAllPlaces();
+        var ads = await Ads.getAll();
+        var notifs = await Admin.getNotifications();
+        await Admin.markNotificationsRead();
+        var unreadCount = await Admin.getUnreadCount();
+
+        app.innerHTML =
+          '<div class="min-h-screen bg-gray-100">' +
+            '<header class="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">' +
+              '<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">' +
+                '<div class="flex items-center gap-3">' +
+                  '<div class="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center"><i data-lucide="shield" class="w-5 h-5 text-white"></i></div>' +
+                  '<div><h1 class="text-lg font-bold text-gray-900 m-0">لوحة التحكم</h1><p class="text-[10px] text-gray-400">دليل اليمن - إدارة النظام</p></div>' +
+                '</div>' +
+                '<div class="flex items-center gap-3">' +
+                  '<a href="index.html" class="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-xs"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>زيارة الموقع</a>' +
+                  '<div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">' +
+                    '<img src="' + (Auth.currentUser.avatar || '') + '" class="w-6 h-6 rounded-full" alt="">' +
+                    '<span class="text-xs font-medium">' + (Auth.currentUser.name || 'Admin') + '</span>' +
+                  '</div>' +
+                  '<button onclick="AdminController.logout()" class="text-red-500 hover:text-red-700"><i data-lucide="log-out" class="w-5 h-5"></i></button>' +
+                '</div>' +
+              '</div>' +
+            '</header>' +
+            '<div class="max-w-7xl mx-auto px-4 py-6">' +
+              '<div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">' +
+                '<div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="users" class="w-4 h-4 text-blue-600"></i><span class="text-[10px] text-gray-500">المستخدمين</span></div><div class="text-xl font-bold">' + stats.totalUsers + '</div><div class="text-[10px] text-green-600">' + stats.verifiedUsers + ' موثّق</div></div>' +
+                '<div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="building-2" class="w-4 h-4 text-blue-600"></i><span class="text-[10px] text-gray-500">الأماكن</span></div><div class="text-xl font-bold">' + stats.totalPlaces + '</div><div class="text-[10px] text-green-600">' + stats.verifiedPlaces + ' موثّق</div></div>' +
+                '<div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="star" class="w-4 h-4 text-yellow-500"></i><span class="text-[10px] text-gray-500">مميزة</span></div><div class="text-xl font-bold">' + stats.featuredPlaces + '</div></div>' +
+                '<div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="megaphone" class="w-4 h-4 text-purple-600"></i><span class="text-[10px] text-gray-500">إعلانات</span></div><div class="text-xl font-bold">' + ads.length + '</div></div>' +
+                '<div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="eye" class="w-4 h-4 text-blue-500"></i><span class="text-[10px] text-gray-500">مشاهدات</span></div><div class="text-xl font-bold">' + (await Ads.getStats()).totalViews + '</div></div>' +
+                '<div class="bg-white rounded-xl p-4 border border-gray-100"><div class="flex items-center gap-2 mb-1"><i data-lucide="bell" class="w-4 h-4 text-red-500"></i><span class="text-[10px] text-gray-500">إشعارات</span></div><div class="text-xl font-bold">' + unreadCount + '</div></div>' +
+              '</div>' +
+              (notifs.length > 0 ?
+                '<div class="bg-white rounded-xl p-4 border border-gray-100 mb-6">' +
+                '<h3 class="text-sm font-bold mb-3 flex items-center gap-2"><i data-lucide="bell" class="w-4 h-4 text-red-500"></i>أحدث الإشعارات</h3>' +
+                '<div class="space-y-2 max-h-40 overflow-y-auto">' +
+                notifs.slice(0, 8).map(function(n) {
+                  return '<div class="flex items-center gap-2 p-2 rounded-lg ' + (n.read ? 'bg-gray-50' : 'bg-blue-50') + ' text-xs">' +
+                    '<i data-lucide="' + (n.type === 'request' ? 'user-plus' : n.type === 'new_place' ? 'building-2' : 'info') + '" class="w-4 h-4 ' + (n.read ? 'text-gray-400' : 'text-blue-600') + ' shrink-0"></i>' +
+                    '<span class="flex-1 ' + (n.read ? 'text-gray-600' : 'text-gray-900 font-medium') + '">' + n.message + '</span>' +
+                    '<span class="text-[10px] text-gray-400 shrink-0">' + (n.createdAt && n.createdAt.toDate ? n.createdAt.toDate().toLocaleTimeString('ar',{hour:'2-digit',minute:'2-digit'}) : '') + '</span>' +
+                  '</div>';
+                }).join('') +
+                '</div></div>' : '') +
+              '<div class="flex gap-2 mb-6 overflow-x-auto pb-2">' +
+                [
+                  {id:'dashboard',name:'نظرة عامة',icon:'layout-dashboard'},
+                  {id:'users',name:'المستخدمين',icon:'users'},
+                  {id:'places',name:'الأماكن',icon:'building-2'},
+                  {id:'ads',name:'الإعلانات',icon:'megaphone'}
+                ].map(function(t) {
+                  return '<button onclick="AdminPanel.currentTab=\'' + t.id + '\';AdminPanel.render()" class="px-4 py-2.5 rounded-xl text-xs font-medium ' + (AdminPanel.currentTab === t.id ? 'bg-red-600 text-white shadow-lg shadow-red-600/25' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50') + ' flex items-center gap-1.5 whitespace-nowrap">' +
+                    '<i data-lucide="' + t.icon + '" class="w-3.5 h-3.5"></i>' + t.name +
+                  '</button>';
+                }).join('') +
+              '</div>' +
+              (AdminPanel.currentTab === 'dashboard' ? AdminPanel.renderDashboard(stats, users, places, notifs) : '') +
+              (AdminPanel.currentTab === 'users' ? AdminPanel.renderUsers(users) : '') +
+              (AdminPanel.currentTab === 'places' ? AdminPanel.renderPlaces(places) : '') +
+              (AdminPanel.currentTab === 'ads' ? AdminPanel.renderAdsTab(ads) : '') +
+            '</div>' +
+          '</div>';
+
+        try { lucide.createIcons(); } catch(e) {}
+      },
+
+      renderDashboard: function(stats, users, places, notifs) {
+        var recentUsers = users.slice(-5).reverse();
+        var recentPlaces = places.filter(function(p) { return p.isActive !== false; }).slice(0, 5);
+        return '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+          '<div class="bg-white rounded-xl p-4 border border-gray-100">' +
+            '<h3 class="text-sm font-bold mb-3 flex items-center gap-2"><i data-lucide="users" class="w-4 h-4 text-blue-600"></i>أحدث المستخدمين</h3>' +
+            '<div class="space-y-2">' +
+              recentUsers.map(function(u) {
+                return '<div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 text-xs">' +
+                  '<img src="' + (u.avatar || '') + '" class="w-7 h-7 rounded-full" alt="">' +
+                  '<div class="flex-1"><div class="font-medium">' + u.name + '</div><div class="text-[10px] text-gray-400">' + u.email + '</div></div>' +
+                  '<span class="text-[10px] px-2 py-0.5 rounded ' + (u.verified ? 'bg-green-100 text-green-700' : u.suspended ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700') + '">' + (u.verified ? 'موثّق' : u.suspended ? 'موقوف' : 'معلّق') + '</span>' +
+                '</div>';
+              }).join('') +
+            '</div>' +
+          '</div>' +
+          '<div class="bg-white rounded-xl p-4 border border-gray-100">' +
+            '<h3 class="text-sm font-bold mb-3 flex items-center gap-2"><i data-lucide="building-2" class="w-4 h-4 text-blue-600"></i>أحدث الأماكن</h3>' +
+            '<div class="space-y-2">' +
+              recentPlaces.map(function(p) {
+                var cat = Data.categories.find(function(c) { return c.id === p.category; });
+                return '<div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 text-xs">' +
+                  '<div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0"><i data-lucide="' + (cat ? cat.icon : 'map-pin') + '" class="w-4 h-4 text-blue-600"></i></div>' +
+                  '<div class="flex-1"><div class="font-medium">' + p.name + '</div><div class="text-[10px] text-gray-400">' + (cat ? cat.name : '') + '</div></div>' +
+                  '<span class="text-[10px] px-2 py-0.5 rounded ' + (p.status === 'approved' || !p.status ? 'bg-green-100 text-green-700' : p.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700') + '">' + (p.status === 'approved' || !p.status ? 'معتمد' : p.status === 'pending' ? 'معلق' : 'مرفوض') + '</span>' +
+                '</div>';
+              }).join('') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      },
+
+      renderUsers: function(users) {
+        return '<div class="bg-white rounded-xl border border-gray-100 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs">' +
+          '<thead class="bg-gray-50"><tr>' +
+            '<th class="px-3 py-3 text-right font-medium text-gray-500">المستخدم</th>' +
+            '<th class="px-3 py-3 text-right font-medium text-gray-500">البريد</th>' +
+            '<th class="px-3 py-3 text-right font-medium text-gray-500">الدور</th>' +
+            '<th class="px-3 py-3 text-right font-medium text-gray-500">الحالة</th>' +
+            '<th class="px-3 py-3 text-right font-medium text-gray-500">الإجراءات</th>' +
+          '</tr></thead>' +
+          '<tbody class="divide-y divide-gray-100">' +
+            users.map(function(u) {
+              return '<tr class="hover:bg-gray-50">' +
+                '<td class="px-3 py-3"><div class="flex items-center gap-2"><img src="' + (u.avatar || '') + '" class="w-8 h-8 rounded-full" alt=""><div><div class="font-medium">' + u.name + '</div></div></div></td>' +
+                '<td class="px-3 py-3 text-gray-600">' + u.email + '</td>' +
+                '<td class="px-3 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-medium ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700') + '">' + (u.role === 'admin' ? 'أدمن' : 'مستخدم') + '</span></td>' +
+                '<td class="px-3 py-3">' + (u.suspended ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">موقوف</span>' : u.verified ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">موثّق</span>' : '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-700">معلّق</span>') + '</td>' +
+                '<td class="px-3 py-3">' + (u.role !== 'admin' ?
+                  '<div class="flex items-center gap-1">' +
+                    '<button onclick="AdminPanel.toggleVerify(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.verified ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-blue-200" title="توثيق"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>' +
+                    '<button onclick="AdminPanel.toggleSuspend(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.suspended ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-yellow-200" title="إيقاف"><i data-lucide="ban" class="w-3.5 h-3.5"></i></button>' +
+                    '<button onclick="AdminPanel.deleteUser(\'' + u.id + '\')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="حذف"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>' +
+                  '</div>' : '<span class="text-[10px] text-gray-400">-</span>') + '</td>' +
+              '</tr>';
+            }).join('') +
+          '</tbody></table></div></div>';
+      },
+
+      renderPlaces: function(places) {
+        var pendingPlaces = places.filter(function(p) { return p.status === 'pending'; });
+        var approvedPlaces = places.filter(function(p) { return p.status === 'approved' || !p.status; });
+        return (pendingPlaces.length > 0 ?
+          '<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">' +
+          '<h3 class="text-sm font-bold text-yellow-800 mb-3 flex items-center gap-2"><i data-lucide="clock" class="w-4 h-4"></i>طلبات بانتظار الموافقة (' + pendingPlaces.length + ')</h3>' +
+          '<div class="space-y-3">' +
+          pendingPlaces.map(function(p) {
+            return '<div class="bg-white rounded-lg p-3 border border-yellow-200">' +
+              '<div class="font-bold text-sm text-gray-900">' + p.name + '</div>' +
+              '<div class="text-xs text-gray-500">' + (p.description || '') + '</div>' +
+              '<div class="flex gap-2 mt-2">' +
+                '<button onclick="AdminPanel.approvePlace(\'' + p.id + '\')" class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700">موافقة</button>' +
+                '<button onclick="AdminPanel.rejectPlace(\'' + p.id + '\')" class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700">رفض</button>' +
+              '</div></div>';
+          }).join('') +
+          '</div></div>' : '') +
+        '<div class="bg-white rounded-xl border border-gray-100 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs">' +
+          '<thead class="bg-gray-50"><tr>' +
+            '<th class="px-3 py-3 text-right font-medium text-gray-500">المكان</th>' +
+            '<th class="px-3 py-3 text-right font-medium text-gray-500">التصنيف</th>' +
+            '<th class="px-3 py-3 text-right font-medium text-gray-500">الحالة</th>' +
+            '<th class="px-3 py-3 text-right font-medium text-gray-500">الإجراءات</th>' +
+          '</tr></thead>' +
+          '<tbody class="divide-y divide-gray-100">' +
+            approvedPlaces.slice(0, 50).map(function(p) {
+              var cat = Data.categories.find(function(c) { return c.id === p.category; });
+              return '<tr class="hover:bg-gray-50">' +
+                '<td class="px-3 py-3"><div class="font-medium">' + p.name + '</div><div class="text-[10px] text-gray-400">' + (p.phone || '') + '</div></td>' +
+                '<td class="px-3 py-3 text-gray-600">' + (cat ? cat.name : '-') + '</td>' +
+                '<td class="px-3 py-3">' + (p.verified ? '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">موثّق</span>' : '') + (p.featured ? '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 mr-1">مميّز</span>' : '') + '</td>' +
+                '<td class="px-3 py-3"><div class="flex items-center gap-1">' +
+                  '<button onclick="AdminPanel.verifyPlace(\'' + p.id + '\')" class="p-1.5 rounded-lg ' + (p.verified ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-blue-200" title="توثيق"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>' +
+                  '<button onclick="AdminPanel.featurePlace(\'' + p.id + '\')" class="p-1.5 rounded-lg ' + (p.featured ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-yellow-200" title="تمييز"><i data-lucide="star" class="w-3.5 h-3.5"></i></button>' +
+                  '<button onclick="AdminPanel.deletePlace(\'' + p.id + '\')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="حذف"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>' +
+                '</div></td>' +
+              '</tr>';
+            }).join('') +
+          '</tbody></table></div></div>';
+      },
+
+      renderAdsTab: function(ads) {
+        return '<div class="bg-white rounded-xl border border-gray-100 p-4">' +
+          '<h3 class="text-sm font-bold mb-3">الإعلانات (' + ads.length + ')</h3>' +
+          '<div class="space-y-2">' +
+            (ads.length > 0 ? ads.map(function(ad) {
+              return '<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">' +
+                '<div class="flex-1"><div class="font-medium text-sm">' + (ad.title || 'بدون عنوان') + '</div><div class="text-[10px] text-gray-400">' + (ad.position || '') + ' • ' + (ad.views || 0) + ' مشاهدة</div></div>' +
+                '<span class="px-2 py-0.5 rounded text-[10px] ' + (ad.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') + '">' + (ad.isActive ? 'نشط' : 'معطل') + '</span>' +
+              '</div>';
+            }).join('') : '<p class="text-gray-400 text-sm text-center py-4">لا توجد إعلانات</p>') +
+          '</div></div>';
+      },
+
+      toggleVerify: async function(userId) { await Admin.toggleVerify(userId); this.render(); },
+      toggleSuspend: async function(userId) { await Admin.toggleSuspend(userId); this.render(); },
+      deleteUser: async function(userId) { if (confirm('هل أنت متأكد من حذف هذا المستخدم؟')) { await Admin.deleteUser(userId); this.render(); } },
+      verifyPlace: async function(placeId) { await Admin.verifyPlace(placeId); this.render(); },
+      featurePlace: async function(placeId) { await Admin.featurePlace(placeId); this.render(); },
+      deletePlace: async function(placeId) { if (confirm('هل أنت متأكد من حذف هذا المكان؟')) { await Admin.deletePlaceAdmin(placeId); this.render(); } },
+      approvePlace: async function(placeId) { await Admin.approvePlace(placeId); this.render(); },
+      rejectPlace: async function(placeId) { var note = prompt('سبب الرفض (اختياري):'); await Admin.rejectPlace(placeId, note); this.render(); }
+    };
+
+    // Add logout to AdminController
+    AdminController.logout = function() {
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminRefreshToken');
+      localStorage.removeItem('adminUid');
+      localStorage.removeItem('adminEmail');
+      Auth.currentUser = null;
+      location.reload();
+    };
+
+    // Start
+    window.addEventListener('load', function() {
+      AdminController.init();
     });
   </script>
 </body>
