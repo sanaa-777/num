@@ -23,21 +23,13 @@ var db = firebase.firestore();
 var storage = firebase.storage();
 var messaging = typeof firebase.messaging === 'function' ? firebase.messaging() : null;
 
-// إعداد Auth persistence مع fallback
-(async function initAuthPersistence() {
-  try {
-    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-    console.log('Auth persistence: LOCAL');
-  } catch (err) {
-    console.warn('LOCAL persistence failed, trying NONE:', err?.code || err?.message);
-    try {
-      await auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
-      console.log('Auth persistence: NONE (fallback)');
-    } catch (err2) {
-      console.warn('Persistence setup failed completely:', err2?.code || err2?.message);
-    }
-  }
-})();
+// إعداد Auth persistence
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(err) {
+  console.warn('LOCAL persistence failed, trying NONE:', err.code || err.message);
+  auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function(err2) {
+    console.warn('Persistence setup failed:', err2.code || err2.message);
+  });
+});
 
 // استخدام لغة الجهاز
 try { auth.useDeviceLanguage(); } catch (e) { /* ignore */ }

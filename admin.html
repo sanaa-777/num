@@ -60,8 +60,6 @@
             if (Date.now() - waitStart > 15000) throw new Error('انتهت مهلة تحميل Firebase');
             await new Promise(function(r) { setTimeout(r, 300); });
           }
-          // تأكد من persistence قبل signIn
-          await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
           await auth.signInWithEmailAndPassword(email, pass);
           location.reload();
         } catch (e) {
