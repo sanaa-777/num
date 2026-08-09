@@ -1,4 +1,4 @@
-# Auto-deploy to Firebase Hosting on push to main
+# Auto-deploy to Firebase Hosting + Rules on push to main
 name: Deploy to Firebase Hosting
 
 on:

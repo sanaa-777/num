@@ -184,45 +184,37 @@
       uploadImage: async function(file, folder) {
         if (!file) return null;
         try {
-          // Compress image before upload
-          var compressed = await new Promise(function(resolve) {
+          // Compress image and store as base64 data URL in Firestore
+          var compressed = await new Promise(function(resolve, reject) {
             var reader = new FileReader();
             reader.onload = function(e) {
               var img = new Image();
               img.onload = function() {
                 var canvas = document.createElement('canvas');
-                var maxSize = 800;
+                var maxSize = 600;
                 var w = img.width, h = img.height;
                 if (w > maxSize) { h = (maxSize / w) * h; w = maxSize; }
                 if (h > maxSize) { w = (maxSize / h) * w; h = maxSize; }
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                resolve(canvas.toDataURL('image/jpeg', 0.8));
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
               };
-              img.onerror = function() { resolve(null); };
+              img.onerror = function() { reject(new Error('فشل تحميل الصورة')); };
               img.src = e.target.result;
             };
-            reader.onerror = function() { resolve(null); };
+            reader.onerror = function() { reject(new Error('فشل قراءة الملف')); };
             reader.readAsDataURL(file);
           });
           
-          if (!compressed) throw new Error('فشل معالجة الصورة');
+          // Check size (Firestore limit ~1MB per document)
+          if (compressed.length > 900000) {
+            throw new Error('الصورة كبيرة جداً. اختر صورة أصغر.');
+          }
           
-          var blob = await fetch(compressed).then(function(r) { return r.blob(); });
-          var fileName = folder + '/' + Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '.jpg';
-          var ref = firebase.storage().ref(fileName);
-          
-          // Upload with timeout
-          var uploadPromise = ref.put(blob, { contentType: 'image/jpeg' });
-          var timeoutPromise = new Promise(function(_, reject) {
-            setTimeout(function() { reject(new Error('انتهت مهلة رفع الصورة')); }, 30000);
-          });
-          
-          var snapshot = await Promise.race([uploadPromise, timeoutPromise]);
-          return await snapshot.ref.getDownloadURL();
+          return compressed;
         } catch (e) {
-          console.error('Upload error:', e);
-          throw new Error('فشل رفع الصورة: ' + e.message);
+          console.error('Image processing error:', e);
+          throw new Error('فشل معالجة الصورة: ' + e.message);
         }
       },
 
