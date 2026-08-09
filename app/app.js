@@ -11,16 +11,19 @@ const App = {
     try {
       this.initDarkMode();
       this.initLang();
-      // Render immediately with default data - no loading screen
+      
+      // Wait for auth first (with timeout) to avoid logout flash
+      const authTimeout = new Promise(resolve => setTimeout(() => resolve(null), 5000));
+      await Promise.race([Auth.init(), authTimeout]);
+      
+      // Now render with auth state
       this.render();
       window.addEventListener('hashchange', () => this.handleRoute());
       this.handleRoute();
-
-      // Load Firebase data in background (non-blocking)
-      Auth.init().then(() => {
-        Admin.initDefaultAdmin().catch(() => {});
-        return Data.preloadAll();
-      }).then(() => {
+      
+      // Load remaining data in background
+      Admin.initDefaultAdmin().catch(() => {});
+      Data.preloadAll().then(() => {
         Admin.refreshUnreadCount().catch(() => {});
         return Promise.all([
           Offers.getAll().catch(() => {}),
@@ -29,7 +32,7 @@ const App = {
           Pricing.getAll().catch(() => {})
         ]);
       }).then(() => {
-        this.render(); // Re-render with loaded data
+        this.render();
         this.handleRoute();
       }).catch(e => {
         console.warn('Background data load:', e.message);
@@ -132,17 +135,20 @@ const App = {
       if (this.currentView === 'notifications' && Auth.currentUser) {
         setTimeout(() => this._loadNotifications(), 100);
       }
-      // Initialize map on add page with delay for DOM rendering
+      // Initialize add page components
       if (this.currentView === 'add') {
+        // Initialize image preview
+        setTimeout(() => this.updatePlaceImagePreview(), 100);
         // Destroy old map instance if exists
         if (this.placeMap) {
           try { this.placeMap.remove(); } catch(e) {}
           this.placeMap = null;
           this.placeMarker = null;
         }
-        setTimeout(() => this.initPlaceMap(), 300);
-        setTimeout(() => this.initPlaceMap(), 1000);
-        setTimeout(() => this.initPlaceMap(), 2000);
+        // Initialize map with multiple retries
+        setTimeout(() => this.initPlaceMap(), 500);
+        setTimeout(() => this.initPlaceMap(), 1500);
+        setTimeout(() => this.initPlaceMap(), 3000);
       }
       // Scroll to top on navigation
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -915,8 +921,8 @@ const App = {
               <label class="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
                 <i data-lucide="map-pin" class="w-3.5 h-3.5 text-gray-500"></i>الموقع على الخريطة <span class="text-gray-400 font-normal">(اختياري)</span>
               </label>
-              <div id="placeMapContainer" class="rounded-xl overflow-hidden border border-gray-200" style="height:250px;position:relative;background:#f0fdf4;">
-                <div id="placeMap" style="height:100%;width:100%;z-index:1;"></div>
+              <div style="position:relative;width:100%;height:280px;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+                <div id="placeMap" style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:1;"></div>
                 <div id="placeMapLoading" style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:#f9fafb;z-index:2;">
                   <div style="text-align:center;">
                     <div style="width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 8px;"></div>
@@ -1656,8 +1662,21 @@ const App = {
     if (!mapEl) return;
     if (typeof L === 'undefined') { console.warn('Leaflet not loaded, retrying...'); setTimeout(() => this.initPlaceMap(), 500); return; }
     try {
-      this.placeMap = L.map('placeMap', { zoomControl: true, scrollWheelZoom: true }).setView([15.3694, 44.191], 6);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(this.placeMap);
+      // Ensure container has dimensions
+      mapEl.style.width = '100%';
+      mapEl.style.height = '100%';
+      
+      this.placeMap = L.map('placeMap', { 
+        zoomControl: true, 
+        scrollWheelZoom: true,
+        attributionControl: true
+      }).setView([15.3694, 44.191], 6);
+      
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+        attribution: '&copy; OpenStreetMap', 
+        maxZoom: 19 
+      }).addTo(this.placeMap);
+      
       this.placeMap.on('click', (e) => {
         const { lat, lng } = e.latlng;
         document.getElementById('placeLat').value = lat.toFixed(6);
@@ -1668,14 +1687,23 @@ const App = {
           this.placeMarker.on('dragend', (e) => { const pos = e.target.getLatLng(); document.getElementById('placeLat').value = pos.lat.toFixed(6); document.getElementById('placeLng').value = pos.lng.toFixed(6); });
         }
       });
-      const hideLoading = () => { const el = document.getElementById('placeMapLoading'); if (el) el.style.display = 'none'; };
-      setTimeout(() => { if (this.placeMap) { this.placeMap.invalidateSize(); hideLoading(); } }, 300);
-      setTimeout(() => { if (this.placeMap) this.placeMap.invalidateSize(); }, 800);
-      setTimeout(() => { if (this.placeMap) this.placeMap.invalidateSize(); }, 1500);
+      
+      // Force map to recalculate size multiple times
+      const fixMap = () => {
+        if (this.placeMap) {
+          this.placeMap.invalidateSize();
+          const el = document.getElementById('placeMapLoading');
+          if (el) el.style.display = 'none';
+        }
+      };
+      setTimeout(fixMap, 200);
+      setTimeout(fixMap, 500);
+      setTimeout(fixMap, 1000);
+      setTimeout(fixMap, 2000);
     } catch (e) {
       console.error('Map init error:', e);
       const loadingEl = document.getElementById('placeMapLoading');
-      if (loadingEl) loadingEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#fef2f2;color:#dc2626;font-size:13px;padding:16px;text-align:center;"><p>تعذر تحميل الخريطة.<br>تأكد من اتصالك بالإنترنت.</p></div>';
+      if (loadingEl) loadingEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#fef2f2;color:#dc2626;font-size:13px;padding:16px;text-align:center;"><p>تعذر تحميل الخريطة</p></div>';
     }
   },
 
