@@ -45,5 +45,26 @@ service firebase.storage {
       allow write: if isAdmin()
         && isImageUpload(10 * 1024 * 1024);
     }
+
+    // صور العروض
+    match /offers/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && isImageUpload(10 * 1024 * 1024);
+    }
+
+    // صور الوظائف
+    match /jobs/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && isImageUpload(10 * 1024 * 1024);
+    }
+
+    // صور الفعاليات
+    match /events/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && isImageUpload(10 * 1024 * 1024);
+    }
   }
 }
