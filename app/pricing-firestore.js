@@ -16,25 +16,35 @@ const Pricing = {
     { id: 'crypto', name: 'العملات المشفرة', icon: 'bitcoin', color: '#8b5cf6' }
   ],
 
-  async getAll() {
-    const now = Date.now();
-    if (this._cache && (now - this._cacheTime) < this._CACHE_TTL) return this._cache;
-    try {
-      try {
-        const snapshot = await db.collection('pricing').orderBy('sortOrder', 'asc').get();
-        this._cache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (idxErr) {
-        const snapshot = await db.collection('pricing').get();
-        this._cache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
-      this._cacheTime = now;
-      return this._cache;
-    } catch (e) {
-      console.error('Pricing getAll error:', e);
-      return this._cache || [];
-    }
-  },
+  _listener: null,
 
+  async getAll() {
+    if (this._listener) return this._cache || [];
+
+    return new Promise((resolve) => {
+      try {
+        let query = db.collection('pricing');
+        try { query = query.orderBy('createdAt', 'desc'); } catch(e) {}
+
+        this._listener = query.onSnapshot((snapshot) => {
+          this._cache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          this._cacheTime = Date.now();
+
+          if (typeof App !== 'undefined' && App._initialized) {
+            App.render();
+          }
+
+          resolve(this._cache);
+        }, (error) => {
+          console.error('Pricing listener error:', error);
+          resolve(this._cache || []);
+        });
+      } catch (e) {
+        console.error('Pricing getAll error:', e);
+        resolve(this._cache || []);
+      }
+    });
+  },
   async getByCategory(category) {
     const all = await this.getAll();
     return all.filter(p => p.category === category && p.isActive !== false);

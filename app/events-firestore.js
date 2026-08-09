@@ -8,23 +8,34 @@ const Events = {
   _cacheTime: 0,
   _CACHE_TTL: 60000,
 
+  _listener: null,
+  
   async getAll() {
-    const now = Date.now();
-    if (this._cache && (now - this._cacheTime) < this._CACHE_TTL) return this._cache;
-    try {
+    if (this._listener) return this._cache || [];
+    
+    return new Promise((resolve) => {
       try {
-        const snapshot = await db.collection('events').orderBy('createdAt', 'desc').get();
-        this._cache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (idxErr) {
-        const snapshot = await db.collection('events').get();
-        this._cache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        let query = db.collection('events');
+        try { query = query.orderBy('createdAt', 'desc'); } catch(e) {}
+        
+        this._listener = query.onSnapshot((snapshot) => {
+          this._cache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          this._cacheTime = Date.now();
+          
+          if (typeof App !== 'undefined' && App._initialized) {
+            App.render();
+          }
+          
+          resolve(this._cache);
+        }, (error) => {
+          console.error('Events listener error:', error);
+          resolve(this._cache || []);
+        });
+      } catch (e) {
+        console.error('Events getAll error:', e);
+        resolve(this._cache || []);
       }
-      this._cacheTime = now;
-      return this._cache;
-    } catch (e) {
-      console.error('Events getAll error:', e);
-      return this._cache || [];
-    }
+    });
   },
 
   async getActive() {

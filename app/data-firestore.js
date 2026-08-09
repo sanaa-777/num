@@ -302,39 +302,48 @@ const Data = {
   _CACHE_TTL: 60000, // دقيقة واحدة
 
   // ====== الأماكن (Firestore) ======
+  _placesListener: null,
+  
   async getPlaces() {
-    const now = Date.now();
-    if (this._placesCache && (now - this._placesCacheTime) < this._CACHE_TTL) {
-      return this._placesCache;
-    }
-    try {
-      // محاولة مع orderBy أولاً
-      let snapshot;
+    // If listener is already active, return cached data
+    if (this._placesListener) return this._placesCache || [];
+    
+    return new Promise((resolve) => {
       try {
-        snapshot = await db.collection('places')
+        // Try with orderBy first
+        let query = db.collection('places')
           .where('isActive', '==', true)
-          .where('status', '==', 'approved')
-          .orderBy('createdAt', 'desc')
-          .get();
-      } catch(idxErr) {
-        // إذا فشل بسبب عدم وجود index، جرب بدون orderBy
-        console.log('Falling back to query without orderBy');
-        snapshot = await db.collection('places')
-          .where('isActive', '==', true)
-          .where('status', '==', 'approved')
-          .get();
+          .where('status', '==', 'approved');
+        
+        try {
+          query = query.orderBy('createdAt', 'desc');
+        } catch(e) {}
+        
+        this._placesListener = query.onSnapshot((snapshot) => {
+          this._placesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          this._placesCacheTime = Date.now();
+          
+          // Re-render if app is initialized
+          if (typeof App !== 'undefined' && App._initialized) {
+            App.render();
+          }
+          
+          resolve(this._placesCache);
+        }, (error) => {
+          console.error('Places listener error:', error);
+          if (!this._placesCache || this._placesCache.length === 0) {
+            this._placesCache = this.defaultPlaces || [];
+          }
+          resolve(this._placesCache);
+        });
+      } catch (e) {
+        console.error('getPlaces error:', e);
+        if (!this._placesCache || this._placesCache.length === 0) {
+          this._placesCache = this.defaultPlaces || [];
+        }
+        resolve(this._placesCache);
       }
-      this._placesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      this._placesCacheTime = now;
-      return this._placesCache;
-    } catch (e) {
-      console.error('getPlaces error:', e);
-      // استخدام البيانات الافتراضية كحل أخير
-      if (!this._placesCache || this._placesCache.length === 0) {
-        this._placesCache = this.defaultPlaces || [];
-      }
-      return this._placesCache;
-    }
+    });
   },
 
   // نسخة متزامنة للتوافق مع الكود القديم (تقرأ من cache)
