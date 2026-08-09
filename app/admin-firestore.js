@@ -12,10 +12,8 @@ const Admin = {
   // ====== تهيئة الأدمن الافتراضي (مرة واحدة) ======
   async initDefaultAdmin() {
     try {
-      // التحقق من وجود أدمن فقط إذا كان المستخدم مصادقاً
       if (!Auth.currentUser) return;
       if (Auth.currentUser.role === 'admin') return;
-      // لا نحاول إنشاء أدمن تلقائياً - يتم إنشاؤه يدوياً
     } catch (e) {
       console.log('initDefaultAdmin skipped:', e.message);
     }
@@ -77,16 +75,19 @@ const Admin = {
       const userRef = db.collection('users').doc(userId);
       const doc = await userRef.get();
       if (!doc.exists) return false;
-      if (doc.data().role === 'admin') return false; // لا نحذف الأدمن
+      if (doc.data().role === 'admin') return false;
 
-      // حذف أماكن المستخدم
       const placesSnap = await db.collection('places').where('owner', '==', userId).get();
       const batch = db.batch();
-      placesSnap.docs.forEach(d => batch.update(d.ref, { isActive: false }));
+      placesSnap.docs.forEach(d => batch.update(d.ref, {
+        isActive: false,
+        status: d.data().status === 'approved' ? 'approved' : 'rejected',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }));
       batch.update(userRef, { suspended: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
       await batch.commit();
 
-      await this.addNotification('delete', `تم حذف الحساب: ${doc.data().name}`);
+      await this.addNotification('delete', `تم تعطيل الحساب: ${doc.data().name}`);
       return true;
     } catch (e) {
       console.error('deleteUser error:', e);
@@ -97,8 +98,13 @@ const Admin = {
   // ====== إدارة الأماكن ======
   async getAllPlaces() {
     try {
-      const snapshot = await db.collection('places').orderBy('createdAt', 'desc').get();
-      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      try {
+        const snapshot = await db.collection('places').orderBy('createdAt', 'desc').get();
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (idxErr) {
+        const snapshot = await db.collection('places').get();
+        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
     } catch (e) {
       console.error('getAllPlaces error:', e);
       return [];
@@ -135,30 +141,39 @@ const Admin = {
     }
   },
 
-  async deletePlaceAdmin(placeId) {
+  async setPlaceActive(placeId, isActive, note) {
     try {
-      await db.collection('places').doc(placeId).update({
-        isActive: false,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      const ref = db.collection('places').doc(placeId);
+      await ref.update({
+        isActive: isActive,
+        adminNote: note || '',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        reviewedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       Data._invalidateCache();
+      await this.addNotification(isActive ? 'reactivate' : 'suspend_place', `${isActive ? 'تمت إعادة تفعيل' : 'تم تعليق'} النشاط: ${placeId}`);
       return true;
     } catch (e) {
-      console.error('deletePlaceAdmin error:', e);
+      console.error('setPlaceActive error:', e);
       return false;
     }
+  },
+
+  async deletePlaceAdmin(placeId) {
+    return this.setPlaceActive(placeId, false, 'تم تعطيل النشاط بواسطة الإدارة');
   },
 
   async approvePlace(placeId, note) {
     try {
       await db.collection('places').doc(placeId).update({
         status: 'approved',
+        isActive: true,
         adminNote: note || '',
         reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       Data._invalidateCache();
-      await this.addNotification('approve', `تمت الموافقة على مكان: ${placeId}`);
+      await this.addNotification('approve', `تمت الموافقة على نشاط: ${placeId}`);
       return true;
     } catch (e) {
       console.error('approvePlace error:', e);
@@ -170,12 +185,13 @@ const Admin = {
     try {
       await db.collection('places').doc(placeId).update({
         status: 'rejected',
+        isActive: false,
         adminNote: note || '',
         reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       Data._invalidateCache();
-      await this.addNotification('reject', `تم رفض مكان: ${placeId}`);
+      await this.addNotification('reject', `تم رفض نشاط: ${placeId}`);
       return true;
     } catch (e) {
       console.error('rejectPlace error:', e);
@@ -186,7 +202,6 @@ const Admin = {
   // ====== الإشعارات ======
   async getNotifications() {
     try {
-      // جلب إشعارات الأدمن (global notifications)
       const snapshot = await db.collection('admin_notifications')
         .orderBy('createdAt', 'desc')
         .limit(50)
@@ -235,31 +250,55 @@ const Admin = {
   // ====== الإحصائيات ======
   async getStats() {
     try {
-      const [usersSnap, placesSnap, verifiedPlacesSnap, featuredPlacesSnap, pendingSnap] = await Promise.all([
+      const [usersSnap, placesSnap, unreadSnap] = await Promise.all([
         db.collection('users').get(),
-        db.collection('places').where('isActive', '==', true).get(),
-        db.collection('places').where('isActive', '==', true).where('verified', '==', true).get(),
-        db.collection('places').where('isActive', '==', true).where('featured', '==', true).get(),
+        db.collection('places').get(),
         db.collection('admin_notifications').where('read', '==', false).get()
       ]);
 
       const users = usersSnap.docs.map(d => d.data());
+      const places = placesSnap.docs.map(d => d.data());
+      const activePlaces = places.filter(p => p.isActive !== false);
+      const approvedPlaces = places.filter(p => p.status === 'approved' && p.isActive !== false);
+      const pendingPlaces = places.filter(p => p.status === 'pending');
+      const rejectedPlaces = places.filter(p => p.status === 'rejected');
+      const inactivePlaces = places.filter(p => p.isActive === false);
+      const verifiedPlaces = approvedPlaces.filter(p => p.verified);
+      const featuredPlaces = approvedPlaces.filter(p => p.featured);
+
       return {
         totalUsers: usersSnap.size,
         verifiedUsers: users.filter(u => u.verified).length,
         suspendedUsers: users.filter(u => u.suspended).length,
         totalPlaces: placesSnap.size,
-        verifiedPlaces: verifiedPlacesSnap.size,
-        featuredPlaces: featuredPlacesSnap.size,
-        pendingRequests: pendingSnap.size,
+        activePlaces: activePlaces.length,
+        approvedPlaces: approvedPlaces.length,
+        pendingPlaces: pendingPlaces.length,
+        rejectedPlaces: rejectedPlaces.length,
+        inactivePlaces: inactivePlaces.length,
+        verifiedPlaces: verifiedPlaces.length,
+        featuredPlaces: featuredPlaces.length,
+        unreadNotifications: unreadSnap.size
       };
     } catch (e) {
       console.error('getStats error:', e);
-      return { totalUsers: 0, verifiedUsers: 0, suspendedUsers: 0, totalPlaces: 0, verifiedPlaces: 0, featuredPlaces: 0, pendingRequests: 0 };
+      return {
+        totalUsers: 0,
+        verifiedUsers: 0,
+        suspendedUsers: 0,
+        totalPlaces: 0,
+        activePlaces: 0,
+        approvedPlaces: 0,
+        pendingPlaces: 0,
+        rejectedPlaces: 0,
+        inactivePlaces: 0,
+        verifiedPlaces: 0,
+        featuredPlaces: 0,
+        unreadNotifications: 0
+      };
     }
   },
 
-  // ====== إشعارات التوثيق ======
   async notifyVerificationRequest(userName, userId) {
     await this.addNotification('request', `طلب توثيق جديد من: ${userName}`);
   },
@@ -268,7 +307,6 @@ const Admin = {
     await this.addNotification('new_place', `نشاط جديد: ${placeName} بواسطة ${userName}`);
   },
 
-  // نسخة متزامنة للتوافق
   _unreadCount: 0,
   getUnreadCountSync() { return this._unreadCount; },
   async refreshUnreadCount() {

@@ -7,7 +7,7 @@ const FirebaseDB = {
 
   // جلب جميع الأماكن
   async getPlaces(filters = {}) {
-    let query = db.collection('places').where('isActive', '==', true);
+    let query = db.collection('places').where('isActive', '==', true).where('status', '==', 'approved');
 
     if (filters.category) {
       query = query.where('category', '==', filters.category);
@@ -47,6 +47,7 @@ const FirebaseDB = {
       verified: false,
       featured: false,
       isActive: true,
+      status: 'pending',
       views: 0,
       rating: 0,
       reviews: 0,

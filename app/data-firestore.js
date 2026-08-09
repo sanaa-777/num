@@ -313,6 +313,7 @@ const Data = {
       try {
         snapshot = await db.collection('places')
           .where('isActive', '==', true)
+          .where('status', '==', 'approved')
           .orderBy('createdAt', 'desc')
           .get();
       } catch(idxErr) {
@@ -320,6 +321,7 @@ const Data = {
         console.log('Falling back to query without orderBy');
         snapshot = await db.collection('places')
           .where('isActive', '==', true)
+          .where('status', '==', 'approved')
           .get();
       }
       this._placesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -363,6 +365,7 @@ const Data = {
     try {
       await db.collection('places').doc(placeId).update({
         status: status,
+        isActive: status === 'approved',
         adminNote: adminNote || '',
         reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()

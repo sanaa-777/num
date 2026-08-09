@@ -2,19 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ====== المستخدمون ======
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth.uid == userId;
-      allow update: if request.auth.uid == userId || isAdmin();
-      allow delete: if false; // لا يُسمح بالحذف المباشر
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow delete: if false;
     }
 
-    // ====== الأماكن ======
     match /places/{placeId} {
-      // القراءة: أي مكان نشط (للعامة) أو أي مكان للمصادقين
-      allow read: if resource.data.isActive == true || request.auth != null;
-      // الإنشاء: مستخدم مصادق يضيف مكانه فقط ولا يستطيع رفع الامتيازات
+      allow read: if isPublicPlace(resource.data)
+        || isOwner(resource.data.owner)
+        || isAdmin();
+
       allow create: if request.auth != null
         && request.resource.data.owner == request.auth.uid
         && request.resource.data.verified == false
@@ -24,7 +23,7 @@ service cloud.firestore {
         && request.resource.data.views == 0
         && request.resource.data.reviews == 0
         && request.resource.data.rating == 0;
-      // التحديث: المالك يحدّث الحقول الوصفية فقط، أو الأدمن يتحكم الكامل
+
       allow update: if isAdmin() || (request.auth != null
         && request.auth.uid == resource.data.owner
         && request.resource.data.owner == resource.data.owner
@@ -35,11 +34,10 @@ service cloud.firestore {
         && request.resource.data.views == resource.data.views
         && request.resource.data.reviews == resource.data.reviews
         && request.resource.data.rating == resource.data.rating);
-      // الحذف: الأدمن فقط (نستخدم تعطيل isActive بدلاً من الحذف)
+
       allow delete: if isAdmin();
     }
 
-    // ====== المراجعات ======
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if request.auth != null
@@ -49,7 +47,8 @@ service cloud.firestore {
         && request.resource.data.rating <= 5
         && request.resource.data.comment is string
         && request.resource.data.comment.size() <= 1000;
-      allow update: if request.auth.uid == resource.data.userId
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.userId
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.placeId == resource.data.placeId
         && request.resource.data.rating is int
@@ -57,61 +56,58 @@ service cloud.firestore {
         && request.resource.data.rating <= 5
         && request.resource.data.comment is string
         && request.resource.data.comment.size() <= 1000;
-      allow delete: if request.auth.uid == resource.data.userId || isAdmin();
+      allow delete: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
-    // ====== المفضلة ======
     match /favorites/{favId} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null
         && favId.matches(request.auth.uid + '_.*')
         && request.resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null
-        && favId.matches(request.auth.uid + '_.*');
+      allow delete: if request.auth != null && favId.matches(request.auth.uid + '_.*');
     }
 
-    // ====== الإشعارات (للمستخدمين) ======
     match /notifications/{notifId} {
-      allow read: if request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create: if request.auth != null;
-      allow update: if request.auth.uid == resource.data.userId;
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
     }
 
-    // ====== إشعارات الأدمن ======
     match /admin_notifications/{notifId} {
       allow read: if isAdmin();
-      allow create: if request.auth != null; // أي مصادق يمكنه إنشاء إشعار (للطلبات)
+      allow create: if request.auth != null;
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
-    // ====== سجلات الأخطاء ======
     match /error_logs/{logId} {
       allow create: if true;
       allow read, update, delete: if isAdmin();
     }
 
-    // ====== الإعلانات ======
     match /ads/{adId} {
-      allow read: if true; // الإعلانات النشطة للعامة
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
     }
 
-    // ====== التصنيفات ======
     match /categories/{catId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // ====== المدن ======
     match /cities/{cityId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // ====== التحقق من صلاحيات الأدمن ======
+    function isPublicPlace(place) {
+      return place.isActive == true && place.status == 'approved';
+    }
+
+    function isOwner(ownerId) {
+      return request.auth != null && request.auth.uid == ownerId;
+    }
+
     function isAdmin() {
       return request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
