@@ -1,0 +1,179 @@
+// =============================================
+// Offers Manager - Firestore Backend
+// العروض الترويجية
+// =============================================
+
+const Offers = {
+  _cache: null,
+  _cacheTime: 0,
+  _CACHE_TTL: 60000,
+
+  async getAll() {
+    const now = Date.now();
+    if (this._cache && (now - this._cacheTime) < this._CACHE_TTL) return this._cache;
+    try {
+      try {
+        const snapshot = await db.collection('offers').orderBy('createdAt', 'desc').get();
+        this._cache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (idxErr) {
+        const snapshot = await db.collection('offers').get();
+        this._cache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      }
+      this._cacheTime = now;
+      return this._cache;
+    } catch (e) {
+      console.error('Offers getAll error:', e);
+      return this._cache || [];
+    }
+  },
+
+  async getActive() {
+    const offers = await this.getAll();
+    const now = new Date();
+    return offers.filter(o => {
+      if (!o.isActive) return false;
+      if (o.endDate && o.endDate.toDate && o.endDate.toDate() < now) return false;
+      return true;
+    });
+  },
+
+  async getActiveCount() {
+    const active = await this.getActive();
+    return active.length;
+  },
+
+  async getById(id) {
+    try {
+      const doc = await db.collection('offers').doc(id).get();
+      if (!doc.exists) return null;
+      return { id: doc.id, ...doc.data() };
+    } catch (e) {
+      console.error('Offer getById error:', e);
+      return null;
+    }
+  },
+
+  async add(offer) {
+    try {
+      const docRef = await db.collection('offers').add({
+        ...offer,
+        isActive: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      this._invalidateCache();
+      return { id: docRef.id, ...offer };
+    } catch (e) {
+      console.error('Offer add error:', e);
+      throw e;
+    }
+  },
+
+  async update(id, data) {
+    try {
+      await db.collection('offers').doc(id).update({
+        ...data,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      this._invalidateCache();
+    } catch (e) {
+      console.error('Offer update error:', e);
+      throw e;
+    }
+  },
+
+  async delete(id) {
+    try {
+      await db.collection('offers').doc(id).delete();
+      this._invalidateCache();
+    } catch (e) {
+      console.error('Offer delete error:', e);
+      throw e;
+    }
+  },
+
+  async toggleActive(id) {
+    try {
+      const doc = await db.collection('offers').doc(id).get();
+      if (!doc.exists) return false;
+      const newStatus = !doc.data().isActive;
+      await db.collection('offers').doc(id).update({
+        isActive: newStatus,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      this._invalidateCache();
+      return newStatus;
+    } catch (e) {
+      console.error('Offer toggleActive error:', e);
+      return false;
+    }
+  },
+
+  async uploadImage(file) {
+    try {
+      const compressed = await this._compressImage(file, 800);
+      const blob = await fetch(compressed).then(r => r.blob());
+      const ownerSegment = (window.Auth && Auth.currentUser && Auth.currentUser.id) ? Auth.currentUser.id : 'admin';
+      const fileName = `offers/${ownerSegment}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+      const ref = storage.ref(fileName);
+      await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
+      return await ref.getDownloadURL();
+    } catch (e) {
+      console.error('Offer uploadImage error:', e);
+      return null;
+    }
+  },
+
+  async cleanupExpired() {
+    try {
+      const offers = await this.getAll();
+      const now = new Date();
+      const batch = db.batch();
+      let count = 0;
+      offers.forEach(o => {
+        if (o.endDate && o.endDate.toDate && o.endDate.toDate() < now) {
+          batch.update(db.collection('offers').doc(o.id), { isActive: false, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+          count++;
+        }
+      });
+      if (count > 0) await batch.commit();
+      this._invalidateCache();
+      return count;
+    } catch (e) {
+      console.error('Offer cleanupExpired error:', e);
+      return 0;
+    }
+  },
+
+  _invalidateCache() { this._cache = null; this._cacheTime = 0; },
+
+  _compressImage(file, maxWidth) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  },
+
+  getAllSync() { return this._cache || []; },
+  getActiveSync() {
+    const offers = this._cache || [];
+    const now = new Date();
+    return offers.filter(o => {
+      if (!o.isActive) return false;
+      if (o.endDate && o.endDate.toDate && o.endDate.toDate() < now) return false;
+      return true;
+    });
+  }
+};

@@ -250,10 +250,14 @@ const Admin = {
   // ====== الإحصائيات ======
   async getStats() {
     try {
-      const [usersSnap, placesSnap, unreadSnap] = await Promise.all([
+      const [usersSnap, placesSnap, unreadSnap, offersSnap, jobsSnap, eventsSnap, pricingSnap] = await Promise.all([
         db.collection('users').get(),
         db.collection('places').get(),
-        db.collection('admin_notifications').where('read', '==', false).get()
+        db.collection('admin_notifications').where('read', '==', false).get(),
+        db.collection('offers').get().catch(()=>({size:0,docs:[]})),
+        db.collection('jobs').get().catch(()=>({size:0,docs:[]})),
+        db.collection('events').get().catch(()=>({size:0,docs:[]})),
+        db.collection('pricing').get().catch(()=>({size:0,docs:[]}))
       ]);
 
       const users = usersSnap.docs.map(d => d.data());
@@ -278,23 +282,20 @@ const Admin = {
         inactivePlaces: inactivePlaces.length,
         verifiedPlaces: verifiedPlaces.length,
         featuredPlaces: featuredPlaces.length,
-        unreadNotifications: unreadSnap.size
+        unreadNotifications: unreadSnap.size,
+        totalOffers: offersSnap.size,
+        totalJobs: jobsSnap.size,
+        totalEvents: eventsSnap.size,
+        totalPricing: pricingSnap.size
       };
     } catch (e) {
       console.error('getStats error:', e);
       return {
-        totalUsers: 0,
-        verifiedUsers: 0,
-        suspendedUsers: 0,
-        totalPlaces: 0,
-        activePlaces: 0,
-        approvedPlaces: 0,
-        pendingPlaces: 0,
-        rejectedPlaces: 0,
-        inactivePlaces: 0,
-        verifiedPlaces: 0,
-        featuredPlaces: 0,
-        unreadNotifications: 0
+        totalUsers: 0, verifiedUsers: 0, suspendedUsers: 0,
+        totalPlaces: 0, activePlaces: 0, approvedPlaces: 0,
+        pendingPlaces: 0, rejectedPlaces: 0, inactivePlaces: 0,
+        verifiedPlaces: 0, featuredPlaces: 0, unreadNotifications: 0,
+        totalOffers: 0, totalJobs: 0, totalEvents: 0, totalPricing: 0
       };
     }
   },

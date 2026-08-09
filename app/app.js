@@ -13,6 +13,11 @@ const App = {
       await Admin.initDefaultAdmin();
       await Data.preloadAll();
       await Admin.refreshUnreadCount();
+      // Load new sections data
+      try { await Offers.getAll(); } catch(e) {}
+      try { await Jobs.getAll(); } catch(e) {}
+      try { await Events.getAll(); } catch(e) {}
+      try { await Pricing.getAll(); } catch(e) {}
       this.initDarkMode();
       this.initLang();
       this.render();
@@ -47,6 +52,9 @@ const App = {
     const [view, ...params] = hash.split('/');
     this.currentView = view;
     if (view === 'place' && params[0]) this.showPlace(params[0]);
+    else if (view === 'offer' && params[0]) this.showItemDetail(params[0], 'offer');
+    else if (view === 'job' && params[0]) this.showItemDetail(params[0], 'job');
+    else if (view === 'event' && params[0]) this.showItemDetail(params[0], 'event');
     else if (view === 'category' && params[0]) { this.selectedCategory = params[0]; this.selectedCity = null; this.currentView = 'category'; this.render(); }
     else if (view === 'subcategory' && params[0]) { this.selectedCategory = params[0]; this.selectedSubCategory = params[1]; this.selectedCity = null; this.currentView = 'subcategory'; this.render(); }
     else if (view === 'city' && params[0]) { this.selectedCity = params[0]; this.currentView = 'search'; this.render(); }
@@ -196,6 +204,10 @@ const App = {
           </button>
           <a href="#home" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 flex items-center gap-1"><i data-lucide="home" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">${Data.t('home')}</span></a>
           <a href="#search" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 flex items-center gap-1"><i data-lucide="search" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">${Data.t('search')}</span></a>
+          <a href="#offers" class="px-2 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 flex items-center gap-1"><i data-lucide="tag" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">عروض</span></a>
+          <a href="#jobs" class="px-2 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 flex items-center gap-1"><i data-lucide="briefcase" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">وظائف</span></a>
+          <a href="#events" class="px-2 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">فعاليات</span></a>
+          <a href="#pricing" class="px-2 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-dark-700 flex items-center gap-1"><i data-lucide="trending-up" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">تسعيرات</span></a>
           ${user ? `
             <a href="#add" class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i><span class="hidden lg:inline">إضافة</span></a>
             <div class="relative group">
@@ -229,6 +241,13 @@ const App = {
     const places = Data.getApprovedPlacesSync();
     const featured = places.filter(p => p.featured || p.verified).slice(0, 8);
     const latest = places.slice(0, 8);
+    const offersCount = Offers.getAllSync().length;
+    const eventsCount = Events.getAllSync().length;
+    const jobsCount = Jobs.getAllSync().length;
+    const pricingCount = Pricing.getAllSync().length;
+    const latestOffers = Offers.getActiveSync().slice(0, 4);
+    const latestJobs = Jobs.getActiveSync().slice(0, 4);
+    const latestEvents = Events.getActiveSync().slice(0, 4);
 
     return `
     <section class="hero-section bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 text-white py-4 md:py-10 relative overflow-hidden">
@@ -251,10 +270,10 @@ const App = {
 
     <section class="bg-white py-2 md:py-4 border-b">
       <div class="max-w-7xl mx-auto px-3 md:px-4 grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3 text-center">
-        <div><div class="text-base md:text-2xl font-bold text-blue-600">${stats.places}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="map-pin" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>مكان</div></div>
-        <div><div class="text-base md:text-2xl font-bold text-blue-600">${stats.users}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="users" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>مستخدم</div></div>
-        <div><div class="text-base md:text-2xl font-bold text-blue-600">${stats.reviews}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="star" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>مراجعة</div></div>
-        <div><div class="text-base md:text-2xl font-bold text-blue-600">${stats.categories}</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="layers" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>قسم</div></div>
+        <a href="#offers" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${offersCount}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="tag" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>عروض</div></a>
+        <a href="#events" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${eventsCount}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="calendar" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>فعاليات</div></a>
+        <a href="#jobs" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${jobsCount}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="briefcase" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>وظائف</div></a>
+        <a href="#pricing" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${pricingCount}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="trending-up" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>تسعيرات</div></a>
       </div>
     </section>
 
@@ -285,6 +304,25 @@ const App = {
         ${Ads.renderPosition('inside_places')}
       </div>
     </section>
+
+    ${latestOffers.length ? `<section class="bg-white py-4 md:py-10">
+      <div class="max-w-7xl mx-auto px-3">
+        <div class="flex items-center justify-between mb-2 md:mb-4"><h3 class="text-sm md:text-lg font-bold text-gray-900 flex items-center gap-2"><i data-lucide="tag" class="w-4 h-4 md:w-5 md:h-5 text-orange-500"></i>أحدث العروض</h3><a href="#offers" class="text-blue-600 text-xs font-medium hover:underline">عرض الكل</a></div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">${latestOffers.map(o => this.renderSectionCard(o, 'offer', '#f97316', 'tag')).join('')}</div>
+      </div>
+    </section>` : ''}
+    ${latestJobs.length ? `<section class="bg-white py-4 md:py-10">
+      <div class="max-w-7xl mx-auto px-3">
+        <div class="flex items-center justify-between mb-2 md:mb-4"><h3 class="text-sm md:text-lg font-bold text-gray-900 flex items-center gap-2"><i data-lucide="briefcase" class="w-4 h-4 md:w-5 md:h-5 text-blue-500"></i>أحدث الوظائف</h3><a href="#jobs" class="text-blue-600 text-xs font-medium hover:underline">عرض الكل</a></div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">${latestJobs.map(j => this.renderSectionCard(j, 'job', '#3b82f6', 'briefcase')).join('')}</div>
+      </div>
+    </section>` : ''}
+    ${latestEvents.length ? `<section class="bg-white py-4 md:py-10">
+      <div class="max-w-7xl mx-auto px-3">
+        <div class="flex items-center justify-between mb-2 md:mb-4"><h3 class="text-sm md:text-lg font-bold text-gray-900 flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4 md:w-5 md:h-5 text-green-500"></i>أحدث الفعاليات</h3><a href="#events" class="text-blue-600 text-xs font-medium hover:underline">عرض الكل</a></div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3">${latestEvents.map(ev => this.renderSectionCard(ev, 'event', '#22c55e', 'calendar')).join('')}</div>
+      </div>
+    </section>` : ''}
 
     <section class="bg-white py-4 md:py-10">
       <div class="max-w-7xl mx-auto px-3">
@@ -952,12 +990,183 @@ const App = {
     </div></section>`;
   },
 
+  // ====== SECTION CARD (Offers/Jobs/Events) ======
+  renderSectionCard(item, type, typeColor, typeIcon) {
+    const subtitle = type === 'offer' ? (item.agentName || '') : type === 'job' ? (item.companyName || '') : (item.organizer || '');
+    const startDate = item.startDate?.toDate ? item.startDate.toDate().toLocaleDateString('ar') : '';
+    const endDate = item.endDate?.toDate ? item.endDate.toDate().toLocaleDateString('ar') : '';
+    const dateStr = startDate && endDate ? `${startDate} - ${endDate}` : startDate || '';
+    return `<div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all cursor-pointer active-scale" onclick="location.hash='${type}/${item.id}'">
+      <div class="h-28 md:h-36 relative flex items-center justify-center" style="background:linear-gradient(135deg, ${typeColor}20, ${typeColor}40)">
+        ${item.image ? `<img src="${item.image}" alt="${item.title || ''}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">` : `<i data-lucide="${typeIcon}" class="w-12 h-12 md:w-16 md:h-16" style="color:${typeColor};opacity:0.3"></i>`}
+        ${item.isActive === false ? `<div class="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[9px] font-medium">منتهي</div>` : ''}
+      </div>
+      <div class="p-2.5 md:p-3">
+        <h4 class="font-bold text-gray-900 text-xs md:text-sm mb-1 truncate">${item.title || 'بدون عنوان'}</h4>
+        ${subtitle ? `<p class="text-[10px] md:text-xs text-gray-500 truncate mb-1">${subtitle}</p>` : ''}
+        ${dateStr ? `<p class="text-[9px] text-gray-400 flex items-center gap-0.5"><i data-lucide="calendar" class="w-2.5 h-2.5"></i>${dateStr}</p>` : ''}
+      </div>
+    </div>`;
+  },
+
+  // ====== OFFERS PAGE ======
+  render_offers() {
+    const offers = Offers.getActiveSync();
+    return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
+      <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
+        <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
+        <i data-lucide="chevron-left" class="w-3 h-3"></i>
+        <span class="text-gray-700 font-medium">العروض الترويجية</span>
+      </div>
+      <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="tag" class="w-6 h-6 text-orange-500"></i>العروض الترويجية</h2>
+      ${offers.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${offers.map(o => this.renderSectionCard(o, 'offer', '#f97316', 'tag')).join('')}</div>` : '<div class="text-center py-12 text-gray-400"><i data-lucide="tag" class="w-16 h-16 mx-auto mb-3 text-gray-300"></i><br>لا توجد عروض حالياً</div>'}
+    </div></section>`;
+  },
+
+  // ====== JOBS PAGE ======
+  render_jobs() {
+    const jobs = Jobs.getActiveSync();
+    return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
+      <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
+        <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
+        <i data-lucide="chevron-left" class="w-3 h-3"></i>
+        <span class="text-gray-700 font-medium">الوظائف</span>
+      </div>
+      <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="briefcase" class="w-6 h-6 text-blue-500"></i>الوظائف المتاحة</h2>
+      ${jobs.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${jobs.map(j => this.renderSectionCard(j, 'job', '#3b82f6', 'briefcase')).join('')}</div>` : '<div class="text-center py-12 text-gray-400"><i data-lucide="briefcase" class="w-16 h-16 mx-auto mb-3 text-gray-300"></i><br>لا توجد وظائف حالياً</div>'}
+    </div></section>`;
+  },
+
+  // ====== EVENTS PAGE ======
+  render_events() {
+    const events = Events.getActiveSync();
+    return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
+      <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
+        <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
+        <i data-lucide="chevron-left" class="w-3 h-3"></i>
+        <span class="text-gray-700 font-medium">الفعاليات</span>
+      </div>
+      <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="calendar" class="w-6 h-6 text-green-500"></i>الفعاليات</h2>
+      ${events.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${events.map(ev => this.renderSectionCard(ev, 'event', '#22c55e', 'calendar')).join('')}</div>` : '<div class="text-center py-12 text-gray-400"><i data-lucide="calendar" class="w-16 h-16 mx-auto mb-3 text-gray-300"></i><br>لا توجد فعاليات حالياً</div>'}
+    </div></section>`;
+  },
+
+  // ====== PRICING PAGE ======
+  _pricingTab: 'currencies',
+  render_pricing() {
+    const categories = Pricing.categories;
+    const activeTab = this._pricingTab || 'currencies';
+    const items = Pricing.getByCategorySync(activeTab);
+    const catInfo = Pricing.getCategoryInfo(activeTab);
+    return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
+      <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
+        <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
+        <i data-lucide="chevron-left" class="w-3 h-3"></i>
+        <span class="text-gray-700 font-medium">التسعيرات</span>
+      </div>
+      <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="trending-up" class="w-6 h-6 text-purple-500"></i>أسعار اليوم</h2>
+      <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+        ${categories.map(c => `<button onclick="App._pricingTab='${c.id}';App.render()" class="px-4 py-2.5 rounded-xl text-xs font-medium ${activeTab === c.id ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'} flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="${c.icon}" class="w-3.5 h-3.5"></i>${c.name}</button>`).join('')}
+      </div>
+      <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div class="p-3 md:p-4 border-b border-gray-100">
+          <p class="text-xs text-gray-500 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i>آخر تحديث: <strong>${items.length && items[0]?.lastUpdated?.toDate ? items[0].lastUpdated.toDate().toLocaleDateString('ar') : 'غير محدد'}</strong></p>
+        </div>
+        ${items.length ? `<div class="overflow-x-auto"><table class="w-full text-xs">
+          <thead class="bg-gray-50"><tr>
+            <th class="px-3 py-3 text-right font-medium text-gray-500">العملة / الدولة</th>
+            <th class="px-3 py-3 text-right font-medium text-gray-500">سعر الشراء</th>
+            <th class="px-3 py-3 text-right font-medium text-gray-500">سعر البيع</th>
+            <th class="px-3 py-3 text-right font-medium text-gray-500">المنطقة</th>
+          </tr></thead>
+          <tbody class="divide-y divide-gray-100">
+            ${items.map(item => `<tr class="hover:bg-gray-50">
+              <td class="px-3 py-3 font-medium text-gray-900">${item.currencyName || ''}</td>
+              <td class="px-3 py-3 text-green-600 font-bold">${item.buyPrice || '-'}</td>
+              <td class="px-3 py-3 text-red-600 font-bold">${item.sellPrice || '-'}</td>
+              <td class="px-3 py-3 text-gray-500">${item.region || '-'}</td>
+            </tr>`).join('')}
+          </tbody></table></div>` : '<div class="text-center py-12 text-gray-400"><i data-lucide="trending-up" class="w-16 h-16 mx-auto mb-3 text-gray-300"></i><br>لا توجد أسعار في هذا القسم</div>'}
+      </div>
+    </div></section>`;
+  },
+
+  // ====== DETAIL PAGE (Offers/Jobs/Events) ======
+  showItemDetail(id, type) {
+    const store = type === 'offer' ? Offers : type === 'job' ? Jobs : Events;
+    const typeName = type === 'offer' ? 'العرض' : type === 'job' ? 'الوظيفة' : 'الفعالية';
+    const typeColor = type === 'offer' ? '#f97316' : type === 'job' ? '#3b82f6' : '#22c55e';
+    const typeIcon = type === 'offer' ? 'tag' : type === 'job' ? 'briefcase' : 'calendar';
+    const backLink = type === 'offer' ? '#offers' : type === 'job' ? '#jobs' : '#events';
+    const subtitle = type === 'offer' ? 'الوكيل' : type === 'job' ? 'الشركة' : 'جهة التنظيم';
+    const subtitleVal = type === 'offer' ? (store.getAllSync().find(i=>i.id===id)?.agentName) : type === 'job' ? (store.getAllSync().find(i=>i.id===id)?.companyName) : (store.getAllSync().find(i=>i.id===id)?.organizer);
+
+    store.getById(id).then(item => {
+      if (!item) { this.showToast('العنصر غير موجود', 'error'); location.hash = backLink; return; }
+      const startDate = item.startDate?.toDate ? item.startDate.toDate().toLocaleDateString('ar') : '';
+      const endDate = item.endDate?.toDate ? item.endDate.toDate().toLocaleDateString('ar') : '';
+      const app = document.getElementById('app');
+      app.innerHTML = `<div class="min-h-screen bg-gray-50">${this.renderHeader(Auth.currentUser)}
+      <section class="py-4 md:py-8"><div class="max-w-4xl mx-auto px-3">
+        <div class="flex items-center gap-2 text-xs text-gray-500 mb-3">
+          <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
+          <i data-lucide="chevron-left" class="w-3 h-3"></i>
+          <a href="${backLink}" class="text-blue-600 hover:underline">${typeName}</a>
+        </div>
+        <div class="bg-white rounded-xl overflow-hidden border border-gray-100">
+          <div class="h-40 md:h-56 relative" style="background:linear-gradient(135deg, ${typeColor}20, ${typeColor}40)">
+            ${item.image ? `<img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="${typeIcon}" class="w-20 h-20" style="color:${typeColor};opacity:0.3"></i></div>`}
+          </div>
+          <div class="p-4 md:p-6">
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-2">${item.title || ''}</h2>
+            ${subtitleVal ? `<p class="text-sm text-gray-500 mb-3 flex items-center gap-1"><i data-lucide="user" class="w-4 h-4"></i>${subtitle}: <strong>${subtitleVal}</strong></p>` : ''}
+            ${item.description ? `<p class="text-gray-600 mb-4 text-sm leading-relaxed">${item.description}</p>` : ''}
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+              ${startDate ? `<div class="bg-gray-50 rounded-lg p-2 text-xs"><span class="text-gray-400">يبدأ:</span> <strong>${startDate}</strong></div>` : ''}
+              ${endDate ? `<div class="bg-gray-50 rounded-lg p-2 text-xs"><span class="text-gray-400">ينتهي:</span> <strong>${endDate}</strong></div>` : ''}
+              ${item.location ? `<div class="bg-gray-50 rounded-lg p-2 text-xs flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3 text-gray-400"></i>${item.location}</div>` : ''}
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+              ${item.phone ? `<a href="tel:${item.phone}" class="bg-green-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="phone" class="w-4 h-4"></i>اتصال</a>` : ''}
+              ${item.whatsapp ? `<a href="https://wa.me/967${item.whatsapp}" target="_blank" class="bg-green-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="message-circle" class="w-4 h-4"></i>واتساب</a>` : ''}
+              <button onclick="App.shareItem('${item.id}','${type}')" class="bg-blue-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-blue-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="share-2" class="w-4 h-4"></i>مشاركة</button>
+            </div>
+            ${(item.facebook || item.instagram || item.telegram || item.website) ? `
+            <div class="flex flex-wrap gap-2">
+              ${item.facebook ? `<a href="${item.facebook}" target="_blank" class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>` : ''}
+              ${item.instagram ? `<a href="${item.instagram}" target="_blank" class="w-9 h-9 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center hover:bg-pink-100"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
+              ${item.telegram ? `<a href="${item.telegram}" target="_blank" class="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center hover:bg-sky-100"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.504-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></a>` : ''}
+              ${item.website ? `<a href="${item.website}" target="_blank" class="w-9 h-9 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100"><i data-lucide="globe" class="w-5 h-5"></i></a>` : ''}
+            </div>` : ''}
+          </div>
+        </div>
+      </div></section>${this.renderFooter()}</div>`;
+      this.initIcons();
+    });
+  },
+
+  shareItem(id, type) {
+    const store = type === 'offer' ? Offers : type === 'job' ? Jobs : Events;
+    const item = store.getAllSync().find(i => i.id === id);
+    if (!item) return;
+    const backLink = type === 'offer' ? 'offers' : type === 'job' ? 'jobs' : 'events';
+    const shareUrl = location.origin + '/#' + type + '/' + id;
+    const shareText = `${item.title}\nالدليل اليمني التجاري\n${shareUrl}`;
+    if (navigator.share) {
+      navigator.share({ title: item.title, text: shareText, url: shareUrl }).catch(() => {});
+    } else {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(shareText).then(() => this.showToast('تم نسخ الرابط', 'success', 2000));
+      }
+    }
+  },
+
   renderFooter() {
     return `<footer class="bg-gray-900 text-gray-300 py-6 mt-8">
       <div class="max-w-7xl mx-auto px-3">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div><div class="flex items-center gap-2 mb-2"><div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center"><span class="text-white font-bold text-sm">د</span></div><span class="text-white font-bold text-sm">الدليل اليمني التجاري</span></div><p class="text-xs text-gray-400">الدليل الشامل للأعمال والأماكن في اليمن</p></div>
-          <div><h5 class="text-white font-semibold mb-2 text-sm">روابط سريعة</h5><ul class="space-y-1 text-xs"><li><a href="#home" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a></li><li><a href="#search" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="search" class="w-3 h-3"></i>البحث</a></li><li><a href="#add" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i>أضف مكانك</a></li></ul></div>
+          <div><h5 class="text-white font-semibold mb-2 text-sm">روابط سريعة</h5><ul class="space-y-1 text-xs"><li><a href="#home" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a></li><li><a href="#search" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="search" class="w-3 h-3"></i>البحث</a></li><li><a href="#offers" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="tag" class="w-3 h-3"></i>العروض</a></li><li><a href="#jobs" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="briefcase" class="w-3 h-3"></i>الوظائف</a></li><li><a href="#events" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i>الفعاليات</a></li><li><a href="#pricing" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="trending-up" class="w-3 h-3"></i>التسعيرات</a></li><li><a href="#add" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="plus" class="w-3 h-3"></i>أضف مكانك</a></li></ul></div>
           <div><h5 class="text-white font-semibold mb-2 text-sm">معلومات</h5><ul class="space-y-1 text-xs"><li><a href="about.html" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="info" class="w-3 h-3"></i>من نحن</a></li><li><a href="privacy.html" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="shield" class="w-3 h-3"></i>سياسة الخصوصية</a></li>${Auth.currentUser&&Auth.currentUser.role==='admin'?'<li><a href="admin.html" class="hover:text-white text-gray-400 flex items-center gap-1"><i data-lucide="settings" class="w-3 h-3"></i>لوحة التحكم</a></li>':''}</ul></div>
           <div><h5 class="text-white font-semibold mb-2 text-sm">تواصل معنا</h5><a href="https://wa.me/967777492635" target="_blank" class="text-xs text-gray-400 flex items-center gap-1 hover:text-green-400 transition-colors"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>واتساب: 777492635</a><p class="text-xs text-gray-400 flex items-center gap-1 mt-1"><i data-lucide="mail" class="w-3 h-3"></i>info@yemendirectory.net</p><p class="text-xs text-gray-400 flex items-center gap-1 mt-1"><i data-lucide="globe" class="w-3 h-3"></i>الدليل اليمني التجاري</p></div>
         </div>

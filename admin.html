@@ -30,6 +30,7 @@
     .btn-login:disabled { background: #f87171; cursor: not-allowed; opacity: 0.7; }
     .error-box { display: none; background: #fef2f2; color: #dc2626; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; text-align: right; }
     .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-left: 8px; vertical-align: middle; }
+    .img-preview { max-width: 120px; max-height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid #e5e7eb; }
   </style>
 </head>
 <body>
@@ -174,6 +175,53 @@
       placeFilter: 'all',
       placeSearch: '',
       userSearch: '',
+      pricingCategory: 'currencies',
+      editingItem: null,
+
+      // =============================================
+      // Helper: Upload image to Firebase Storage
+      // =============================================
+      uploadImage: async function(file, folder) {
+        if (!file) return null;
+        var ext = file.name.split('.').pop();
+        var fileName = folder + '/' + Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '.' + ext;
+        var ref = firebase.storage().ref(fileName);
+        var snapshot = await ref.put(file);
+        return await snapshot.ref.getDownloadURL();
+      },
+
+      // =============================================
+      // Helper: Format date for display
+      // =============================================
+      formatDate: function(d) {
+        if (!d) return '-';
+        var dt = d.toDate ? d.toDate() : new Date(d);
+        if (isNaN(dt.getTime())) return '-';
+        return dt.toLocaleDateString('ar-YE', { year: 'numeric', month: 'short', day: 'numeric' });
+      },
+
+      // =============================================
+      // Helper: Check if date is expired
+      // =============================================
+      isExpired: function(endDate) {
+        if (!endDate) return false;
+        var dt = endDate.toDate ? endDate.toDate() : new Date(endDate);
+        return dt < new Date();
+      },
+
+      // =============================================
+      // Helper: Toast notification
+      // =============================================
+      showToast: function(message, type) {
+        var colors = { success: 'bg-green-600', error: 'bg-red-600', info: 'bg-blue-600' };
+        var toast = document.createElement('div');
+        toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[9999] px-4 py-3 rounded-xl text-white text-sm font-medium shadow-lg ' + (colors[type] || colors.info);
+        toast.textContent = message;
+        toast.style.cssText = 'transform:translateX(-50%);transition:opacity 0.3s,transform 0.3s;';
+        document.body.appendChild(toast);
+        setTimeout(function() { toast.style.opacity = '0'; }, 2500);
+        setTimeout(function() { toast.remove(); }, 2800);
+      },
 
       render: async function() {
         var app = document.getElementById('admin-app');
@@ -183,7 +231,12 @@
           Admin.getAllPlaces(),
           Ads.getAll(),
           Admin.getNotifications(),
-          Admin.getUnreadCount()
+          Admin.getUnreadCount(),
+          // NEW: Offers, Jobs, Events, Pricing
+          db.collection('offers').orderBy('createdAt','desc').get().then(function(s) { return s.docs.map(function(d) { return {id:d.id, ...d.data()}; }); }).catch(function(){ return []; }),
+          db.collection('jobs').orderBy('createdAt','desc').get().then(function(s) { return s.docs.map(function(d) { return {id:d.id, ...d.data()}; }); }).catch(function(){ return []; }),
+          db.collection('events').orderBy('createdAt','desc').get().then(function(s) { return s.docs.map(function(d) { return {id:d.id, ...d.data()}; }); }).catch(function(){ return []; }),
+          db.collection('pricing').orderBy('sortOrder','asc').get().then(function(s) { return s.docs.map(function(d) { return {id:d.id, ...d.data()}; }); }).catch(function(){ return []; })
         ]);
         var stats = results[0];
         var users = results[1];
@@ -191,7 +244,23 @@
         var ads = results[3];
         var notifs = results[4];
         var unreadCount = results[5];
+        var offers = results[6];
+        var jobs = results[7];
+        var events = results[8];
+        var pricing = results[9];
         await Admin.markNotificationsRead();
+
+        // Store data for tab renderers
+        this._offers = offers;
+        this._jobs = jobs;
+        this._events = events;
+        this._pricing = pricing;
+        this._users = users;
+        this._places = places;
+        this._stats = stats;
+        this._ads = ads;
+        this._notifs = notifs;
+        this._unreadCount = unreadCount;
 
         app.innerHTML =
           '<div class="min-h-screen bg-gray-100">' +
@@ -213,47 +282,70 @@
               '</div>' +
             '</header>' +
             '<div class="max-w-7xl mx-auto px-4 py-6">' +
-              '<div class="grid grid-cols-2 md:grid-cols-7 gap-3 mb-6">' +
-                this.statCard('users', 'المستخدمين', stats.totalUsers, stats.verifiedUsers + ' موثّق') +
-                this.statCard('building-2', 'كل الأنشطة', stats.totalPlaces, stats.activePlaces + ' نشط') +
-                this.statCard('clock-3', 'Pending', stats.pendingPlaces, 'بانتظار المراجعة', 'text-yellow-600') +
-                this.statCard('badge-check', 'Approved', stats.approvedPlaces, 'ظاهر للعامة', 'text-green-600') +
-                this.statCard('shield-x', 'Rejected', stats.rejectedPlaces, 'مرفوض', 'text-red-600') +
-                this.statCard('pause-circle', 'معلّق', stats.inactivePlaces, 'غير ظاهر', 'text-slate-600') +
-                this.statCard('bell', 'إشعارات', unreadCount, 'غير مقروء', 'text-blue-600') +
-              '</div>' +
-              (notifs.length > 0 ?
-                '<div class="bg-white rounded-xl p-4 border border-gray-100 mb-6">' +
-                '<h3 class="text-sm font-bold mb-3 flex items-center gap-2"><i data-lucide="bell" class="w-4 h-4 text-red-500"></i>أحدث الإشعارات</h3>' +
-                '<div class="space-y-2 max-h-40 overflow-y-auto">' +
-                notifs.slice(0, 8).map(function(n) {
-                  return '<div class="flex items-center gap-2 p-2 rounded-lg ' + (n.read ? 'bg-gray-50' : 'bg-blue-50') + ' text-xs">' +
-                    '<i data-lucide="' + (n.type === 'request' ? 'user-plus' : n.type === 'new_place' ? 'building-2' : 'info') + '" class="w-4 h-4 ' + (n.read ? 'text-gray-400' : 'text-blue-600') + ' shrink-0"></i>' +
-                    '<span class="flex-1 ' + (n.read ? 'text-gray-600' : 'text-gray-900 font-medium') + '">' + n.message + '</span>' +
-                    '<span class="text-[10px] text-gray-400 shrink-0">' + (n.createdAt && n.createdAt.toDate ? n.createdAt.toDate().toLocaleString('ar') : '') + '</span>' +
-                  '</div>';
-                }).join('') +
-                '</div></div>' : '') +
+              this.renderStatsGrid(stats, unreadCount, offers, jobs, events, pricing) +
+              this.renderNotifications(notifs) +
               '<div class="flex gap-2 mb-6 overflow-x-auto pb-2">' +
                 [
                   {id:'dashboard',name:'نظرة عامة',icon:'layout-dashboard'},
                   {id:'users',name:'المستخدمين',icon:'users'},
                   {id:'places',name:'الأنشطة',icon:'building-2'},
-                  {id:'ads',name:'الإعلانات',icon:'megaphone'}
+                  {id:'ads',name:'الإعلانات',icon:'megaphone'},
+                  {id:'offers',name:'العروض',icon:'tag'},
+                  {id:'jobs',name:'الوظائف',icon:'briefcase'},
+                  {id:'events',name:'الفعاليات',icon:'calendar'},
+                  {id:'pricing',name:'التسعيرات',icon:'trending-up'}
                 ].map(function(t) {
                   return '<button onclick="AdminPanel.currentTab=\'' + t.id + '\';AdminPanel.render()" class="px-4 py-2.5 rounded-xl text-xs font-medium ' + (AdminPanel.currentTab === t.id ? 'bg-red-600 text-white shadow-lg shadow-red-600/25' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50') + ' flex items-center gap-1.5 whitespace-nowrap">' +
                     '<i data-lucide="' + t.icon + '" class="w-3.5 h-3.5"></i>' + t.name +
                   '</button>';
                 }).join('') +
               '</div>' +
-              (AdminPanel.currentTab === 'dashboard' ? AdminPanel.renderDashboard(stats, users, places) : '') +
-              (AdminPanel.currentTab === 'users' ? AdminPanel.renderUsers(users) : '') +
-              (AdminPanel.currentTab === 'places' ? AdminPanel.renderPlaces(places, stats) : '') +
-              (AdminPanel.currentTab === 'ads' ? AdminPanel.renderAdsTab(ads) : '') +
+              (this.currentTab === 'dashboard' ? this.renderDashboard(stats, users, places) : '') +
+              (this.currentTab === 'users' ? this.renderUsers(users) : '') +
+              (this.currentTab === 'places' ? this.renderPlaces(places, stats) : '') +
+              (this.currentTab === 'ads' ? this.renderAdsTab(ads) : '') +
+              (this.currentTab === 'offers' ? this.renderOffersTab(offers) : '') +
+              (this.currentTab === 'jobs' ? this.renderJobsTab(jobs) : '') +
+              (this.currentTab === 'events' ? this.renderEventsTab(events) : '') +
+              (this.currentTab === 'pricing' ? this.renderPricingTab(pricing) : '') +
             '</div>' +
           '</div>';
 
         try { lucide.createIcons(); } catch(e) {}
+      },
+
+      // =============================================
+      // Stats Grid (updated with new sections)
+      // =============================================
+      renderStatsGrid: function(stats, unreadCount, offers, jobs, events, pricing) {
+        return '<div class="grid grid-cols-2 md:grid-cols-7 gap-3 mb-6">' +
+          this.statCard('users', 'المستخدمين', stats.totalUsers, stats.verifiedUsers + ' موثّق') +
+          this.statCard('building-2', 'كل الأنشطة', stats.totalPlaces, stats.activePlaces + ' نشط') +
+          this.statCard('clock-3', 'Pending', stats.pendingPlaces, 'بانتظار المراجعة', 'text-yellow-600') +
+          this.statCard('badge-check', 'Approved', stats.approvedPlaces, 'ظاهر للعامة', 'text-green-600') +
+          this.statCard('shield-x', 'Rejected', stats.rejectedPlaces, 'مرفوض', 'text-red-600') +
+          this.statCard('pause-circle', 'معلّق', stats.inactivePlaces, 'غير ظاهر', 'text-slate-600') +
+          this.statCard('bell', 'إشعارات', unreadCount, 'غير مقروء', 'text-blue-600') +
+          this.statCard('tag', 'العروض', offers.length, offers.filter(function(o){ return !AdminPanel.isExpired(o.endDate); }).length + ' نشط', 'text-orange-600') +
+          this.statCard('briefcase', 'الوظائف', jobs.length, jobs.filter(function(j){ return !AdminPanel.isExpired(j.endDate); }).length + ' نشط', 'text-purple-600') +
+          this.statCard('calendar', 'الفعاليات', events.length, events.filter(function(e){ return !AdminPanel.isExpired(e.endDate); }).length + ' نشط', 'text-teal-600') +
+          this.statCard('trending-up', 'التسعيرات', pricing.length, 'عنصر مسعّر', 'text-emerald-600') +
+        '</div>';
+      },
+
+      renderNotifications: function(notifs) {
+        if (!notifs || notifs.length === 0) return '';
+        return '<div class="bg-white rounded-xl p-4 border border-gray-100 mb-6">' +
+          '<h3 class="text-sm font-bold mb-3 flex items-center gap-2"><i data-lucide="bell" class="w-4 h-4 text-red-500"></i>أحدث الإشعارات</h3>' +
+          '<div class="space-y-2 max-h-40 overflow-y-auto">' +
+          notifs.slice(0, 8).map(function(n) {
+            return '<div class="flex items-center gap-2 p-2 rounded-lg ' + (n.read ? 'bg-gray-50' : 'bg-blue-50') + ' text-xs">' +
+              '<i data-lucide="' + (n.type === 'request' ? 'user-plus' : n.type === 'new_place' ? 'building-2' : 'info') + '" class="w-4 h-4 ' + (n.read ? 'text-gray-400' : 'text-blue-600') + ' shrink-0"></i>' +
+              '<span class="flex-1 ' + (n.read ? 'text-gray-600' : 'text-gray-900 font-medium') + '">' + n.message + '</span>' +
+              '<span class="text-[10px] text-gray-400 shrink-0">' + (n.createdAt && n.createdAt.toDate ? n.createdAt.toDate().toLocaleString('ar') : '') + '</span>' +
+            '</div>';
+          }).join('') +
+          '</div></div>';
       },
 
       statCard: function(icon, label, value, hint, iconColor) {
@@ -451,6 +543,487 @@
           '</div></div>';
       },
 
+      // =============================================
+      // Offers Tab
+      // =============================================
+      renderOffersTab: function(offers) {
+        var self = this;
+        var formHtml = this.editingItem && this.editingItem._type === 'offer'
+          ? this.renderOfferForm(this.editingItem)
+          : '';
+
+        return '<div class="space-y-4">' +
+          formHtml +
+          '<div class="bg-white rounded-xl border border-gray-100 p-4">' +
+            '<div class="flex items-center justify-between mb-4">' +
+              '<h3 class="text-sm font-bold">العروض (' + offers.length + ')</h3>' +
+              '<button onclick="AdminPanel.editingItem={_type:\'offer\'};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة عرض</button>' +
+            '</div>' +
+            this.renderDataTable(offers, 'offer', [
+              { label: 'الصورة', render: function(item) { return item.imageUrl ? '<img src="' + item.imageUrl + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
+              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + (item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + (item.description || '').substring(0, 50) + '</div>'; } },
+              { label: 'الوكيل', render: function(item) { return item.agentName || '-'; } },
+              { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
+              { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>'); } }
+            ]) +
+          '</div>' +
+        '</div>';
+      },
+
+      renderOfferForm: function(item) {
+        var isNew = !item.id;
+        return this.renderItemForm(item, isNew, 'offer', [
+          { name: 'title', label: 'عنوان العرض', type: 'text', required: true, placeholder: 'أدخل عنوان العرض' },
+          { name: 'agentName', label: 'اسم الوكيل', type: 'text', required: true, placeholder: 'اسم الوكيل أو الشركة' },
+          { name: 'description', label: 'الوصف', type: 'textarea', required: false, placeholder: 'وصف العرض' },
+          { name: 'startDate', label: 'تاريخ البداية', type: 'date', required: true },
+          { name: 'endDate', label: 'تاريخ النهاية', type: 'date', required: true },
+          { name: 'location', label: 'الموقع', type: 'text', required: false, placeholder: 'الموقع أو العنوان' },
+          { name: 'phone', label: 'الهاتف', type: 'text', required: false, placeholder: 'رقم الهاتف' },
+          { name: 'whatsapp', label: 'واتساب', type: 'text', required: false, placeholder: 'رقم واتساب' },
+          { name: 'facebook', label: 'فيسبوك', type: 'text', required: false, placeholder: 'رابط فيسبوك' },
+          { name: 'instagram', label: 'انستغرام', type: 'text', required: false, placeholder: 'رابط انستغرام' },
+          { name: 'telegram', label: 'تيليجرام', type: 'text', required: false, placeholder: 'رابط تيليجرام' },
+          { name: 'website', label: 'الموقع الإلكتروني', type: 'text', required: false, placeholder: 'رابط الموقع' }
+        ]);
+      },
+
+      // =============================================
+      // Jobs Tab
+      // =============================================
+      renderJobsTab: function(jobs) {
+        var self = this;
+        var formHtml = this.editingItem && this.editingItem._type === 'job'
+          ? this.renderJobForm(this.editingItem)
+          : '';
+
+        return '<div class="space-y-4">' +
+          formHtml +
+          '<div class="bg-white rounded-xl border border-gray-100 p-4">' +
+            '<div class="flex items-center justify-between mb-4">' +
+              '<h3 class="text-sm font-bold">الوظائف (' + jobs.length + ')</h3>' +
+              '<button onclick="AdminPanel.editingItem={_type:\'job\'};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة وظيفة</button>' +
+            '</div>' +
+            this.renderDataTable(jobs, 'job', [
+              { label: 'الصورة', render: function(item) { return item.imageUrl ? '<img src="' + item.imageUrl + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
+              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + (item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + (item.description || '').substring(0, 50) + '</div>'; } },
+              { label: 'الشركة', render: function(item) { return item.companyName || '-'; } },
+              { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
+              { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>'); } }
+            ]) +
+          '</div>' +
+        '</div>';
+      },
+
+      renderJobForm: function(item) {
+        var isNew = !item.id;
+        return this.renderItemForm(item, isNew, 'job', [
+          { name: 'title', label: 'عنوان الوظيفة', type: 'text', required: true, placeholder: 'أدخل عنوان الوظيفة' },
+          { name: 'companyName', label: 'اسم الشركة', type: 'text', required: true, placeholder: 'اسم الشركة' },
+          { name: 'description', label: 'الوصف', type: 'textarea', required: false, placeholder: 'وصف الوظيفة والمتطلبات' },
+          { name: 'startDate', label: 'تاريخ النشر', type: 'date', required: true },
+          { name: 'endDate', label: 'تاريخ انتهاء التقديم', type: 'date', required: true },
+          { name: 'location', label: 'الموقع', type: 'text', required: false, placeholder: 'موقع العمل' },
+          { name: 'phone', label: 'الهاتف', type: 'text', required: false, placeholder: 'رقم الهاتف' },
+          { name: 'whatsapp', label: 'واتساب', type: 'text', required: false, placeholder: 'رقم واتساب' },
+          { name: 'facebook', label: 'فيسبوك', type: 'text', required: false, placeholder: 'رابط فيسبوك' },
+          { name: 'instagram', label: 'انستغرام', type: 'text', required: false, placeholder: 'رابط انستغرام' },
+          { name: 'telegram', label: 'تيليجرام', type: 'text', required: false, placeholder: 'رابط تيليجرام' },
+          { name: 'website', label: 'الموقع الإلكتروني', type: 'text', required: false, placeholder: 'رابط الموقع' }
+        ]);
+      },
+
+      // =============================================
+      // Events Tab
+      // =============================================
+      renderEventsTab: function(events) {
+        var self = this;
+        var formHtml = this.editingItem && this.editingItem._type === 'event'
+          ? this.renderEventForm(this.editingItem)
+          : '';
+
+        return '<div class="space-y-4">' +
+          formHtml +
+          '<div class="bg-white rounded-xl border border-gray-100 p-4">' +
+            '<div class="flex items-center justify-between mb-4">' +
+              '<h3 class="text-sm font-bold">الفعاليات (' + events.length + ')</h3>' +
+              '<button onclick="AdminPanel.editingItem={_type:\'event\'};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة فعالية</button>' +
+            '</div>' +
+            this.renderDataTable(events, 'event', [
+              { label: 'الصورة', render: function(item) { return item.imageUrl ? '<img src="' + item.imageUrl + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
+              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + (item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + (item.description || '').substring(0, 50) + '</div>'; } },
+              { label: 'جهة التنظيم', render: function(item) { return item.organizer || '-'; } },
+              { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
+              { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>'); } }
+            ]) +
+          '</div>' +
+        '</div>';
+      },
+
+      renderEventForm: function(item) {
+        var isNew = !item.id;
+        return this.renderItemForm(item, isNew, 'event', [
+          { name: 'title', label: 'عنوان الفعالية', type: 'text', required: true, placeholder: 'أدخل عنوان الفعالية' },
+          { name: 'organizer', label: 'جهة التنظيم', type: 'text', required: true, placeholder: 'اسم الجهة المنظمة' },
+          { name: 'description', label: 'الوصف', type: 'textarea', required: false, placeholder: 'وصف الفعالية' },
+          { name: 'startDate', label: 'تاريخ البداية', type: 'date', required: true },
+          { name: 'endDate', label: 'تاريخ النهاية', type: 'date', required: true },
+          { name: 'location', label: 'الموقع', type: 'text', required: false, placeholder: 'مكان الفعالية' },
+          { name: 'phone', label: 'الهاتف', type: 'text', required: false, placeholder: 'رقم الهاتف' },
+          { name: 'whatsapp', label: 'واتساب', type: 'text', required: false, placeholder: 'رقم واتساب' },
+          { name: 'facebook', label: 'فيسبوك', type: 'text', required: false, placeholder: 'رابط فيسبوك' },
+          { name: 'instagram', label: 'انستغرام', type: 'text', required: false, placeholder: 'رابط انستغرام' },
+          { name: 'telegram', label: 'تيليجرام', type: 'text', required: false, placeholder: 'رابط تيليجرام' },
+          { name: 'website', label: 'الموقع الإلكتروني', type: 'text', required: false, placeholder: 'رابط الموقع' }
+        ]);
+      },
+
+      // =============================================
+      // Pricing Tab
+      // =============================================
+      renderPricingTab: function(pricing) {
+        var self = this;
+        var categories = [
+          { id: 'currencies', name: 'أسعار العملات' },
+          { id: 'metals', name: 'المعادن' },
+          { id: 'fuel', name: 'البنزين' },
+          { id: 'food', name: 'المواد الغذائية' },
+          { id: 'crypto', name: 'العملات المشفرة' }
+        ];
+        var filtered = pricing.filter(function(p) { return p.category === self.pricingCategory; });
+        var formHtml = this.editingItem && this.editingItem._type === 'pricing'
+          ? this.renderPricingForm(this.editingItem, categories)
+          : '';
+
+        return '<div class="space-y-4">' +
+          formHtml +
+          '<div class="bg-white rounded-xl border border-gray-100 p-4">' +
+            '<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">' +
+              '<h3 class="text-sm font-bold">التسعيرات (' + pricing.length + ')</h3>' +
+              '<div class="flex gap-2 flex-wrap">' +
+                categories.map(function(cat) {
+                  return '<button onclick="AdminPanel.pricingCategory=\'' + cat.id + '\';AdminPanel.render()" class="px-3 py-2 rounded-lg text-xs font-medium ' + (self.pricingCategory === cat.id ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200') + '">' + cat.name + '</button>';
+                }).join('') +
+              '</div>' +
+              '<button onclick="AdminPanel.editingItem={_type:\'pricing\'};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5 shrink-0"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة تسعيرة</button>' +
+            '</div>' +
+            '<div class="bg-white rounded-xl border border-gray-100 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs">' +
+              '<thead class="bg-gray-50"><tr>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">العملة/الدولة</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">سعر الشراء</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">سعر البيع</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">المنطقة</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">آخر تحديث</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">الإجراءات</th>' +
+              '</tr></thead>' +
+              '<tbody class="divide-y divide-gray-100">' +
+                (filtered.length > 0 ? filtered.map(function(item) {
+                  return '<tr class="hover:bg-gray-50">' +
+                    '<td class="px-3 py-3 font-medium">' + (item.name || '-') + '</td>' +
+                    '<td class="px-3 py-3">' + (item.buyPrice || '-') + '</td>' +
+                    '<td class="px-3 py-3">' + (item.sellPrice || '-') + '</td>' +
+                    '<td class="px-3 py-3 text-gray-500">' + (item.region || '-') + '</td>' +
+                    '<td class="px-3 py-3 text-gray-400">' + self.formatDate(item.updatedAt || item.createdAt) + '</td>' +
+                    '<td class="px-3 py-3"><div class="flex items-center gap-1">' +
+                      '<button onclick="AdminPanel.editPricing(\'' + item.id + '\')" class="p-1.5 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200" title="تعديل"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>' +
+                      '<button onclick="AdminPanel.deletePricing(\'' + item.id + '\')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="حذف"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>' +
+                    '</div></td>' +
+                  '</tr>';
+                }).join('') : '<tr><td colspan="6" class="px-3 py-8 text-center text-gray-400">لا توجد تسعيرات في هذه الفئة</td></tr>') +
+              '</tbody></table></div></div>' +
+          '</div>' +
+        '</div>';
+      },
+
+      renderPricingForm: function(item, categories) {
+        var isNew = !item.id;
+        return this.renderItemForm(item, isNew, 'pricing', [
+          { name: 'category', label: 'الفئة', type: 'select', required: true, options: categories.map(function(c) { return { value: c.id, label: c.name }; }) },
+          { name: 'name', label: 'العملة/الدولة', type: 'text', required: true, placeholder: 'مثال: الريال السعودي / الذهب / البنزين' },
+          { name: 'buyPrice', label: 'سعر الشراء', type: 'text', required: true, placeholder: 'سعر الشراء' },
+          { name: 'sellPrice', label: 'سعر البيع', type: 'text', required: true, placeholder: 'سعر البيع' },
+          { name: 'region', label: 'المنطقة', type: 'text', required: false, placeholder: 'مثال: صنعاء، عدن (اختياري)' }
+        ]);
+      },
+
+      // =============================================
+      // Generic Data Table Renderer
+      // =============================================
+      renderDataTable: function(items, type, columns) {
+        var self = this;
+        if (items.length === 0) {
+          return '<div class="text-center py-8 text-gray-400 text-sm">لا توجد عناصر</div>';
+        }
+        return '<div class="bg-white rounded-xl border border-gray-100 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs">' +
+          '<thead class="bg-gray-50"><tr>' +
+            columns.map(function(col) { return '<th class="px-3 py-3 text-right font-medium text-gray-500">' + col.label + '</th>'; }).join('') +
+            '<th class="px-3 py-3 text-right font-medium text-gray-500">الإجراءات</th>' +
+          '</tr></thead>' +
+          '<tbody class="divide-y divide-gray-100">' +
+            items.map(function(item) {
+              return '<tr class="hover:bg-gray-50">' +
+                columns.map(function(col) { return '<td class="px-3 py-3">' + col.render(item) + '</td>'; }).join('') +
+                '<td class="px-3 py-3"><div class="flex items-center gap-1">' +
+                  '<button onclick="AdminPanel.editItem(\'' + type + '\',\'' + item.id + '\')" class="p-1.5 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200" title="تعديل"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>' +
+                  '<button onclick="AdminPanel.toggleActiveItem(\'' + type + '\',\'' + item.id + '\',' + (item.isActive === false ? 'true' : 'false') + ')" class="p-1.5 rounded-lg ' + (item.isActive === false ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200') + '" title="' + (item.isActive === false ? 'تفعيل' : 'تعطيل') + '"><i data-lucide="' + (item.isActive === false ? 'play' : 'pause') + '" class="w-3.5 h-3.5"></i></button>' +
+                  '<button onclick="AdminPanel.deleteItem(\'' + type + '\',\'' + item.id + '\')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="حذف"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>' +
+                '</div></td>' +
+              '</tr>';
+            }).join('') +
+          '</tbody></table></div></div>';
+      },
+
+      // =============================================
+      // Generic Item Form Renderer
+      // =============================================
+      renderItemForm: function(item, isNew, type, fields) {
+        var self = this;
+        var title = isNew ? 'إضافة جديد' : 'تعديل';
+        if (type === 'offer') title = isNew ? 'إضافة عرض جديد' : 'تعديل العرض';
+        else if (type === 'job') title = isNew ? 'إضافة وظيفة جديدة' : 'تعديل الوظيفة';
+        else if (type === 'event') title = isNew ? 'إضافة فعالية جديدة' : 'تعديل الفعالية';
+        else if (type === 'pricing') title = isNew ? 'إضافة تسعيرة جديدة' : 'تعديل التسعيرة';
+
+        var imageField = type !== 'pricing' ?
+          '<div>' +
+            '<label class="field-label">الصورة</label>' +
+            '<div class="flex items-center gap-3">' +
+              '<input type="file" id="itemImageFile" accept="image/*" onchange="AdminPanel.previewImage(this)" class="text-xs">' +
+              '<img id="itemImagePreview" class="img-preview" style="display:' + (item.imageUrl ? 'block' : 'none') + ';" src="' + (item.imageUrl || '') + '">' +
+            '</div>' +
+          '</div>' : '';
+
+        var fieldsHtml = fields.map(function(f) {
+          var val = item[f.name] || '';
+          if (f.type === 'textarea') {
+            return '<div><label class="field-label">' + f.label + (f.required ? ' *' : '') + '</label><textarea id="field_' + f.name + '" class="field-input" rows="3" placeholder="' + (f.placeholder || '') + '">' + val + '</textarea></div>';
+          }
+          if (f.type === 'select') {
+            var opts = (f.options || []).map(function(o) {
+              return '<option value="' + o.value + '"' + (val === o.value ? ' selected' : '') + '>' + o.label + '</option>';
+            }).join('');
+            return '<div><label class="field-label">' + f.label + (f.required ? ' *' : '') + '</label><select id="field_' + f.name + '" class="field-input">' + opts + '</select></div>';
+          }
+          return '<div><label class="field-label">' + f.label + (f.required ? ' *' : '') + '</label><input type="' + f.type + '" id="field_' + f.name + '" class="field-input" value="' + val + '" placeholder="' + (f.placeholder || '') + '"></div>';
+        }).join('');
+
+        return '<div class="bg-white rounded-xl border border-gray-200 p-5 mb-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-4">' +
+            '<h3 class="text-sm font-bold">' + title + '</h3>' +
+            '<button onclick="AdminPanel.editingItem=null;AdminPanel.render()" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"><i data-lucide="x" class="w-4 h-4"></i></button>' +
+          '</div>' +
+          '<div id="formError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:12px;margin-bottom:12px;"></div>' +
+          '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+            fieldsHtml +
+            imageField +
+          '</div>' +
+          '<div class="flex items-center gap-3 mt-5 pt-4 border-t border-gray-100">' +
+            '<button id="formSubmitBtn" onclick="AdminPanel.submitItemForm(\'' + type + '\',' + (item.id ? '\'' + item.id + '\'' : 'null') + ')" class="px-5 py-2.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5">' +
+              '<i data-lucide="save" class="w-3.5 h-3.5"></i>' +
+              (isNew ? 'إضافة' : 'حفظ التعديلات') +
+            '</button>' +
+            '<button onclick="AdminPanel.editingItem=null;AdminPanel.render()" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">إلغاء</button>' +
+          '</div>' +
+        '</div>';
+      },
+
+      // =============================================
+      // Image Preview
+      // =============================================
+      previewImage: function(input) {
+        var preview = document.getElementById('itemImagePreview');
+        if (input.files && input.files[0]) {
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+          };
+          reader.readAsDataURL(input.files[0]);
+        }
+      },
+
+      // =============================================
+      // Submit Form (Add/Edit)
+      // =============================================
+      submitItemForm: async function(type, id) {
+        var self = this;
+        var errEl = document.getElementById('formError');
+        var btn = document.getElementById('formSubmitBtn');
+        errEl.style.display = 'none';
+
+        // Collect field values
+        var fields = this._getFormFields(type);
+        var data = {};
+        var missingRequired = false;
+
+        for (var i = 0; i < fields.length; i++) {
+          var f = fields[i];
+          var el = document.getElementById('field_' + f.name);
+          if (!el) continue;
+          var val = el.value.trim();
+          if (f.required && !val) {
+            missingRequired = true;
+            errEl.textContent = 'حقل "' + f.label + '" مطلوب';
+            errEl.style.display = 'block';
+            el.focus();
+            return;
+          }
+          data[f.name] = val;
+        }
+
+        // Pricing doesn't need image
+        if (type !== 'pricing') {
+          var fileInput = document.getElementById('itemImageFile');
+          if (fileInput && fileInput.files && fileInput.files[0]) {
+            // Validate file size (max 2MB)
+            if (fileInput.files[0].size > 2 * 1024 * 1024) {
+              errEl.textContent = 'حجم الصورة يجب أن يكون أقل من 2 ميغابايت';
+              errEl.style.display = 'block';
+              return;
+            }
+          }
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner" style="border-top-color:#fff;"></span>جاري الحفظ...';
+
+        try {
+          // Upload image if new file selected
+          if (type !== 'pricing') {
+            var fileInput = document.getElementById('itemImageFile');
+            if (fileInput && fileInput.files && fileInput.files[0]) {
+              var imageUrl = await self.uploadImage(fileInput.files[0], type + 's');
+              data.imageUrl = imageUrl;
+            } else if (id && self.editingItem && self.editingItem.imageUrl) {
+              // Keep existing image
+              data.imageUrl = self.editingItem.imageUrl;
+            }
+          }
+
+          // Set timestamps
+          if (!id) {
+            data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            data.isActive = true;
+          }
+          data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+
+          // For pricing, set sortOrder
+          if (type === 'pricing' && !id) {
+            data.sortOrder = Date.now();
+          }
+
+          var collection = type === 'pricing' ? 'pricing' : type + 's';
+
+          if (id) {
+            // Update existing
+            await db.collection(collection).doc(id).update(data);
+            self.showToast('تم التحديث بنجاح', 'success');
+          } else {
+            // Add new
+            await db.collection(collection).add(data);
+            self.showToast('تمت الإضافة بنجاح', 'success');
+          }
+
+          self.editingItem = null;
+          await self.render();
+        } catch (e) {
+          console.error('Submit error:', e);
+          errEl.textContent = 'حدث خطأ: ' + (e.message || 'تعذر الحفظ');
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.innerHTML = '<i data-lucide="save" class="w-3.5 h-3.5"></i>' + (id ? 'حفظ التعديلات' : 'إضافة');
+          try { lucide.createIcons(); } catch(e) {}
+        }
+      },
+
+      _getFormFields: function(type) {
+        var base = [
+          { name: 'title', label: 'العنوان', type: 'text', required: true },
+          { name: 'description', label: 'الوصف', type: 'textarea', required: false },
+          { name: 'startDate', label: 'تاريخ البداية', type: 'date', required: true },
+          { name: 'endDate', label: 'تاريخ النهاية', type: 'date', required: true },
+          { name: 'location', label: 'الموقع', type: 'text', required: false },
+          { name: 'phone', label: 'الهاتف', type: 'text', required: false },
+          { name: 'whatsapp', label: 'واتساب', type: 'text', required: false },
+          { name: 'facebook', label: 'فيسبوك', type: 'text', required: false },
+          { name: 'instagram', label: 'انستغرام', type: 'text', required: false },
+          { name: 'telegram', label: 'تيليجرام', type: 'text', required: false },
+          { name: 'website', label: 'الموقع الإلكتروني', type: 'text', required: false }
+        ];
+        if (type === 'offer') return [{ name: 'title', label: 'عنوان العرض', type: 'text', required: true }, { name: 'agentName', label: 'اسم الوكيل', type: 'text', required: true }].concat(base.slice(1));
+        if (type === 'job') return [{ name: 'title', label: 'عنوان الوظيفة', type: 'text', required: true }, { name: 'companyName', label: 'اسم الشركة', type: 'text', required: true }].concat(base.slice(1));
+        if (type === 'event') return [{ name: 'title', label: 'عنوان الفعالية', type: 'text', required: true }, { name: 'organizer', label: 'جهة التنظيم', type: 'text', required: true }].concat(base.slice(1));
+        if (type === 'pricing') return [
+          { name: 'category', label: 'الفئة', type: 'select', required: true },
+          { name: 'name', label: 'العملة/الدولة', type: 'text', required: true },
+          { name: 'buyPrice', label: 'سعر الشراء', type: 'text', required: true },
+          { name: 'sellPrice', label: 'سعر البيع', type: 'text', required: true },
+          { name: 'region', label: 'المنطقة', type: 'text', required: false }
+        ];
+        return base;
+      },
+
+      // =============================================
+      // CRUD Operations - Generic
+      // =============================================
+      editItem: async function(type, id) {
+        var collection = type === 'pricing' ? 'pricing' : type + 's';
+        try {
+          var doc = await db.collection(collection).doc(id).get();
+          if (!doc.exists) {
+            this.showToast('العنصر غير موجود', 'error');
+            return;
+          }
+          var data = doc.data();
+          data.id = id;
+          data._type = type;
+          this.editingItem = data;
+          this.render();
+        } catch (e) {
+          console.error('Edit error:', e);
+          this.showToast('تعذر جلب البيانات', 'error');
+        }
+      },
+
+      editPricing: async function(id) {
+        await this.editItem('pricing', id);
+      },
+
+      toggleActiveItem: async function(type, id, shouldActivate) {
+        var collection = type === 'pricing' ? 'pricing' : type + 's';
+        try {
+          await db.collection(collection).doc(id).update({
+            isActive: shouldActivate,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          this.showToast(shouldActivate ? 'تم التفعيل' : 'تم التعطيل', 'success');
+          await this.render();
+        } catch (e) {
+          console.error('Toggle error:', e);
+          this.showToast('حدث خطأ', 'error');
+        }
+      },
+
+      deleteItem: async function(type, id) {
+        var collection = type === 'pricing' ? 'pricing' : type + 's';
+        if (!confirm('هل أنت متأكد من الحذف؟ لا يمكن التراجع عن هذا الإجراء.')) return;
+        try {
+          await db.collection(collection).doc(id).delete();
+          this.showToast('تم الحذف بنجاح', 'success');
+          await this.render();
+        } catch (e) {
+          console.error('Delete error:', e);
+          this.showToast('تعذر الحذف', 'error');
+        }
+      },
+
+      deletePricing: async function(id) {
+        await this.deleteItem('pricing', id);
+      },
+
+      // =============================================
+      // Existing CRUD (Users & Places)
+      // =============================================
       toggleVerify: async function(userId) { await Admin.toggleVerify(userId); this.render(); },
       toggleSuspend: async function(userId) { await Admin.toggleSuspend(userId); this.render(); },
       deleteUser: async function(userId) { if (confirm('هل تريد تعطيل هذا المستخدم وإخفاء أنشطته؟')) { await Admin.deleteUser(userId); this.render(); } },
