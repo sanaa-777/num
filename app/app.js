@@ -119,7 +119,6 @@ const App = {
 
   // Mobile Bottom Navigation
   renderBottomNav(user) {
-    if (!user) return '';
     const current = this.currentView;
     return `
     <nav class="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-dark-900 border-t border-gray-200 dark:border-dark-700 safe-area-bottom bottom-nav-shadow">
@@ -132,19 +131,19 @@ const App = {
           <i data-lucide="tag" class="bottom-nav-icon"></i>
           <span class="bottom-nav-label">العروض</span>
         </a>
-        <a href="#add" class="bottom-nav-item-add">
+        <a href="${user ? '#add' : '#signup'}" class="bottom-nav-item-add">
           <div class="bottom-nav-add-btn">
             <i data-lucide="plus" class="w-6 h-6"></i>
           </div>
-          <span class="bottom-nav-label">إضافة</span>
+          <span class="bottom-nav-label">${user ? 'إضافة' : 'سجّل'}</span>
         </a>
         <a href="#pricing" class="bottom-nav-item ${current === 'pricing' ? 'active' : ''}">
           <i data-lucide="trending-up" class="bottom-nav-icon"></i>
           <span class="bottom-nav-label">الأسعار</span>
         </a>
-        <a href="#profile" class="bottom-nav-item ${current === 'profile' || current === 'myplaces' || current === 'favorites' ? 'active' : ''}">
+        <a href="${user ? '#profile' : '#login'}" class="bottom-nav-item ${current === 'profile' || current === 'myplaces' || current === 'favorites' || current === 'login' ? 'active' : ''}">
           <i data-lucide="user" class="bottom-nav-icon"></i>
-          <span class="bottom-nav-label">حسابي</span>
+          <span class="bottom-nav-label">${user ? 'حسابي' : 'دخول'}</span>
         </a>
       </div>
     </nav>`;
