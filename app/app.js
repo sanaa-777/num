@@ -9,20 +9,31 @@ const App = {
     if (this._initialized) return;
     this._initialized = true;
     try {
-      await Auth.init();
-      await Admin.initDefaultAdmin();
-      await Data.preloadAll();
-      await Admin.refreshUnreadCount();
-      // Load new sections data
-      try { await Offers.getAll(); } catch(e) {}
-      try { await Jobs.getAll(); } catch(e) {}
-      try { await Events.getAll(); } catch(e) {}
-      try { await Pricing.getAll(); } catch(e) {}
       this.initDarkMode();
       this.initLang();
+      // Render immediately with default data - no loading screen
       this.render();
       window.addEventListener('hashchange', () => this.handleRoute());
       this.handleRoute();
+
+      // Load Firebase data in background (non-blocking)
+      Auth.init().then(() => {
+        Admin.initDefaultAdmin().catch(() => {});
+        return Data.preloadAll();
+      }).then(() => {
+        Admin.refreshUnreadCount().catch(() => {});
+        return Promise.all([
+          Offers.getAll().catch(() => {}),
+          Jobs.getAll().catch(() => {}),
+          Events.getAll().catch(() => {}),
+          Pricing.getAll().catch(() => {})
+        ]);
+      }).then(() => {
+        this.render(); // Re-render with loaded data
+        this.handleRoute();
+      }).catch(e => {
+        console.warn('Background data load:', e.message);
+      });
 
       // إخفاء الاقتراحات عند النقر خارجها
       document.addEventListener('click', (e) => {

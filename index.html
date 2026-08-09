@@ -40,12 +40,12 @@
   <meta name="twitter:image:alt" content="الدليل اليمني التجاري">
 
   <!-- PWA -->
-  <link rel="manifest" href="manifest.json?v=20260809213501">
-  <script src="app/build-meta.js?v=20260809213501"></script>
-  <script src="app/version-manager.js?v=20260809213501"></script>
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/favicon-32x32.png?v=20260809213501">
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png?v=20260809213501">
-  <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png?v=20260809213501">
+  <link rel="manifest" href="manifest.json?v=20260809214845">
+  <script src="app/build-meta.js?v=20260809214845"></script>
+  <script src="app/version-manager.js?v=20260809214845"></script>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/favicon-32x32.png?v=20260809214845">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png?v=20260809214845">
+  <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png?v=20260809214845">
   <link rel="canonical" href="https://dalil-yemen-deel.web.app/">
 
   <!-- Structured Data -->
@@ -74,8 +74,8 @@
   }
   </script>
 
-  <link rel="stylesheet" href="app/styles.css?v=20260809213501">
-  <link rel="stylesheet" href="app/tailwind.css?v=20260809213501">
+  <link rel="stylesheet" href="app/styles.css?v=20260809214845">
+  <link rel="stylesheet" href="app/tailwind.css?v=20260809214845">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
@@ -104,12 +104,7 @@
   </style>
 </head>
 <body class="bg-gray-50 dark:bg-dark-950 text-gray-900 dark:text-gray-100">
-  <div id="app">
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;">
-      <div class="loading-spinner"></div>
-      <p style="color:#94a3b8;font-size:13px;">جاري تحميل الدليل اليمني التجاري...</p>
-    </div>
-  </div>
+  <div id="app"></div>
 
   <!-- Firebase SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" defer></script>
@@ -119,21 +114,21 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js" defer></script>
 
   <!-- Error Tracker -->
-  <script src="app/error-tracker.js?v=20260809213501" defer></script>
+  <script src="app/error-tracker.js?v=20260809214845" defer></script>
 
   <!-- Firebase Config -->
-  <script src="app/firebase-config.js?v=20260809213501" defer></script>
+  <script src="app/firebase-config.js?v=20260809214845" defer></script>
 
   <!-- App Modules (Firestore-based) -->
-  <script src="app/data-firestore.js?v=20260809213501" defer></script>
-  <script src="app/auth-firestore.js?v=20260809213501" defer></script>
-  <script src="app/admin-firestore.js?v=20260809213501" defer></script>
-  <script src="app/ads-firestore.js?v=20260809213501" defer></script>
-  <script src="app/offers-firestore.js?v=20260809213501" defer></script>
-  <script src="app/jobs-firestore.js?v=20260809213501" defer></script>
-  <script src="app/events-firestore.js?v=20260809213501" defer></script>
-  <script src="app/pricing-firestore.js?v=20260809213501" defer></script>
-  <script src="app/app.js?v=20260809213501" defer></script>
+  <script src="app/data-firestore.js?v=20260809214845" defer></script>
+  <script src="app/auth-firestore.js?v=20260809214845" defer></script>
+  <script src="app/admin-firestore.js?v=20260809214845" defer></script>
+  <script src="app/ads-firestore.js?v=20260809214845" defer></script>
+  <script src="app/offers-firestore.js?v=20260809214845" defer></script>
+  <script src="app/jobs-firestore.js?v=20260809214845" defer></script>
+  <script src="app/events-firestore.js?v=20260809214845" defer></script>
+  <script src="app/pricing-firestore.js?v=20260809214845" defer></script>
+  <script src="app/app.js?v=20260809214845" defer></script>
 
   <!-- PWA Service Worker -->
   <script>
@@ -151,39 +146,16 @@
   <script>
     window.addEventListener('load', async () => {
       await (window.VersionManager?.ready || Promise.resolve());
-      if (typeof firebase === 'undefined') {
-        const payload = ErrorTracker.normalize(new Error('Firebase SDK not loaded'), {
-          operation: 'app.bootstrap.firebase',
-          code: 'APP-FIREBASE-NOT-LOADED',
-          userMessage: 'تعذر تحميل خدمات التطبيق الأساسية'
-        });
-        ErrorTracker.writeLog(payload);
-        document.getElementById('app').innerHTML = ErrorTracker.buildErrorCard(payload, {
-          title: 'تعذر تحميل التطبيق',
-          message: 'تعذر تحميل خدمات التطبيق الأساسية'
-        });
-        return;
-      }
       try {
         await App.init();
-        console.log('App initialized');
       } catch (e) {
         console.error('Init error:', e);
-        // محاولة أخيرة بدون Firestore
+        // Fallback: render with default data
         try {
           Data._placesCache = Data.defaultPlaces || [];
-          await App.init();
+          App.render();
         } catch(e2) {
-          const payload = ErrorTracker.normalize(e2, {
-            operation: 'app.bootstrap.init',
-            code: e2.code || 'APP-INIT-FAILED',
-            userMessage: 'تعذر تشغيل التطبيق حالياً'
-          });
-          ErrorTracker.writeLog(payload);
-          document.getElementById('app').innerHTML = ErrorTracker.buildErrorCard(payload, {
-            title: 'خطأ في تحميل التطبيق',
-            message: 'تعذر تشغيل التطبيق حالياً'
-          });
+          console.error('Fallback error:', e2);
         }
       }
     });
