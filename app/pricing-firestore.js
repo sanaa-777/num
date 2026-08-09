@@ -36,6 +36,21 @@ const Pricing = {
 
           resolve(this._cache);
         }, (error) => {
+          // If orderBy failed due to missing index, retry without it
+          if (error.code === 'failed-precondition') {
+            this._listener = null;
+            let retryQuery = db.collection('pricing');
+            this._listener = retryQuery.onSnapshot((snap) => {
+              this._cache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+              this._cacheTime = Date.now();
+              if (typeof App !== 'undefined' && App._initialized) App.render();
+              resolve(this._cache);
+            }, (retryErr) => {
+              console.error('Pricing retry listener error:', retryErr);
+              resolve(this._cache || []);
+            });
+            return;
+          }
           console.error('Pricing listener error:', error);
           resolve(this._cache || []);
         });

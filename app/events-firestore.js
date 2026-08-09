@@ -28,6 +28,20 @@ const Events = {
           
           resolve(this._cache);
         }, (error) => {
+          if (error.code === 'failed-precondition') {
+            this._listener = null;
+            let retryQuery = db.collection('events');
+            this._listener = retryQuery.onSnapshot((snap) => {
+              this._cache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+              this._cacheTime = Date.now();
+              if (typeof App !== 'undefined' && App._initialized) App.render();
+              resolve(this._cache);
+            }, (retryErr) => {
+              console.error('Events retry error:', retryErr);
+              resolve(this._cache || []);
+            });
+            return;
+          }
           console.error('Events listener error:', error);
           resolve(this._cache || []);
         });

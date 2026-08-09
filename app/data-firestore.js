@@ -310,32 +310,41 @@ const Data = {
     
     return new Promise((resolve) => {
       try {
-        // Try with orderBy first
-        let query = db.collection('places')
-          .where('isActive', '==', true)
-          .where('status', '==', 'approved');
-        
-        try {
-          query = query.orderBy('createdAt', 'desc');
-        } catch(e) {}
-        
-        this._placesListener = query.onSnapshot((snapshot) => {
-          this._placesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          this._placesCacheTime = Date.now();
+        const setupListener = (useOrderBy) => {
+          let query = db.collection('places')
+            .where('isActive', '==', true)
+            .where('status', '==', 'approved');
           
-          // Re-render if app is initialized
-          if (typeof App !== 'undefined' && App._initialized) {
-            App.render();
+          if (useOrderBy) {
+            try { query = query.orderBy('createdAt', 'desc'); } catch(e) {}
           }
           
-          resolve(this._placesCache);
-        }, (error) => {
-          console.error('Places listener error:', error);
-          if (!this._placesCache || this._placesCache.length === 0) {
-            this._placesCache = this.defaultPlaces || [];
-          }
-          resolve(this._placesCache);
-        });
+          this._placesListener = query.onSnapshot((snapshot) => {
+            this._placesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            this._placesCacheTime = Date.now();
+            
+            if (typeof App !== 'undefined' && App._initialized) {
+              App.render();
+            }
+            
+            resolve(this._placesCache);
+          }, (error) => {
+            // If orderBy failed, retry without it
+            if (useOrderBy && error.code === 'failed-precondition') {
+              console.log('Retrying places query without orderBy...');
+              this._placesListener = null;
+              setupListener(false);
+              return;
+            }
+            console.error('Places listener error:', error);
+            if (!this._placesCache || this._placesCache.length === 0) {
+              this._placesCache = this.defaultPlaces || [];
+            }
+            resolve(this._placesCache);
+          });
+        };
+        
+        setupListener(true);
       } catch (e) {
         console.error('getPlaces error:', e);
         if (!this._placesCache || this._placesCache.length === 0) {
