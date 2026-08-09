@@ -360,7 +360,7 @@ const App = {
         ${p.featured ? `<div class="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded text-[9px] font-medium flex items-center gap-0.5"><i data-lucide="star" class="w-3 h-3"></i></div>` : ''}
         ${p.images && p.images.length > 1 ? `<div class="absolute bottom-2 right-2 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="image" class="w-3 h-3"></i>${p.images.length}</div>` : ''}
         ${Auth.currentUser ? `<button onclick="event.stopPropagation();App.toggleFav('${p.id}')" class="absolute bottom-2 left-2 w-7 h-7 rounded-full bg-white/80 flex items-center justify-center"><i data-lucide="heart" class="w-4 h-4 ${isFav ? 'text-red-500 fill-red-500' : 'text-gray-400'}"></i></button>` : ''}
-      </div>`
+      </div>
       <div class="p-2.5 md:p-3">
         <h4 class="font-bold text-gray-900 text-xs md:text-sm mb-1 truncate">${p.name}</h4>
         <div class="flex items-center gap-1 text-[10px] md:text-xs text-gray-500 mb-1.5">
