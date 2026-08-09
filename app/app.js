@@ -855,8 +855,8 @@ const App = {
         const mapEl = document.getElementById('placeDetailMap');
         if (mapEl) {
           try {
-            const map = L.map('placeDetailMap').setView([parseFloat(place.lat), parseFloat(place.lng)], 15);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(map);
+            const map = L.map('placeDetailMap', { attributionControl: false }).setView([parseFloat(place.lat), parseFloat(place.lng)], 15);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
             L.marker([parseFloat(place.lat), parseFloat(place.lng)]).addTo(map).bindPopup(place.name);
             setTimeout(() => map.invalidateSize(), 300);
           } catch (e) { console.error('Detail map error:', e); }
@@ -1662,19 +1662,21 @@ const App = {
     if (!mapEl) return;
     if (typeof L === 'undefined') { console.warn('Leaflet not loaded, retrying...'); setTimeout(() => this.initPlaceMap(), 500); return; }
     try {
-      // Ensure container has dimensions
+      // Ensure container has explicit dimensions
       mapEl.style.width = '100%';
       mapEl.style.height = '100%';
+      mapEl.style.minHeight = '280px';
       
       this.placeMap = L.map('placeMap', { 
         zoomControl: true, 
         scrollWheelZoom: true,
-        attributionControl: true
-      }).setView([15.3694, 44.191], 6);
+        attributionControl: false
+      }).setView([15.3694, 44.191], 7);
       
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-        attribution: '&copy; OpenStreetMap', 
-        maxZoom: 19 
+      // Use CartoDB Voyager tiles - fast and reliable
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
       }).addTo(this.placeMap);
       
       this.placeMap.on('click', (e) => {
@@ -1688,7 +1690,7 @@ const App = {
         }
       });
       
-      // Force map to recalculate size multiple times
+      // Force map to recalculate size
       const fixMap = () => {
         if (this.placeMap) {
           this.placeMap.invalidateSize();
@@ -1696,10 +1698,10 @@ const App = {
           if (el) el.style.display = 'none';
         }
       };
-      setTimeout(fixMap, 200);
-      setTimeout(fixMap, 500);
-      setTimeout(fixMap, 1000);
-      setTimeout(fixMap, 2000);
+      fixMap();
+      setTimeout(fixMap, 300);
+      setTimeout(fixMap, 800);
+      setTimeout(fixMap, 1500);
     } catch (e) {
       console.error('Map init error:', e);
       const loadingEl = document.getElementById('placeMapLoading');

@@ -1301,3 +1301,28 @@ section {
     padding-bottom: 80px !important;
   }
 }
+
+/* =============================================
+   Map Fix - Ensure proper dimensions
+   ============================================= */
+#placeMap {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 280px;
+}
+
+#placeDetailMap {
+  width: 100% !important;
+  height: 200px !important;
+}
+
+/* Fix Leaflet container in RTL */
+.leaflet-container {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Hide loading when map is ready */
+.leaflet-tile-loaded ~ #placeMapLoading {
+  display: none !important;
+}
