@@ -172,6 +172,38 @@
 
     var AdminPanel = {
       currentTab: 'dashboard',
+      
+      openSidebar: function() {
+        document.getElementById('adminSidebar')?.classList.add('open');
+        document.querySelector('.admin-sidebar-overlay')?.classList.add('show');
+        document.body.style.overflow = 'hidden';
+      },
+      
+      closeSidebar: function() {
+        document.getElementById('adminSidebar')?.classList.remove('open');
+        document.querySelector('.admin-sidebar-overlay')?.classList.remove('show');
+        document.body.style.overflow = '';
+      },
+      
+      navigateToTab: function(tabId) {
+        this.currentTab = tabId;
+        this.closeSidebar();
+        this.render();
+      },
+      
+      getTabName: function(tabId) {
+        var tabs = {
+          'dashboard': 'نظرة عامة',
+          'users': 'المستخدمين',
+          'places': 'الأنشطة',
+          'ads': 'الإعلانات',
+          'offers': 'العروض',
+          'jobs': 'الوظائف',
+          'events': 'الفعاليات',
+          'pricing': 'التسعيرات'
+        };
+        return tabs[tabId] || tabId;
+      },
       placeFilter: 'all',
       placeSearch: '',
       userSearch: '',
@@ -292,13 +324,62 @@
 
         app.innerHTML =
           '<div class="min-h-screen bg-gray-100">' +
-            '<header class="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100">' +
-              '<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">' +
+            // Mobile Sidebar Overlay
+            '<div class="admin-sidebar-overlay" onclick="AdminPanel.closeSidebar()"></div>' +
+            // Mobile Sidebar
+            '<div class="admin-sidebar" id="adminSidebar">' +
+              '<div class="admin-sidebar-header">' +
+                '<div class="flex items-center gap-2">' +
+                  '<div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center"><i data-lucide="shield" class="w-4 h-4 text-white"></i></div>' +
+                  '<span class="font-bold text-sm">لوحة التحكم</span>' +
+                '</div>' +
+                '<button onclick="AdminPanel.closeSidebar()" class="p-2 rounded-lg hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5 text-gray-500"></i></button>' +
+              '</div>' +
+              '<div class="admin-sidebar-nav">' +
+                [
+                  {id:'dashboard',name:'نظرة عامة',icon:'layout-dashboard'},
+                  {id:'users',name:'المستخدمين',icon:'users'},
+                  {id:'places',name:'الأنشطة',icon:'building-2'},
+                  {id:'ads',name:'الإعلانات',icon:'megaphone'},
+                  {id:'offers',name:'العروض',icon:'tag'},
+                  {id:'jobs',name:'الوظائف',icon:'briefcase'},
+                  {id:'events',name:'الفعاليات',icon:'calendar'},
+                  {id:'pricing',name:'التسعيرات',icon:'trending-up'}
+                ].map(function(t) {
+                  return '<div class="admin-sidebar-item' + (AdminPanel.currentTab === t.id ? ' active' : '') + '" onclick="AdminPanel.navigateToTab(\'' + t.id + '\')">' +
+                    '<i data-lucide="' + t.icon + '"></i>' +
+                    '<span>' + t.name + '</span>' +
+                  '</div>';
+                }).join('') +
+              '</div>' +
+              '<div class="p-4 border-t border-gray-100">' +
+                '<button onclick="AdminController.logout()" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 text-sm font-medium"><i data-lucide="log-out" class="w-4 h-4"></i>تسجيل الخروج</button>' +
+              '</div>' +
+            '</div>' +
+            // Mobile Header (shows hamburger)
+            '<header class="admin-mobile-header bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100" style="display:none;">' +
+              '<div class="px-4 py-3 flex items-center justify-between">' +
+                '<div class="flex items-center gap-2">' +
+                  '<div class="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center"><i data-lucide="shield" class="w-4 h-4 text-white"></i></div>' +
+                  '<span class="font-bold text-sm">لوحة التحكم</span>' +
+                '</div>' +
+                '<div class="flex items-center gap-2">' +
+                  '<button onclick="AdminPanel.render()" class="p-2 rounded-lg hover:bg-gray-100"><i data-lucide="refresh-cw" class="w-4 h-4 text-gray-500"></i></button>' +
+                  '<button onclick="AdminPanel.openSidebar()" class="p-2 rounded-lg hover:bg-gray-100"><i data-lucide="menu" class="w-5 h-5 text-gray-700"></i></button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="px-4 pb-2">' +
+                '<p class="text-[10px] text-gray-400">' + this.getTabName(AdminPanel.currentTab) + '</p>' +
+              '</div>' +
+            '</header>' +
+            // Desktop Header
+            '<header class="admin-desktop-header bg-white shadow-sm sticky top-0 z-50 border-b border-gray-100" style="display:flex;">' +
+              '<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3 w-full">' +
                 '<div class="flex items-center gap-3">' +
                   '<div class="w-9 h-9 bg-red-600 rounded-xl flex items-center justify-center"><i data-lucide="shield" class="w-5 h-5 text-white"></i></div>' +
-                  '<div><h1 class="text-lg font-bold text-gray-900 m-0">لوحة التحكم</h1><p class="text-[10px] text-gray-400">إدارة المستخدمين والأنشطة والموافقات</p></div>' +
+                  '<div><h1 class="text-lg font-bold text-gray-900 m-0">لوحة التحكم</h1><p class="text-[10px] text-gray-400">إدارة المستخدمين والأنشطة</p></div>' +
                 '</div>' +
-                '<div class="flex items-center gap-2 flex-wrap justify-end">' +
+                '<div class="flex items-center gap-2">' +
                   '<button onclick="AdminPanel.render()" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>تحديث</button>' +
                   '<a href="index.html" class="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-xs"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>زيارة الموقع</a>' +
                   '<div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">' +
@@ -312,7 +393,7 @@
             '<div class="max-w-7xl mx-auto px-4 py-6">' +
               this.renderStatsGrid(stats, unreadCount, offers, jobs, events, pricing) +
               this.renderNotifications(notifs) +
-              '<div class="flex gap-2 mb-6 overflow-x-auto pb-2">' +
+              '<div class="admin-tabs-horizontal flex gap-2 mb-6 overflow-x-auto pb-2">' +
                 [
                   {id:'dashboard',name:'نظرة عامة',icon:'layout-dashboard'},
                   {id:'users',name:'المستخدمين',icon:'users'},
@@ -349,9 +430,9 @@
         return '<div class="grid grid-cols-2 md:grid-cols-7 gap-3 mb-6">' +
           this.statCard('users', 'المستخدمين', stats.totalUsers, stats.verifiedUsers + ' موثّق') +
           this.statCard('building-2', 'كل الأنشطة', stats.totalPlaces, stats.activePlaces + ' نشط') +
-          this.statCard('clock-3', 'Pending', stats.pendingPlaces, 'بانتظار المراجعة', 'text-yellow-600') +
-          this.statCard('badge-check', 'Approved', stats.approvedPlaces, 'ظاهر للعامة', 'text-green-600') +
-          this.statCard('shield-x', 'Rejected', stats.rejectedPlaces, 'مرفوض', 'text-red-600') +
+          this.statCard('clock-3', 'بانتظار المراجعة', stats.pendingPlaces, 'طلب معلق', 'text-yellow-600') +
+          this.statCard('badge-check', 'معتمدة', stats.approvedPlaces, 'ظاهر للعامة', 'text-green-600') +
+          this.statCard('shield-x', 'مرفوضة', stats.rejectedPlaces, 'مرفوض', 'text-red-600') +
           this.statCard('pause-circle', 'معلّق', stats.inactivePlaces, 'غير ظاهر', 'text-slate-600') +
           this.statCard('bell', 'إشعارات', unreadCount, 'غير مقروء', 'text-blue-600') +
           this.statCard('tag', 'العروض', offers.length, offers.filter(function(o){ return !AdminPanel.isExpired(o.endDate); }).length + ' نشط', 'text-orange-600') +
@@ -419,12 +500,12 @@
           '<div class="bg-white rounded-xl p-4 border border-gray-100">' +
             '<h3 class="text-sm font-bold mb-3 flex items-center gap-2"><i data-lucide="bar-chart-3" class="w-4 h-4 text-green-600"></i>ملخص سريع</h3>' +
             '<div class="space-y-3 text-xs">' +
-              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>Pending</span><strong>' + stats.pendingPlaces + '</strong></div>' +
-              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>Approved</span><strong>' + stats.approvedPlaces + '</strong></div>' +
-              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>Rejected</span><strong>' + stats.rejectedPlaces + '</strong></div>' +
-              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>Inactive</span><strong>' + stats.inactivePlaces + '</strong></div>' +
-              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>Places Verified</span><strong>' + stats.verifiedPlaces + '</strong></div>' +
-              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>Places Featured</span><strong>' + stats.featuredPlaces + '</strong></div>' +
+              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>بانتظار المراجعة</span><strong>' + stats.pendingPlaces + '</strong></div>' +
+              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>معتمدة</span><strong>' + stats.approvedPlaces + '</strong></div>' +
+              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>مرفوضة</span><strong>' + stats.rejectedPlaces + '</strong></div>' +
+              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>غير نشطة</span><strong>' + stats.inactivePlaces + '</strong></div>' +
+              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>أماكن موثّقة</span><strong>' + stats.verifiedPlaces + '</strong></div>' +
+              '<div class="flex items-center justify-between p-2 rounded-lg bg-gray-50"><span>أماكن مميزة</span><strong>' + stats.featuredPlaces + '</strong></div>' +
             '</div>' +
           '</div>' +
           '<div class="md:col-span-3 bg-white rounded-xl p-4 border border-gray-100">' +
@@ -475,9 +556,10 @@
                   '<td class="px-3 py-3"><div class="flex items-center gap-2"><img src="' + (u.avatar || '') + '" class="w-8 h-8 rounded-full" alt=""><div><div class="font-medium">' + (u.name || 'بدون اسم') + '</div></div></div></td>' +
                   '<td class="px-3 py-3 text-gray-600">' + (u.email || '') + '</td>' +
                   '<td class="px-3 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-medium ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700') + '">' + (u.role === 'admin' ? 'أدمن' : 'مستخدم') + '</span></td>' +
-                  '<td class="px-3 py-3">' + (u.suspended ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">موقوف</span>' : u.verified ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">موثّق</span>' : '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-700">معلّق</span>') + '</td>' +
+                  '<td class="px-3 py-3">' + (u.suspended ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">موقوف</span>' : u.verified ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">موثّق</span>' : u.active ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">مفعّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-700">معلّق</span>') + '</td>' +
                   '<td class="px-3 py-3">' + (u.role !== 'admin' ?
                     '<div class="flex items-center gap-1">' +
+                      '<button onclick="AdminPanel.toggleActiveUser(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.active ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-green-200" title="' + (u.active ? 'إلغاء التفعيل' : 'تفعيل') + '"><i data-lucide="power" class="w-3.5 h-3.5"></i></button>' +
                       '<button onclick="AdminPanel.toggleVerify(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.verified ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-blue-200" title="توثيق"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>' +
                       '<button onclick="AdminPanel.toggleSuspend(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.suspended ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-yellow-200" title="إيقاف"><i data-lucide="ban" class="w-3.5 h-3.5"></i></button>' +
                       '<button onclick="AdminPanel.deleteUser(\'' + u.id + '\')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="تعطيل"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>' +
@@ -508,9 +590,9 @@
             '<div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">' +
               '<div class="flex flex-wrap gap-2">' +
                 this.filterButton('all', 'الكل', places.length) +
-                this.filterButton('pending', 'Pending', stats.pendingPlaces) +
-                this.filterButton('approved', 'Approved', stats.approvedPlaces) +
-                this.filterButton('rejected', 'Rejected', stats.rejectedPlaces) +
+                this.filterButton('pending', 'بانتظار المراجعة', stats.pendingPlaces) +
+                this.filterButton('approved', 'معتمدة', stats.approvedPlaces) +
+                this.filterButton('rejected', 'مرفوضة', stats.rejectedPlaces) +
                 this.filterButton('inactive', 'معلّق', stats.inactivePlaces) +
                 this.filterButton('featured', 'مميّز', stats.featuredPlaces) +
               '</div>' +
@@ -529,10 +611,10 @@
               filtered.map(function(p) {
                 var cat = Data.categories.find(function(c) { return c.id === p.category; });
                 var statusBadge = p.status === 'approved'
-                  ? '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">Approved</span>'
+                  ? '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">معتمد</span>'
                   : p.status === 'pending'
-                    ? '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700">Pending</span>'
-                    : '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">Rejected</span>';
+                    ? '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700">بانتظار المراجعة</span>'
+                    : '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">مرفوض</span>';
                 var activeBadge = p.isActive === false
                   ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 mr-1">معلّق</span>'
                   : '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 mr-1">نشط</span>';
@@ -1064,6 +1146,7 @@
       // =============================================
       // Existing CRUD (Users & Places)
       // =============================================
+      toggleActiveUser: async function(userId) { await Admin.toggleActive(userId); this.render(); },
       toggleVerify: async function(userId) { await Admin.toggleVerify(userId); this.render(); },
       toggleSuspend: async function(userId) { await Admin.toggleSuspend(userId); this.render(); },
       deleteUser: async function(userId) { if (confirm('هل تريد تعطيل هذا المستخدم وإخفاء أنشطته؟')) { await Admin.deleteUser(userId); this.render(); } },
@@ -1084,3 +1167,102 @@
   </script>
 </body>
 </html>
+<style>
+/* Mobile Sidebar Navigation */
+@media (max-width: 767px) {
+  .admin-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 280px;
+    background: white;
+    z-index: 100;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+    overflow-y: auto;
+  }
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+  .admin-sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 99;
+    display: none;
+  }
+  .admin-sidebar-overlay.show {
+    display: block;
+  }
+  .admin-sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .admin-sidebar-nav {
+    padding: 8px;
+  }
+  .admin-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 2px;
+  }
+  .admin-sidebar-item:hover {
+    background: #f3f4f6;
+  }
+  .admin-sidebar-item.active {
+    background: #fef2f2;
+    color: #dc2626;
+  }
+  .admin-sidebar-item i {
+    width: 20px;
+    height: 20px;
+  }
+  .admin-sidebar-badge {
+    margin-right: auto;
+    background: #dc2626;
+    color: white;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  /* Hide horizontal tabs on mobile */
+  .admin-tabs-horizontal {
+    display: none !important;
+  }
+  /* Mobile header adjustments */
+  .admin-mobile-header {
+    display: flex !important;
+  }
+  .admin-desktop-header {
+    display: none !important;
+  }
+}
+@media (min-width: 768px) {
+  .admin-sidebar, .admin-sidebar-overlay {
+    display: none !important;
+  }
+  .admin-mobile-header {
+    display: none !important;
+  }
+  .admin-desktop-header {
+    display: flex !important;
+  }
+}
+</style>

@@ -70,6 +70,29 @@ const Admin = {
     }
   },
 
+  async toggleActive(userId) {
+    try {
+      const userRef = db.collection('users').doc(userId);
+      const doc = await userRef.get();
+      if (!doc.exists) return false;
+
+      const currentActive = doc.data().active || false;
+      const newActive = !currentActive;
+      await userRef.update({
+        active: newActive,
+        // If activating, remove suspension
+        suspended: newActive ? false : doc.data().suspended,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      await this.addNotification('activate', `تم ${newActive ? 'تفعيل' : 'إلغاء تفعيل'} الحساب: ${doc.data().name}`);
+      return newActive;
+    } catch (e) {
+      console.error('toggleActive error:', e);
+      return false;
+    }
+  },
+
   async deleteUser(userId) {
     try {
       const userRef = db.collection('users').doc(userId);
