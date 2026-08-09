@@ -183,11 +183,47 @@
       // =============================================
       uploadImage: async function(file, folder) {
         if (!file) return null;
-        var ext = file.name.split('.').pop();
-        var fileName = folder + '/' + Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '.' + ext;
-        var ref = firebase.storage().ref(fileName);
-        var snapshot = await ref.put(file);
-        return await snapshot.ref.getDownloadURL();
+        try {
+          // Compress image before upload
+          var compressed = await new Promise(function(resolve) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+              var img = new Image();
+              img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var maxSize = 800;
+                var w = img.width, h = img.height;
+                if (w > maxSize) { h = (maxSize / w) * h; w = maxSize; }
+                if (h > maxSize) { w = (maxSize / h) * w; h = maxSize; }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+              };
+              img.onerror = function() { resolve(null); };
+              img.src = e.target.result;
+            };
+            reader.onerror = function() { resolve(null); };
+            reader.readAsDataURL(file);
+          });
+          
+          if (!compressed) throw new Error('فشل معالجة الصورة');
+          
+          var blob = await fetch(compressed).then(function(r) { return r.blob(); });
+          var fileName = folder + '/' + Date.now() + '_' + Math.random().toString(36).substr(2, 9) + '.jpg';
+          var ref = firebase.storage().ref(fileName);
+          
+          // Upload with timeout
+          var uploadPromise = ref.put(blob, { contentType: 'image/jpeg' });
+          var timeoutPromise = new Promise(function(_, reject) {
+            setTimeout(function() { reject(new Error('انتهت مهلة رفع الصورة')); }, 30000);
+          });
+          
+          var snapshot = await Promise.race([uploadPromise, timeoutPromise]);
+          return await snapshot.ref.getDownloadURL();
+        } catch (e) {
+          console.error('Upload error:', e);
+          throw new Error('فشل رفع الصورة: ' + e.message);
+        }
       },
 
       // =============================================
@@ -892,10 +928,18 @@
           if (type !== 'pricing') {
             var fileInput = document.getElementById('itemImageFile');
             if (fileInput && fileInput.files && fileInput.files[0]) {
-              var imageUrl = await self.uploadImage(fileInput.files[0], type + 's');
-              data.imageUrl = imageUrl;
+              try {
+                var imageUrl = await self.uploadImage(fileInput.files[0], type + 's');
+                data.imageUrl = imageUrl;
+              } catch (uploadErr) {
+                errEl.textContent = uploadErr.message || 'فشل رفع الصورة';
+                errEl.style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="save" class="w-3.5 h-3.5"></i>' + (id ? 'حفظ التعديلات' : 'إضافة');
+                try { lucide.createIcons(); } catch(e) {}
+                return;
+              }
             } else if (id && self.editingItem && self.editingItem.imageUrl) {
-              // Keep existing image
               data.imageUrl = self.editingItem.imageUrl;
             }
           }
@@ -907,22 +951,26 @@
           }
           data.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
 
-          // For pricing, set sortOrder
           if (type === 'pricing' && !id) {
             data.sortOrder = Date.now();
           }
 
           var collection = type === 'pricing' ? 'pricing' : type + 's';
 
+          // Save with timeout
+          var savePromise;
           if (id) {
-            // Update existing
-            await db.collection(collection).doc(id).update(data);
-            self.showToast('تم التحديث بنجاح', 'success');
+            savePromise = db.collection(collection).doc(id).update(data);
           } else {
-            // Add new
-            await db.collection(collection).add(data);
-            self.showToast('تمت الإضافة بنجاح', 'success');
+            savePromise = db.collection(collection).add(data);
           }
+          
+          var timeoutPromise = new Promise(function(_, reject) {
+            setTimeout(function() { reject(new Error('انتهت مهلة الحفظ')); }, 15000);
+          });
+          
+          await Promise.race([savePromise, timeoutPromise]);
+          self.showToast(id ? 'تم التحديث بنجاح' : 'تمت الإضافة بنجاح', 'success');
 
           self.editingItem = null;
           await self.render();
