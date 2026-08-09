@@ -68,11 +68,14 @@ const App = {
       </a>`;
       this.initIcons();
       this.initAllCustomSelects();
-      // Initialize map on add page
-      if (this.currentView === 'add') {
-        setTimeout(() => this.initPlaceMap(), 300);
-      }
       Ads.initAllSliders();
+      // Initialize map on add page with delay for DOM rendering
+      if (this.currentView === 'add') {
+        this.placeMap = null;
+        this.placeMarker = null;
+        setTimeout(() => this.initPlaceMap(), 500);
+        setTimeout(() => this.initPlaceMap(), 1500);
+      }
       // Scroll to top on navigation
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
@@ -117,10 +120,21 @@ const App = {
 
   // Image Upload
   placeImages: [],
+  _uploadingImages: false,
   async handlePlaceImageUpload(files) {
-    const images = await Data.uploadPlaceImages(files, 800);
-    this.placeImages.push(...images);
+    if (!files || files.length === 0) return;
+    this._uploadingImages = true;
     this.updatePlaceImagePreview();
+    try {
+      const images = await Data.uploadPlaceImages(files, 800);
+      this.placeImages.push(...images);
+    } catch (error) {
+      console.error('Image upload error:', error);
+      this.showToast('فشل رفع الصورة. تأكد من تسجيل الدخول وحاول مجدداً.', 'error');
+    } finally {
+      this._uploadingImages = false;
+      this.updatePlaceImagePreview();
+    }
   },
   removePlaceImage(index) {
     this.placeImages.splice(index, 1);
@@ -128,17 +142,20 @@ const App = {
   },
   updatePlaceImagePreview() {
     const preview = document.getElementById('placeImagePreview');
-    if (preview) {
-      preview.innerHTML = this.placeImages.map((img, i) => `
-        <div class="relative">
-          <img src="${img}" class="w-20 h-16 object-cover rounded-lg border" loading="lazy" alt="صورة">
-          <button onclick="App.removePlaceImage(${i})" class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">
-            <i data-lucide="x" class="w-3 h-3"></i>
-          </button>
-        </div>
-      `).join('');
-      this.initIcons();
+    if (!preview) return;
+    if (this._uploadingImages) {
+      preview.innerHTML = '<div class="flex items-center gap-2 text-blue-600 text-xs p-2"><div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>جاري رفع الصور...</div>';
+      return;
     }
+    preview.innerHTML = this.placeImages.map((img, i) => `
+      <div class="relative">
+        <img src="${img}" class="w-20 h-16 object-cover rounded-lg border" loading="lazy" alt="صورة">
+        <button onclick="App.removePlaceImage(${i})" class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">
+          <i data-lucide="x" class="w-3 h-3"></i>
+        </button>
+      </div>
+    `).join('');
+    this.initIcons();
   },
 
   // Profile Image Upload
@@ -296,14 +313,16 @@ const App = {
     const city = Data.cities.find(c => c.id === p.city);
     const isFav = Auth.currentUser && Data.isFavoriteSync(Auth.currentUser.id, p.id);
     const catColor = cat ? cat.color : '#3b82f6';
+    const hasImages = p.images && p.images.length > 0;
     return `
     <div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all cursor-pointer active-scale" onclick="location.hash='place/${p.id}'">
       <div class="h-28 md:h-36 relative flex items-center justify-center" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
-        <div style="color:${catColor};opacity:0.3">${cat ? I(cat.icon, 'w-16 h-16 md:w-20 md:h-20') : I('map-pin', 'w-16 h-16')}</div>
+        ${hasImages ? `<img src="${p.images[0]}" alt="${p.name}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">` : `<div style="color:${catColor};opacity:0.3">${cat ? I(cat.icon, 'w-16 h-16 md:w-20 md:h-20') : I('map-pin', 'w-16 h-16')}</div>`}
         ${p.verified ? `<div class="absolute top-2 right-2 bg-green-500 text-white px-2 py-0.5 rounded text-[9px] font-medium flex items-center gap-0.5"><i data-lucide="check-circle" class="w-3 h-3"></i>موثّق</div>` : ''}
         ${p.featured ? `<div class="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded text-[9px] font-medium flex items-center gap-0.5"><i data-lucide="star" class="w-3 h-3"></i></div>` : ''}
+        ${p.images && p.images.length > 1 ? `<div class="absolute bottom-2 right-2 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="image" class="w-3 h-3"></i>${p.images.length}</div>` : ''}
         ${Auth.currentUser ? `<button onclick="event.stopPropagation();App.toggleFav('${p.id}')" class="absolute bottom-2 left-2 w-7 h-7 rounded-full bg-white/80 flex items-center justify-center"><i data-lucide="heart" class="w-4 h-4 ${isFav ? 'text-red-500 fill-red-500' : 'text-gray-400'}"></i></button>` : ''}
-      </div>
+      </div>`
       <div class="p-2.5 md:p-3">
         <h4 class="font-bold text-gray-900 text-xs md:text-sm mb-1 truncate">${p.name}</h4>
         <div class="flex items-center gap-1 text-[10px] md:text-xs text-gray-500 mb-1.5">
@@ -452,9 +471,25 @@ const App = {
           ${sub ? `<i data-lucide="chevron-left" class="w-3 h-3"></i><a href="#subcategory/${cat.id}/${sub.id}" class="text-blue-600 hover:underline">${sub.name}</a>` : ''}
         </div>
         <div class="bg-white rounded-xl overflow-hidden border border-gray-100">
-          <div class="h-40 md:h-56 flex items-center justify-center relative" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
-            <div style="color:${catColor};opacity:0.2">${cat ? I(cat.icon, 'w-24 h-24') : I('map-pin', 'w-24 h-24')}</div>
-            ${place.verified ? `<div class="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i>موثّق</div>` : ''}
+          <div class="h-40 md:h-56 relative" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
+            ${place.images && place.images.length > 0 ? `
+              <div id="placeGallery" class="relative w-full h-full">
+                <img src="${place.images[0]}" alt="${place.name}" class="w-full h-full object-cover" id="placeGalleryImg" onerror="this.style.display='none'">
+                ${place.images.length > 1 ? `
+                  <button onclick="App.galleryPrev()" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors z-10"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+                  <button onclick="App.galleryNext()" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors z-10"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+                  <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                    ${place.images.map((_, i) => `<button onclick="App.galleryGoTo(${i})" class="w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-white/50'}" data-gallery-dot="${i}"></button>`).join('')}
+                  </div>
+                  <div class="absolute top-3 left-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full z-10"><span id="galleryCounter">1</span>/${place.images.length}</div>
+                ` : ''}
+              </div>
+            ` : `
+              <div class="flex items-center justify-center h-full">
+                <div style="color:${catColor};opacity:0.2">${cat ? I(cat.icon, 'w-24 h-24') : I('map-pin', 'w-24 h-24')}</div>
+              </div>
+            `}
+            ${place.verified ? `<div class="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 z-10"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i>موثّق</div>` : ''}
           </div>
           <div class="p-4 md:p-6">
             <div class="flex items-start justify-between mb-3">
@@ -549,20 +584,22 @@ const App = {
       </div>
     </section>${this.renderFooter()}</div>`;
     this.initIcons();
+    // Initialize gallery if images exist
+    if (place.images && place.images.length > 0) { this.initGallery(place.images); }
     // Initialize map if coordinates exist
     if (place.lat && place.lng) {
       setTimeout(() => {
+        if (typeof L === 'undefined') return;
         const mapEl = document.getElementById('placeDetailMap');
         if (mapEl) {
-          const map = L.map('placeDetailMap').setView([parseFloat(place.lat), parseFloat(place.lng)], 15);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap',
-            maxZoom: 19
-          }).addTo(map);
-          L.marker([parseFloat(place.lat), parseFloat(place.lng)]).addTo(map)
-            .bindPopup(place.name);
+          try {
+            const map = L.map('placeDetailMap').setView([parseFloat(place.lat), parseFloat(place.lng)], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(map);
+            L.marker([parseFloat(place.lat), parseFloat(place.lng)]).addTo(map).bindPopup(place.name);
+            setTimeout(() => map.invalidateSize(), 300);
+          } catch (e) { console.error('Detail map error:', e); }
         }
-      }, 300);
+      }, 500);
     }
   },
 
@@ -622,8 +659,14 @@ const App = {
               <label class="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
                 <i data-lucide="map-pin" class="w-3.5 h-3.5 text-gray-500"></i>الموقع على الخريطة <span class="text-gray-400 font-normal">(اختياري)</span>
               </label>
-              <div id="placeMapContainer" class="rounded-xl overflow-hidden border border-gray-200" style="height:250px;position:relative;">
-                <div id="placeMap" style="height:100%;width:100%;"></div>
+              <div id="placeMapContainer" class="rounded-xl overflow-hidden border border-gray-200" style="height:250px;position:relative;background:#f0fdf4;">
+                <div id="placeMap" style="height:100%;width:100%;z-index:1;"></div>
+                <div id="placeMapLoading" style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:#f9fafb;z-index:2;">
+                  <div style="text-align:center;">
+                    <div style="width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#3b82f6;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 8px;"></div>
+                    <p style="color:#94a3b8;font-size:12px;">جاري تحميل الخريطة...</p>
+                  </div>
+                </div>
                 <input type="hidden" id="placeLat">
                 <input type="hidden" id="placeLng">
               </div>
@@ -1046,7 +1089,7 @@ const App = {
           errEl.textContent = msg;
           errEl.classList.remove('hidden');
         } else {
-          alert(msg);
+          App.showToast(msg, 'error');
         }
       }
       if (btn) {
@@ -1057,6 +1100,44 @@ const App = {
       }
     }
   },
+  // ====== IMAGE GALLERY ======
+  _galleryImages: [],
+  _galleryIndex: 0,
+  initGallery(images) { this._galleryImages = images || []; this._galleryIndex = 0; },
+  galleryGoTo(index) {
+    if (!this._galleryImages.length) return;
+    this._galleryIndex = index;
+    const img = document.getElementById('placeGalleryImg');
+    const counter = document.getElementById('galleryCounter');
+    if (img) img.src = this._galleryImages[index];
+    if (counter) counter.textContent = index + 1;
+    document.querySelectorAll('[data-gallery-dot]').forEach((dot, i) => {
+      dot.className = `w-2 h-2 rounded-full ${i === index ? 'bg-white' : 'bg-white/50'}`;
+    });
+  },
+  galleryNext() { if (!this._galleryImages.length) return; this.galleryGoTo((this._galleryIndex + 1) % this._galleryImages.length); },
+  galleryPrev() { if (!this._galleryImages.length) return; this.galleryGoTo((this._galleryIndex - 1 + this._galleryImages.length) % this._galleryImages.length); },
+
+  // ====== TOAST NOTIFICATION SYSTEM ======
+  showToast(message, type = 'success', duration = 3000) {
+    document.querySelectorAll('.app-toast').forEach(t => t.remove());
+    const colors = { success: { bg: 'bg-green-600', icon: 'check-circle', iconColor: 'text-green-200' }, error: { bg: 'bg-red-600', icon: 'alert-circle', iconColor: 'text-red-200' }, info: { bg: 'bg-blue-600', icon: 'info', iconColor: 'text-blue-200' }, warning: { bg: 'bg-yellow-600', icon: 'alert-triangle', iconColor: 'text-yellow-200' } };
+    const config = colors[type] || colors.success;
+    const toast = document.createElement('div');
+    toast.className = 'app-toast fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] shadow-2xl';
+    toast.style.cssText = 'animation: toastSlideUp 0.3s ease-out;';
+    toast.innerHTML = `<div class="${config.bg} text-white px-5 py-3 rounded-2xl flex items-center gap-3 min-w-[280px] max-w-[90vw]" style="font-family:'Noto Kufi Arabic',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,0.3);"><i data-lucide="${config.icon}" class="w-5 h-5 ${config.iconColor} shrink-0"></i><span class="text-sm font-medium flex-1">${message}</span><button onclick="this.closest('.app-toast').remove()" class="shrink-0 opacity-70 hover:opacity-100"><i data-lucide="x" class="w-4 h-4"></i></button></div>`;
+    if (!document.getElementById('toast-styles')) {
+      const style = document.createElement('style');
+      style.id = 'toast-styles';
+      style.textContent = '@keyframes toastSlideUp{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}';
+      document.head.appendChild(style);
+    }
+    document.body.appendChild(toast);
+    try { lucide.createIcons({ nodes: [toast] }); } catch(e) {}
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, duration);
+  },
+
   // ====== MAP INITIALIZATION ======
   placeMap: null,
   placeMarker: null,
@@ -1065,34 +1146,29 @@ const App = {
     if (this.placeMap) return;
     const mapEl = document.getElementById('placeMap');
     if (!mapEl) return;
-    
-    // Initialize map centered on Yemen
-    this.placeMap = L.map('placeMap').setView([15.3694, 44.191], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap',
-      maxZoom: 19
-    }).addTo(this.placeMap);
-    
-    // Click to place marker
-    this.placeMap.on('click', (e) => {
-      const { lat, lng } = e.latlng;
-      document.getElementById('placeLat').value = lat.toFixed(6);
-      document.getElementById('placeLng').value = lng.toFixed(6);
-      
-      if (this.placeMarker) {
-        this.placeMarker.setLatLng([lat, lng]);
-      } else {
-        this.placeMarker = L.marker([lat, lng], { draggable: true }).addTo(this.placeMap);
-        this.placeMarker.on('dragend', (e) => {
-          const pos = e.target.getLatLng();
-          document.getElementById('placeLat').value = pos.lat.toFixed(6);
-          document.getElementById('placeLng').value = pos.lng.toFixed(6);
-        });
-      }
-    });
-    
-    // Fix map display
-    setTimeout(() => { this.placeMap.invalidateSize(); }, 200);
+    if (typeof L === 'undefined') { console.warn('Leaflet not loaded, retrying...'); setTimeout(() => this.initPlaceMap(), 500); return; }
+    try {
+      this.placeMap = L.map('placeMap', { zoomControl: true, scrollWheelZoom: true }).setView([15.3694, 44.191], 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(this.placeMap);
+      this.placeMap.on('click', (e) => {
+        const { lat, lng } = e.latlng;
+        document.getElementById('placeLat').value = lat.toFixed(6);
+        document.getElementById('placeLng').value = lng.toFixed(6);
+        if (this.placeMarker) { this.placeMarker.setLatLng([lat, lng]); }
+        else {
+          this.placeMarker = L.marker([lat, lng], { draggable: true }).addTo(this.placeMap);
+          this.placeMarker.on('dragend', (e) => { const pos = e.target.getLatLng(); document.getElementById('placeLat').value = pos.lat.toFixed(6); document.getElementById('placeLng').value = pos.lng.toFixed(6); });
+        }
+      });
+      const hideLoading = () => { const el = document.getElementById('placeMapLoading'); if (el) el.style.display = 'none'; };
+      setTimeout(() => { if (this.placeMap) { this.placeMap.invalidateSize(); hideLoading(); } }, 300);
+      setTimeout(() => { if (this.placeMap) this.placeMap.invalidateSize(); }, 800);
+      setTimeout(() => { if (this.placeMap) this.placeMap.invalidateSize(); }, 1500);
+    } catch (e) {
+      console.error('Map init error:', e);
+      const loadingEl = document.getElementById('placeMapLoading');
+      if (loadingEl) loadingEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#fef2f2;color:#dc2626;font-size:13px;padding:16px;text-align:center;"><p>تعذر تحميل الخريطة.<br>تأكد من اتصالك بالإنترنت.</p></div>';
+    }
   },
 
   // ====== FORM VALIDATION ======
@@ -1157,18 +1233,18 @@ const App = {
       });
       Admin.notifyNewPlace(n, Auth.currentUser.name);
       this.placeImages = [];
-      alert('✅ تم إرسال طلبك بنجاح!\n\nسيتم مراجعة النشاط من قبل الإدارة قبل النشر.\nستظهر حالة الطلب في "مواقعي".');
-      location.hash = 'myplaces';
+      this.showToast('تم إرسال طلبك بنجاح! سيتم مراجعته من قبل الإدارة', 'success', 4000);
+      setTimeout(() => { location.hash = 'myplaces'; }, 1500);
     } catch (error) {
       ErrorTracker.capture(error, { operation: 'app.place.submit', source: 'submit_place_form' });
-      alert(ErrorTracker.getInlineMessage(error));
+      this.showToast(ErrorTracker.getInlineMessage(error), 'error');
     }
   },
   async toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } await Data.toggleFavorite(Auth.currentUser.id, pid); await Data.preloadAll(); this.render(); },
   setRating(s) { document.querySelectorAll('[data-star]').forEach(b => { const v = parseInt(b.dataset.star); b.className = v <= s ? 'text-yellow-500' : 'text-gray-300'; b.querySelector('i')?.classList.toggle('fill-yellow-500', v <= s); }); this._selectedRating = s; },
-  async submitReview(pid) { if (!this._selectedRating) { alert('اختر تقييم'); return; } const c = document.getElementById('reviewComment').value; if (!c) { alert('اكتب تعليق'); return; } try { await Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, Auth.currentUser.avatar || '', this._selectedRating, c); this._selectedRating = 0; await Data.preloadAll(); this.showPlace(pid); } catch (error) { ErrorTracker.capture(error, { operation: 'app.review.submit', source: 'place_detail_review_form' }); alert(ErrorTracker.getInlineMessage(error)); } },
-  deletePlaceConfirm(id) { if (confirm('هل أنت متأكد من الحذف؟')) { Data.deletePlace(id); alert('تم الحذف'); location.hash = 'myplaces'; } },
-  updateProfile() { Auth.updateProfile({ name:document.getElementById('profileName').value, phone:document.getElementById('profilePhone').value, bio:document.getElementById('profileBio')?.value||'' }); alert('تم التحديث'); this.render(); },
+  async submitReview(pid) { if (!this._selectedRating) { this.showToast('اختر تقييم أولاً', 'warning'); return; } const c = document.getElementById('reviewComment').value; if (!c) { this.showToast('اكتب تعليقك أولاً', 'warning'); return; } try { await Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, Auth.currentUser.avatar || '', this._selectedRating, c); this._selectedRating = 0; await Data.preloadAll(); this.showToast('تم إضافة مراجعتك بنجاح', 'success'); setTimeout(() => this.showPlace(pid), 1000); } catch (error) { ErrorTracker.capture(error, { operation: 'app.review.submit', source: 'place_detail_review_form' }); this.showToast(ErrorTracker.getInlineMessage(error), 'error'); } },
+  deletePlaceConfirm(id) { if (confirm('هل أنت متأكد من حذف هذا النشاط؟')) { Data.deletePlace(id); this.showToast('تم حذف النشاط', 'success'); setTimeout(() => { location.hash = 'myplaces'; }, 1000); } },
+  async updateProfile() { await Auth.updateProfile({ name:document.getElementById('profileName').value, phone:document.getElementById('profilePhone').value, bio:document.getElementById('profileBio')?.value||'' }); this.showToast('تم تحديث الملف الشخصي', 'success'); setTimeout(() => this.render(), 1000); },
 
   // ====== مشاركة النشاط التجاري ======
   sharePlace(pid) {
@@ -1223,14 +1299,7 @@ const App = {
     this.showCopyToast();
   },
 
-  showCopyToast() {
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-medium z-50 shadow-lg fade-in';
-    toast.innerHTML = '<span class="flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4 text-green-400"></i>تم نسخ الرابط بنجاح</span>';
-    document.body.appendChild(toast);
-    try { lucide.createIcons({ nodes: [toast] }); } catch(e) { ErrorTracker.capture(e, { operation: 'app.toast.icons', source: 'app_ui' }); }
-    setTimeout(() => { toast.remove(); }, 2000);
-  },
+  showCopyToast() { this.showToast('تم نسخ الرابط بنجاح', 'success', 2000); },
 
   // Admin moved to admin.html
   render_admin() { window.location.href = 'admin.html'; return ''; }

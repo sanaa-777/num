@@ -550,6 +550,34 @@ const Data = {
     }
   },
 
+  // ====== البحث السريع (للاقتراحات) ======
+  quickSearch(query) {
+    if (!query || query.trim().length < 2) return [];
+    const q = this.normalizeArabic(query.toLowerCase());
+    const results = [];
+    for (const cat of this.categories) {
+      if (this.normalizeArabic(cat.name.toLowerCase()).includes(q)) results.push({ type: 'category', id: cat.id, name: cat.name, icon: cat.icon, subtitle: 'قسم رئيسي' });
+      for (const sub of cat.subs) {
+        if (this.normalizeArabic(sub.name.toLowerCase()).includes(q)) results.push({ type: 'subcategory', id: sub.id, catId: cat.id, name: sub.name, icon: sub.icon, subtitle: cat.name });
+      }
+    }
+    for (const city of this.cities) {
+      if (this.normalizeArabic(city.name.toLowerCase()).includes(q)) results.push({ type: 'city', id: city.id, name: city.name, icon: 'map-pin', subtitle: 'مدينة' });
+    }
+    const places = this.getPlacesSync();
+    for (const p of places) {
+      if (p.isActive === false) continue;
+      const name = this.normalizeArabic((p.name || '').toLowerCase());
+      const addr = this.normalizeArabic((p.address || '').toLowerCase());
+      if (name.includes(q) || addr.includes(q)) {
+        const cat = this.categories.find(c => c.id === p.category);
+        const city = this.cities.find(c => c.id === p.city);
+        results.push({ type: 'place', id: p.id, name: p.name, icon: cat ? cat.icon : 'map-pin', subtitle: [cat?.name, city?.name].filter(Boolean).join(' • ') });
+      }
+    }
+    return results.slice(0, 8);
+  },
+
   // ====== البحث ======
   normalizeArabic(text) {
     if (!text) return '';
