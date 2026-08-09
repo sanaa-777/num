@@ -1081,7 +1081,7 @@ const App = {
           </tr></thead>
           <tbody class="divide-y divide-gray-100">
             ${items.map(item => `<tr class="hover:bg-gray-50">
-              <td class="px-3 py-3 font-medium text-gray-900">${item.currencyName || ''}</td>
+              <td class="px-3 py-3 font-medium text-gray-900">${item.name || item.currencyName || ''}</td>
               <td class="px-3 py-3 text-green-600 font-bold">${item.buyPrice || '-'}</td>
               <td class="px-3 py-3 text-red-600 font-bold">${item.sellPrice || '-'}</td>
               <td class="px-3 py-3 text-gray-500">${item.region || '-'}</td>

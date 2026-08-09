@@ -1,0 +1,8 @@
+tree 321be26381afd670f29822f4fb5eeb565f9744ef
+parent 1841fe6c16dc70dcb0c58b390b1e7ae866cdc140
+author Genspark Assistant <assistant@users.noreply.genspark.ai> 1786061170 +0000
+committer Genspark Assistant <assistant@users.noreply.genspark.ai> 1786061170 +0000
+
+Bump cache-busting version to 20260807000602
+
+Trigger new SW cache after CSS overflow safety net fix.
