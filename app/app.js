@@ -134,10 +134,15 @@ const App = {
       }
       // Initialize map on add page with delay for DOM rendering
       if (this.currentView === 'add') {
-        this.placeMap = null;
-        this.placeMarker = null;
-        setTimeout(() => this.initPlaceMap(), 500);
-        setTimeout(() => this.initPlaceMap(), 1500);
+        // Destroy old map instance if exists
+        if (this.placeMap) {
+          try { this.placeMap.remove(); } catch(e) {}
+          this.placeMap = null;
+          this.placeMarker = null;
+        }
+        setTimeout(() => this.initPlaceMap(), 300);
+        setTimeout(() => this.initPlaceMap(), 1000);
+        setTimeout(() => this.initPlaceMap(), 2000);
       }
       // Scroll to top on navigation
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -228,40 +233,116 @@ const App = {
   // Image Upload
   placeImages: [],
   _uploadingImages: false,
+  _uploadProgress: {},
+  
   async handlePlaceImageUpload(files) {
     if (!files || files.length === 0) return;
+    // Check max 5 images
+    if (this.placeImages.length + files.length > 5) {
+      this.showToast('الحد الأقصى 5 صور للنشاط', 'warning');
+      return;
+    }
     this._uploadingImages = true;
+    this._uploadProgress = {};
     this.updatePlaceImagePreview();
+    
     try {
-      const images = await Data.uploadPlaceImages(files, 800);
-      this.placeImages.push(...images);
+      // Process each file individually with progress
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileKey = `file_${i}`;
+        this._uploadProgress[fileKey] = { status: 'processing', name: file.name };
+        this.updatePlaceImagePreview();
+        
+        try {
+          const compressed = await this._compressImageForUpload(file, 800);
+          this._uploadProgress[fileKey] = { status: 'done', name: file.name };
+          this.placeImages.push(compressed);
+        } catch (e) {
+          this._uploadProgress[fileKey] = { status: 'error', name: file.name };
+          console.error('Image compress error:', e);
+        }
+        this.updatePlaceImagePreview();
+      }
     } catch (error) {
       console.error('Image upload error:', error);
-      this.showToast('فشل رفع الصورة. تأكد من تسجيل الدخول وحاول مجدداً.', 'error');
+      this.showToast('فشل معالجة الصورة', 'error');
     } finally {
       this._uploadingImages = false;
+      this._uploadProgress = {};
       this.updatePlaceImagePreview();
     }
   },
+  
+  _compressImageForUpload(file, maxWidth) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
+          if (h > maxWidth) { w = (maxWidth / h) * w; h = maxWidth; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.75));
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  },
+  
   removePlaceImage(index) {
     this.placeImages.splice(index, 1);
     this.updatePlaceImagePreview();
   },
+  
   updatePlaceImagePreview() {
     const preview = document.getElementById('placeImagePreview');
     if (!preview) return;
-    if (this._uploadingImages) {
-      preview.innerHTML = '<div class="flex items-center gap-2 text-blue-600 text-xs p-2"><div class="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>جاري رفع الصور...</div>';
-      return;
-    }
-    preview.innerHTML = this.placeImages.map((img, i) => `
-      <div class="relative">
-        <img src="${img}" class="w-20 h-16 object-cover rounded-lg border" loading="lazy" alt="صورة">
-        <button onclick="App.removePlaceImage(${i})" class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center">
+    
+    let html = '';
+    
+    // Show existing images
+    this.placeImages.forEach((img, i) => {
+      html += `<div class="relative group">
+        <img src="${img}" class="w-20 h-20 object-cover rounded-xl border-2 border-gray-200" loading="lazy" alt="صورة ${i+1}">
+        <button onclick="App.removePlaceImage(${i})" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
           <i data-lucide="x" class="w-3 h-3"></i>
         </button>
-      </div>
-    `).join('');
+        <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 rounded-b-xl">${i+1}/5</div>
+      </div>`;
+    });
+    
+    // Show upload progress
+    Object.values(this._uploadProgress).forEach(p => {
+      if (p.status === 'processing') {
+        html += `<div class="w-20 h-20 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center">
+          <div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-1"></div>
+          <span class="text-[8px] text-blue-600 truncate max-w-[70px]">${p.name?.substring(0,8) || ''}</span>
+        </div>`;
+      } else if (p.status === 'error') {
+        html += `<div class="w-20 h-20 rounded-xl border-2 border-dashed border-red-300 bg-red-50 flex flex-col items-center justify-center">
+          <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 mb-1"></i>
+          <span class="text-[8px] text-red-600">خطأ</span>
+        </div>`;
+      }
+    });
+    
+    // Show add button if less than 5
+    if (this.placeImages.length < 5 && !this._uploadingImages) {
+      html += `<label class="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+        <i data-lucide="plus" class="w-5 h-5 text-gray-400 mb-1"></i>
+        <span class="text-[8px] text-gray-400">إضافة</span>
+        <input type="file" accept="image/*" multiple onchange="App.handlePlaceImageUpload(this.files)" class="hidden">
+      </label>`;
+    }
+    
+    preview.innerHTML = html;
     this.initIcons();
   },
 
@@ -874,9 +955,11 @@ const App = {
             </div>
             
             <div>
-              <label class="block text-xs font-medium text-gray-700 mb-1">صور المكان</label>
-              <input type="file" id="placeImagesInput" accept="image/*" multiple onchange="App.handlePlaceImageUpload(this.files)" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm">
-              <div id="placeImagePreview" class="flex flex-wrap gap-2 mt-2"></div>
+              <label class="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1">
+                <i data-lucide="image" class="w-3.5 h-3.5 text-gray-500"></i>صور المكان <span class="text-gray-400 font-normal">(حتى 5 صور)</span>
+              </label>
+              <div id="placeImagePreview" class="flex flex-wrap gap-2"></div>
+              <p class="text-[10px] text-gray-400 mt-1">${this.placeImages.length}/5 صور مرفوعة</p>
             </div>
             <button onclick="App.submitPlace()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i>إضافة المكان</button>
           </div>
@@ -1658,7 +1741,12 @@ const App = {
       });
       Admin.notifyNewPlace(n, Auth.currentUser.name);
       this.placeImages = [];
-      this.showToast('تم إرسال طلبك بنجاح! سيتم مراجعته من قبل الإدارة', 'success', 4000);
+      // Check if user is verified (auto-approve for verified users)
+      if (Auth.currentUser.verified) {
+        this.showToast('✅ تم نشر نشاطك بنجاح وهو ظاهر الآن للجميع!', 'success', 4000);
+      } else {
+        this.showToast('⏳ تم إرسال طلبك! نشاطك قيد المراجعة وسيظهر بعد موافقة الإدارة', 'info', 5000);
+      }
       setTimeout(() => { location.hash = 'myplaces'; }, 1500);
     } catch (error) {
       ErrorTracker.capture(error, { operation: 'app.place.submit', source: 'submit_place_form' });
