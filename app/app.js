@@ -72,6 +72,50 @@ const App = {
     else this.render();
   },
 
+  // Load notifications when visiting the page
+  _loadNotifications: async function() {
+    if (!Auth.currentUser) return;
+    try {
+      const snapshot = await db.collection('notifications')
+        .where('userId', '==', Auth.currentUser.id)
+        .orderBy('createdAt', 'desc')
+        .limit(50)
+        .get();
+      const notifs = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+      const container = document.getElementById('notifsList');
+      if (container) {
+        if (notifs.length === 0) {
+          container.innerHTML = '<div class="text-center py-8 text-gray-400"><i data-lucide="bell-off" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i><br>لا توجد إشعارات</div>';
+        } else {
+          container.innerHTML = notifs.map(n => {
+            const date = n.createdAt?.toDate ? n.createdAt.toDate().toLocaleDateString('ar') : '';
+            const icon = n.type === 'review' ? 'star' : n.type === 'comment' ? 'message-circle' : n.type === 'admin' ? 'shield' : 'bell';
+            const color = n.read ? 'text-gray-400' : 'text-blue-600';
+            return `<div class="flex items-start gap-3 p-3 rounded-xl ${n.read ? 'bg-white' : 'bg-blue-50'} border border-gray-100">
+              <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="${icon}" class="w-4 h-4 ${color}"></i></div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}">${n.message || ''}</p>
+                <span class="text-[10px] text-gray-400">${date}</span>
+              </div>
+            </div>`;
+          }).join('');
+        }
+        try { lucide.createIcons(); } catch(e) {}
+        // Mark as read
+        const unread = notifs.filter(n => !n.read);
+        if (unread.length > 0) {
+          const batch = db.batch();
+          unread.forEach(n => batch.update(db.collection('notifications').doc(n.id), {read: true}));
+          await batch.commit();
+        }
+      }
+    } catch(e) {
+      console.error('Load notifications error:', e);
+      const container = document.getElementById('notifsList');
+      if (container) container.innerHTML = '<div class="text-center py-8 text-gray-400">تعذر تحميل الإشعارات</div>';
+    }
+  },
+
   // Dark mode helper
   C(light, dark) { return document.documentElement.classList.contains('dark') ? dark : light; },
 
@@ -84,6 +128,10 @@ const App = {
       this.initIcons();
       this.initAllCustomSelects();
       Ads.initAllSliders();
+      // Load notifications when visiting the page
+      if (this.currentView === 'notifications' && Auth.currentUser) {
+        setTimeout(() => this._loadNotifications(), 100);
+      }
       // Initialize map on add page with delay for DOM rendering
       if (this.currentView === 'add') {
         this.placeMap = null;
@@ -998,9 +1046,31 @@ const App = {
   render_profile() {
     if (!Auth.currentUser) return this.render_login();
     const u = Auth.currentUser;
+    const myPlaces = Data.getPlacesSync().filter(p => p.owner === u.id);
+    const unreadNotifs = 0; // Will be loaded async
     return `<section class="py-6 md:py-8"><div class="max-w-2xl mx-auto px-3">
+      <!-- Quick Actions Grid -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+        <a href="#myplaces" class="bg-white rounded-xl p-3 border border-gray-100 text-center hover:shadow-md transition-all">
+          <i data-lucide="building-2" class="w-6 h-6 text-blue-600 mx-auto mb-1"></i>
+          <div class="text-xs font-medium text-gray-700">مواقعي</div>
+          <div class="text-[10px] text-gray-400">${myPlaces.length} نشاط</div>
+        </a>
+        <a href="#favorites" class="bg-white rounded-xl p-3 border border-gray-100 text-center hover:shadow-md transition-all">
+          <i data-lucide="heart" class="w-6 h-6 text-red-500 mx-auto mb-1"></i>
+          <div class="text-xs font-medium text-gray-700">المفضلة</div>
+        </a>
+        <a href="#notifications" class="bg-white rounded-xl p-3 border border-gray-100 text-center hover:shadow-md transition-all">
+          <i data-lucide="bell" class="w-6 h-6 text-yellow-500 mx-auto mb-1"></i>
+          <div class="text-xs font-medium text-gray-700">الإشعارات</div>
+        </a>
+        <button onclick="Auth.logout();location.hash='home'" class="bg-white rounded-xl p-3 border border-gray-100 text-center hover:shadow-md transition-all hover:bg-red-50">
+          <i data-lucide="log-out" class="w-6 h-6 text-red-500 mx-auto mb-1"></i>
+          <div class="text-xs font-medium text-gray-700">تسجيل الخروج</div>
+        </button>
+      </div>
+      <!-- Profile Card -->
       <div class="bg-white rounded-xl overflow-hidden border border-gray-100">
-        <!-- Cover Image -->
         <div class="h-32 bg-gradient-to-r from-blue-500 to-blue-700 relative">
           ${u.coverImage ? `<img src="${u.coverImage}" class="w-full h-full object-cover" alt="">` : ''}
           <label class="absolute bottom-2 right-2 bg-white/80 hover:bg-white text-gray-700 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer flex items-center gap-1">
@@ -1009,7 +1079,6 @@ const App = {
           </label>
         </div>
         <div class="p-4 md:p-6 -mt-10">
-          <!-- Avatar -->
           <div class="flex items-end gap-4 mb-5">
             <div class="relative">
               <img src="${u.avatar}" class="w-20 h-20 rounded-full border-4 border-white shadow-lg" alt="">
@@ -1021,7 +1090,7 @@ const App = {
             <div>
               <h3 class="text-lg font-bold">${u.name}</h3>
               <p class="text-gray-500 text-xs">${u.email}</p>
-              ${u.verified ? '<span class="inline-flex items-center gap-1 text-blue-600 text-xs font-medium"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i>موثّق</span>' : '<span class="text-gray-400 text-xs">بانتظار التوثيق</span>'}
+              ${u.verified ? '<span class="inline-flex items-center gap-1 text-blue-600 text-xs font-medium"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i>موثّق</span>' : u.active ? '<span class="inline-flex items-center gap-1 text-green-600 text-xs font-medium"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i>مفعّل</span>' : '<span class="text-gray-400 text-xs">بانتظار التفعيل</span>'}
             </div>
           </div>
           <div class="space-y-3">
@@ -1265,6 +1334,64 @@ const App = {
         </div>
       </div>
     </footer>`;
+  },
+
+  // ====== NOTIFICATIONS PAGE ======
+  render_notifications() {
+    if (!Auth.currentUser) return this.render_login();
+    return `<section class="py-6 md:py-8"><div class="max-w-2xl mx-auto px-3">
+      <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
+        <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
+        <i data-lucide="chevron-left" class="w-3 h-3"></i>
+        <span class="text-gray-700 font-medium">الإشعارات</span>
+      </div>
+      <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="bell" class="w-6 h-6 text-yellow-500"></i>الإشعارات</h2>
+      <div id="notifsList" class="space-y-2">
+        <div class="text-center py-8 text-gray-400"><div class="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-2"></div>جاري التحميل...</div>
+      </div>
+    </div></section>`;
+  },
+
+  // ====== MY ADS PAGE ======
+  render_myads() {
+    if (!Auth.currentUser) return this.render_login();
+    const my = Data.getPlacesSync().filter(p => p.owner === Auth.currentUser.id);
+    return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="megaphone" class="w-5 h-5 text-purple-600"></i>إعلاناتي (${my.length})</h3>
+        <a href="#add" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة</a>
+      </div>
+      ${my.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">${my.map(p => {
+        const cat = Data.categories.find(c => c.id === p.category);
+        const city = Data.cities.find(c => c.id === p.city);
+        const statusColors = { pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', approved: 'bg-green-50 text-green-700 border-green-200', rejected: 'bg-red-50 text-red-700 border-red-200' };
+        const statusLabels = { pending: '⏳ قيد المراجعة', approved: '✅ معتمد', rejected: '❌ مرفوض' };
+        const status = p.status || 'approved';
+        return `<div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all">
+          <div class="h-24 relative" style="background:linear-gradient(135deg, ${cat?.color || '#3b82f6'}20, ${cat?.color || '#3b82f6'}40)">
+            ${p.images && p.images[0] ? `<img src="${p.images[0]}" class="w-full h-full object-cover" loading="lazy">` : ''}
+            <span class="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full border ${statusColors[status]}">${statusLabels[status]}</span>
+          </div>
+          <div class="p-3">
+            <h4 class="font-bold text-sm text-gray-900 mb-1">${p.name}</h4>
+            <div class="flex items-center gap-2 text-xs text-gray-500 mb-2">
+              ${cat ? `<span>${cat.name}</span>` : ''}
+              ${city ? `<span>• ${city.name}</span>` : ''}
+            </div>
+            <div class="flex items-center gap-2 text-[10px] text-gray-400">
+              <span class="flex items-center gap-0.5"><i data-lucide="eye" class="w-3 h-3"></i>${p.views || 0}</span>
+              <span class="flex items-center gap-0.5"><i data-lucide="star" class="w-3 h-3"></i>${p.rating || 0}</span>
+              <span class="flex items-center gap-0.5"><i data-lucide="message-circle" class="w-3 h-3"></i>${p.reviews || 0}</span>
+            </div>
+            ${p.adminNote ? `<p class="text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded">📝 ${p.adminNote}</p>` : ''}
+            <div class="flex gap-2 mt-3">
+              <a href="#place/${p.id}" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-center text-xs font-medium hover:bg-blue-100">عرض</a>
+              <button onclick="App.sharePlace('${p.id}')" class="flex-1 bg-gray-50 text-gray-600 py-2 rounded-lg text-center text-xs font-medium hover:bg-gray-100">مشاركة</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}</div>` : '<div class="text-center py-12 text-gray-400"><i data-lucide="megaphone" class="w-16 h-16 mx-auto mb-3 text-gray-300"></i><br>لم تنشر أي إعلان بعد<br><a href="#add" class="text-blue-600 font-medium">أضف أول إعلان</a></div>'}
+    </div></section>`;
   },
 
   // ====== ACTIONS ======

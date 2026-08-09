@@ -303,6 +303,7 @@ const Data = {
 
   // ====== الأماكن (Firestore) ======
   _placesListener: null,
+  _renderDebounce: null,
   
   async getPlaces() {
     // If listener is already active, return cached data
@@ -320,11 +321,21 @@ const Data = {
           }
           
           this._placesListener = query.onSnapshot((snapshot) => {
-            this._placesCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const newData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const oldData = this._placesCache || [];
+            this._placesCache = newData;
             this._placesCacheTime = Date.now();
             
-            if (typeof App !== 'undefined' && App._initialized) {
-              App.render();
+            // Only re-render if data actually changed
+            const hasChanged = newData.length !== oldData.length || 
+              JSON.stringify(newData.map(p=>p.id).sort()) !== JSON.stringify(oldData.map(p=>p.id).sort());
+            
+            if (hasChanged && typeof App !== 'undefined' && App._initialized) {
+              // Debounce re-render to prevent flickering
+              clearTimeout(this._renderDebounce);
+              this._renderDebounce = setTimeout(() => {
+                App.render();
+              }, 300);
             }
             
             resolve(this._placesCache);

@@ -22,8 +22,10 @@ const Jobs = {
           this._cache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
           this._cacheTime = Date.now();
           
+          // Debounced re-render to prevent flickering
           if (typeof App !== 'undefined' && App._initialized) {
-            App.render();
+            clearTimeout(this._renderDebounce);
+            this._renderDebounce = setTimeout(function() { App.render(); }, 300);
           }
           
           resolve(this._cache);
