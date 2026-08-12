@@ -991,7 +991,7 @@ const App = {
               </label>
               <div id="placeImagePreview" class="flex flex-wrap gap-2"></div>
               <p class="text-[10px] text-gray-400 mt-1">${this.placeImages.length}/5 صور مرفوعة</p>
-              ${!ImageStorage.isConfigured() ? '<p class="text-[10px] text-orange-500 mt-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>رفع الصور غير مفعّل. يرجى التواصل مع الإدارة.</p>' : ''}
+              ${!ImageStorage.isConfigured() ? '<p class="text-[10px] text-orange-500 mt-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>رفع الصور غير مُفعّل. يرجى التواصل مع الإدارة.</p>' : ''}
             </div>
             <button onclick="App.submitPlace()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i>إضافة المكان</button>
           </div>
@@ -1781,7 +1781,7 @@ const App = {
       let imageUrls = [];
       if (this.placeImages && this.placeImages.length > 0) {
         if (!ImageStorage.isConfigured()) {
-          this.showToast('⚠️ الصور غير مفعّلة. أضف GitHub Token من لوحة التحكم لتمكين رفع الصور.', 'warning', 5000);
+          this.showToast('⚠️ رفع الصور غير مُفعّل. يرجى التواصل مع الإدارة.', 'warning', 5000);
         } else {
           this.showToast('جاري رفع الصور...', 'info', 10000);
           for (const dataUrl of this.placeImages) {

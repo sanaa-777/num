@@ -690,43 +690,23 @@ const Data = {
     return tr[key]?.[this.currentLang] || key;
   },
 
-  // ====== رفع الصور إلى Firebase Storage ======
+  // ====== رفع الصور (ImageStorage) ======
   async uploadPlaceImages(files, maxWidth = 800) {
+    if (!ImageStorage.isConfigured()) {
+      console.warn('uploadPlaceImages: ImageStorage not configured');
+      return [];
+    }
     const urls = [];
     for (const file of files) {
       try {
-        const compressed = await this._compressImage(file, maxWidth);
-        const blob = await fetch(compressed).then(r => r.blob());
-        if (!Auth.currentUser) throw new Error('AUTH_REQUIRED_FOR_PLACE_UPLOAD');
-        const fileName = `places/${Auth.currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
-        const ref = storage.ref(fileName);
-        await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
-        const url = await ref.getDownloadURL();
-        urls.push(url);
+        const ownerSegment = (Auth.currentUser && Auth.currentUser.id) ? Auth.currentUser.id : 'anon';
+        const result = await ImageStorage.upload(file, 'places/' + ownerSegment);
+        urls.push(result.url);
       } catch (e) {
         console.error('Upload image error:', e);
       }
     }
     return urls;
-  },
-
-  _compressImage(file, maxWidth) {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let w = img.width, h = img.height;
-          if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
   },
 
   // ====== الإحصائيات ======

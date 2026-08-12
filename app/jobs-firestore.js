@@ -137,14 +137,14 @@ const Jobs = {
   },
 
   async uploadImage(file) {
+    if (!ImageStorage.isConfigured()) {
+      console.warn('Job uploadImage: ImageStorage not configured');
+      return null;
+    }
     try {
-      const compressed = await this._compressImage(file, 800);
-      const blob = await fetch(compressed).then(r => r.blob());
       const ownerSegment = (window.Auth && Auth.currentUser && Auth.currentUser.id) ? Auth.currentUser.id : 'admin';
-      const fileName = `jobs/${ownerSegment}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
-      const ref = storage.ref(fileName);
-      await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
-      return await ref.getDownloadURL();
+      const result = await ImageStorage.upload(file, 'jobs/' + ownerSegment);
+      return result.url;
     } catch (e) {
       console.error('Job uploadImage error:', e);
       return null;

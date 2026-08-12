@@ -133,37 +133,18 @@ const Ads = {
 
   // ====== رفع صورة الإعلان ======
   async uploadImage(file) {
+    if (!ImageStorage.isConfigured()) {
+      console.warn('Ads uploadImage: ImageStorage not configured');
+      return null;
+    }
     try {
-      const compressed = await this._compressImage(file, 1200);
-      const blob = await fetch(compressed).then(r => r.blob());
       const ownerSegment = (window.Auth && Auth.currentUser && Auth.currentUser.id) ? Auth.currentUser.id : 'admin';
-      const fileName = `ads/${ownerSegment}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
-      const ref = storage.ref(fileName);
-      await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
-      return await ref.getDownloadURL();
+      const result = await ImageStorage.upload(file, 'ads/' + ownerSegment);
+      return result.url;
     } catch (e) {
       console.error('Ads uploadImage error:', e);
       return null;
     }
-  },
-
-  _compressImage(file, maxWidth) {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let w = img.width, h = img.height;
-          if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
   },
 
   // ====== مواضع الإعلانات ======

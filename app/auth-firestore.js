@@ -249,34 +249,34 @@ const Auth = {
   // ====== رفع صورة الملف الشخصي ======
   async uploadAvatar(file) {
     if (!this.currentUser) return;
+    if (!ImageStorage.isConfigured()) {
+      console.warn('uploadAvatar: ImageStorage not configured');
+      return null;
+    }
     try {
-      const user = auth.currentUser;
-      const compressed = await this._compressImage(file, 400);
-      const blob = await fetch(compressed).then(r => r.blob());
-      const ref = storage.ref(`avatars/${user.uid}/avatar.jpg`);
-      await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
-      const url = await ref.getDownloadURL();
-      await this.updateProfile({ avatar: url });
-      return url;
+      const result = await ImageStorage.upload(file, 'avatars/' + this.currentUser.id);
+      await this.updateProfile({ avatar: result.url });
+      return result.url;
     } catch (e) {
       console.error('uploadAvatar error:', e);
+      return null;
     }
   },
 
   // ====== رفع صورة الغلاف ======
   async uploadCover(file) {
     if (!this.currentUser) return;
+    if (!ImageStorage.isConfigured()) {
+      console.warn('uploadCover: ImageStorage not configured');
+      return null;
+    }
     try {
-      const user = auth.currentUser;
-      const compressed = await this._compressImage(file, 800);
-      const blob = await fetch(compressed).then(r => r.blob());
-      const ref = storage.ref(`covers/${user.uid}/cover.jpg`);
-      await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
-      const url = await ref.getDownloadURL();
-      await this.updateProfile({ coverImage: url });
-      return url;
+      const result = await ImageStorage.upload(file, 'covers/' + this.currentUser.id);
+      await this.updateProfile({ coverImage: result.url });
+      return result.url;
     } catch (e) {
       console.error('uploadCover error:', e);
+      return null;
     }
   },
 

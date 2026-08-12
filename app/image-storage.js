@@ -1,189 +1,187 @@
 // =============================================
-// Image Upload Service - GitHub Storage
-// Completely free, no payment required
-// Uses GitHub repo as image storage + CDN
+// Image Upload Service — Cloudinary (Free Tier)
+// =============================================
+// Completely free, no backend, no payment card.
+// Uses Cloudinary unsigned upload presets — no API secrets in frontend.
+// Free tier: 25 GB storage, 25 GB bandwidth/month, auto CDN + optimization.
+//
+// SETUP (one-time, by admin):
+//   1. Create free account at https://cloudinary.com
+//   2. Go to Settings → Upload → Upload presets
+//   3. Add unsigned upload preset (name it e.g. "dalil_unsigned")
+//   4. Set folder to "dalil-yemen" in the preset settings
+//   5. Enter cloud name + preset name in the admin panel sidebar
 // =============================================
 
 const ImageStorage = {
-  // GitHub config
-  REPO: 'sanaa-777/num',
-  BRANCH: 'main',
-  IMAGE_DIR: 'images',
-  MAX_SIZE: 800,      // max dimension
-  QUALITY: 0.80,      // JPEG quality
-  MAX_FILE_SIZE: 500000, // 500KB after compression
+  // Cloudinary config — set via admin panel, persisted in localStorage
+  _cloudName: localStorage.getItem('dy_cloud_name') || '',
+  _uploadPreset: localStorage.getItem('dy_upload_preset') || '',
 
-  // Get GitHub token from sessionStorage (set during admin login)
-  _getToken() {
-    return sessionStorage.getItem('dy_gh_token') || '';
+  // Compression settings
+  MAX_DIMENSION: 1200,
+  QUALITY: 0.82,
+  MAX_FILE_SIZE: 900000,  // 900 KB after compression (Cloudinary free: 10 MB upload limit)
+
+  // ====== Configuration ======
+  configure(cloudName, uploadPreset) {
+    this._cloudName = cloudName.trim();
+    this._uploadPreset = uploadPreset.trim();
+    localStorage.setItem('dy_cloud_name', this._cloudName);
+    localStorage.setItem('dy_upload_preset', this._uploadPreset);
   },
 
-  _setToken(token) {
-    sessionStorage.setItem('dy_gh_token', token);
+  isConfigured() {
+    return !!(this._cloudName && this._uploadPreset);
   },
 
-  // Compress image for upload
+  async testConnection() {
+    if (!this.isConfigured()) {
+      return { ok: false, error: 'الرجاء إدخال Cloud Name و Upload Preset' };
+    }
+    try {
+      // Verify the cloud exists by requesting the resource list endpoint (returns 401/200)
+      const resp = await fetch(
+        `https://res.cloudinary.com/${this._cloudName}/image/list/dalil-yemen.json`
+      );
+      // 200 or 404 both mean the cloud name is valid
+      if (resp.status === 200 || resp.status === 404) {
+        return { ok: true, cloud: this._cloudName };
+      }
+      return { ok: false, error: `HTTP ${resp.status}` };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  },
+
+  // ====== Image Compression ======
   compress(file, maxWidth) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let w = img.width, h = img.height;
+    maxWidth = maxWidth || this.MAX_DIMENSION;
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var img = new Image();
+        img.onload = function () {
+          var canvas = document.createElement('canvas');
+          var w = img.width, h = img.height;
           if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
           if (h > maxWidth) { w = (maxWidth / h) * w; h = maxWidth; }
           canvas.width = w;
           canvas.height = h;
           canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          
-          // Try different quality levels to meet size limit
-          let quality = this.QUALITY;
-          let blob;
+
+          // Try decreasing quality until under size limit
+          var quality = ImageStorage.QUALITY;
+          var blob;
           do {
-            blob = dataURLtoBlob(canvas.toDataURL('image/jpeg', quality));
-            quality -= 0.1;
-          } while (blob.size > this.MAX_FILE_SIZE && quality > 0.3);
-          
+            blob = ImageStorage._dataURLtoBlob(canvas.toDataURL('image/jpeg', quality));
+            quality -= 0.08;
+          } while (blob.size > ImageStorage.MAX_FILE_SIZE && quality > 0.25);
+
           resolve(blob);
         };
-        img.onerror = () => reject(new Error('Failed to load image'));
+        img.onerror = function () { reject(new Error('فشل تحميل الصورة')); };
         img.src = e.target.result;
       };
-      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.onerror = function () { reject(new Error('فشل قراءة الملف')); };
       reader.readAsDataURL(file);
     });
   },
 
-  // Upload image to GitHub repo (accepts File or Blob)
+  // ====== Upload to Cloudinary ======
   async upload(file, folder) {
-    // Compress if it's a File, use directly if it's already a compressed Blob
-    let blob;
+    if (!this.isConfigured()) {
+      throw new Error('رفع الصور غير مُعدّل. يرجى تكوين Cloudinary من إعدادات لوحة التحكم.');
+    }
+
+    // Compress
+    var blob;
     if (file instanceof Blob && !(file instanceof File)) {
-      blob = file; // Already compressed
+      blob = file; // already compressed
     } else {
-      blob = await this.compress(file, this.MAX_SIZE);
-    }
-    
-    // Generate unique filename
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).slice(2, 8);
-    const ext = 'jpg';
-    const filename = `${folder}/${timestamp}_${random}.${ext}`;
-    const path = `${this.IMAGE_DIR}/${filename}`;
-
-    // Convert blob to base64
-    const base64 = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.readAsDataURL(blob);
-    });
-
-    // Upload to GitHub
-    const token = this._getToken();
-    if (!token) {
-      throw new Error('GitHub token not set. Admin must configure image storage.');
+      blob = await this.compress(file);
     }
 
-    const response = await fetch(`https://api.github.com/repos/${this.REPO}/contents/${path}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: `Upload image: ${filename}`,
-        content: base64,
-        branch: this.BRANCH,
-      }),
-    });
+    // Build form data
+    var formData = new FormData();
+    formData.append('file', blob);
+    formData.append('upload_preset', this._uploadPreset);
+    formData.append('folder', folder || 'dalil-yemen/uploads');
+
+    // Unique public_id
+    var timestamp = Date.now();
+    var random = Math.random().toString(36).slice(2, 8);
+    formData.append('public_id', timestamp + '_' + random);
+
+    // Upload
+    var response = await fetch(
+      'https://api.cloudinary.com/v1_1/' + this._cloudName + '/image/upload',
+      { method: 'POST', body: formData }
+    );
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Upload failed: ${error.message || response.status}`);
+      var err = await response.json().catch(function () { return {}; });
+      throw new Error(err.error?.message || 'Upload failed: HTTP ' + response.status);
     }
 
-    const result = await response.json();
-    
-    // Return the raw URL for display
-    const rawUrl = `https://raw.githubusercontent.com/${this.REPO}/${this.BRANCH}/${path}`;
+    var result = await response.json();
+
+    // Return optimized URL (auto format + quality)
+    var optimizedUrl = result.secure_url.replace(
+      '/upload/',
+      '/upload/f_auto,q_auto/'
+    );
+
     return {
-      url: rawUrl,
-      path: path,
-      sha: result.content.sha,
+      url: optimizedUrl,
+      publicId: result.public_id,
       size: blob.size,
+      width: result.width,
+      height: result.height
     };
   },
 
-  // Delete image from GitHub
-  async delete(path, sha) {
-    const token = this._getToken();
-    if (!token || !sha) return false;
-
-    const response = await fetch(`https://api.github.com/repos/${this.REPO}/contents/${path}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `token ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: `Delete image: ${path}`,
-        sha: sha,
-        branch: this.BRANCH,
-      }),
-    });
-
-    return response.ok;
+  // ====== Delete from Cloudinary ======
+  // Note: Unsigned uploads cannot be deleted via API without authentication.
+  // For admin cleanup, use the Cloudinary dashboard.
+  // This method is a no-op for unsigned presets.
+  async delete(publicId) {
+    console.warn('ImageStorage.delete: unsigned presets cannot delete via API. Use Cloudinary dashboard for cleanup.');
+    return false;
   },
 
-  // Replace image (delete old + upload new)
-  async replace(file, folder, oldPath, oldSha) {
-    // Delete old image if exists
-    if (oldPath && oldSha) {
-      await this.delete(oldPath, oldSha).catch(() => {});
-    }
-    // Upload new image
+  // ====== Replace image ======
+  async replace(file, folder, _oldPublicId) {
+    // Upload new image (old one stays in Cloudinary — dashboard cleanup)
     return await this.upload(file, folder);
   },
 
-  // Set GitHub token (called from admin panel)
-  configure(token) {
-    this._setToken(token);
-    return true;
+  // ====== Clear configuration ======
+  clearConfig() {
+    this._cloudName = '';
+    this._uploadPreset = '';
+    localStorage.removeItem('dy_cloud_name');
+    localStorage.removeItem('dy_upload_preset');
   },
 
-  // Check if configured
-  isConfigured() {
-    return !!this._getToken();
+  // ====== Get current config (for UI display) ======
+  getConfig() {
+    return {
+      cloudName: this._cloudName,
+      uploadPreset: this._uploadPreset,
+      configured: this.isConfigured()
+    };
   },
 
-  // Test connection
-  async testConnection() {
-    const token = this._getToken();
-    if (!token) return { ok: false, error: 'No token configured' };
-
-    try {
-      const response = await fetch(`https://api.github.com/repos/${this.REPO}`, {
-        headers: { 'Authorization': `token ${token}` }
-      });
-      if (response.ok) {
-        return { ok: true, repo: this.REPO };
-      }
-      return { ok: false, error: `HTTP ${response.status}` };
-    } catch (e) {
-      return { ok: false, error: e.message };
+  // ====== Helpers ======
+  _dataURLtoBlob: function (dataURL) {
+    var parts = dataURL.split(',');
+    var mime = parts[0].match(/:(.*?);/)[1];
+    var binary = atob(parts[1]);
+    var array = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) {
+      array[i] = binary.charCodeAt(i);
     }
+    return new Blob([array], { type: mime });
   }
 };
-
-// Helper: Convert data URL to Blob
-function dataURLtoBlob(dataURL) {
-  const parts = dataURL.split(',');
-  const mime = parts[0].match(/:(.*?);/)[1];
-  const binary = atob(parts[1]);
-  const array = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    array[i] = binary.charCodeAt(i);
-  }
-  return new Blob([array], { type: mime });
-}

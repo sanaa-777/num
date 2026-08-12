@@ -18,9 +18,9 @@ if (!firebase.apps.length) {
 }
 
 // الخدمات (var for global access from inline scripts)
+// Note: Firebase Storage removed — image uploads use Cloudinary (ImageStorage)
 var auth = firebase.auth();
 var db = firebase.firestore();
-var storage = firebase.storage();
 var messaging = typeof firebase.messaging === 'function' ? firebase.messaging() : null;
 
 // إعداد Auth persistence

@@ -68,7 +68,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
   <!-- Error Tracker -->
   <script src="app/error-tracker.js?v=20260812193614"></script>
@@ -216,12 +215,12 @@
       editingItem: null,
 
       // =============================================
-      // Helper: Upload image to Firebase Storage
+      // Helper: Upload image (Cloudinary via ImageStorage)
       // =============================================
       uploadImage: async function(file, folder) {
         if (!file) return null;
         if (!ImageStorage.isConfigured()) {
-          throw new Error('يجب تكوين GitHub Token أولاً من إعدادات لوحة التحكم');
+          throw new Error('يجب تكوين Cloudinary أولاً من إعدادات لوحة التحكم');
         }
         try {
           var result = await ImageStorage.upload(file, folder || 'uploads');
@@ -336,12 +335,21 @@
               '</div>' +
               '<div class="p-4 border-t border-gray-100">' +
                 '<div class="mb-3 px-2">' +
-                  '<div class="text-[10px] text-gray-400 mb-1.5">GitHub Token (لرفع الصور)</div>' +
-                  '<div class="flex gap-1.5">' +
-                    '<input type="password" id="ghTokenInput" placeholder="ghp_..." class="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs" value="' + (sessionStorage.getItem('dy_gh_token') ? '***' : '') + '">' +
-                    '<button onclick="AdminPanel.configureGitHub()" class="px-2.5 py-1.5 bg-gray-100 rounded-lg text-xs hover:bg-gray-200"><i data-lucide="save" class="w-3.5 h-3.5"></i></button>' +
+                  '<div class="text-[10px] text-gray-400 mb-1.5">☁️ Cloudinary (رفع الصور)</div>' +
+                  (ImageStorage.isConfigured()
+                    ? '<div class="text-[9px] text-green-600 mb-1">✅ ' + ImageStorage.getConfig().cloudName + '</div>'
+                    : '<div class="text-[9px] text-orange-500 mb-1">⚠️ غير مُعدّل</div>') +
+                  '<div class="flex gap-1 mb-1">' +
+                    '<input type="text" id="cldNameInput" placeholder="Cloud Name" class="flex-1 px-2 py-1 rounded border border-gray-200 text-[10px]" value="' + (ImageStorage.getConfig().cloudName || '') + '">' +
                   '</div>' +
-                  '<div id="ghStatus" class="text-[9px] mt-1"></div>' +
+                  '<div class="flex gap-1 mb-1">' +
+                    '<input type="text" id="cldPresetInput" placeholder="Upload Preset" class="flex-1 px-2 py-1 rounded border border-gray-200 text-[10px]" value="' + (ImageStorage.getConfig().uploadPreset || '') + '">' +
+                  '</div>' +
+                  '<div class="flex gap-1">' +
+                    '<button onclick="AdminPanel.configureCloudinary()" class="flex-1 px-2 py-1 bg-blue-500 text-white rounded text-[10px] hover:bg-blue-600">حفظ</button>' +
+                    '<button onclick="AdminPanel.testCloudinary()" class="px-2 py-1 bg-gray-100 rounded text-[10px] hover:bg-gray-200">اختبار</button>' +
+                  '</div>' +
+                  '<div id="cldStatus" class="text-[9px] mt-1"></div>' +
                 '</div>' +
                 '<button onclick="AdminController.logout()" class="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 text-sm font-medium"><i data-lucide="log-out" class="w-4 h-4"></i>تسجيل الخروج</button>' +
               '</div>' +
@@ -376,10 +384,11 @@
                     '<img src="' + (Auth.currentUser.avatar || '') + '" class="w-6 h-6 rounded-full" alt="">' +
                     '<span class="text-xs font-medium">' + (Auth.currentUser.name || 'Admin') + '</span>' +
                   '</div>' +
-                  '<div class="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-lg" title="GitHub Token لرفع الصور">' +
-                    '<input type="password" id="ghTokenDesktop" placeholder="ghp_..." class="w-28 px-2 py-1 rounded border border-gray-200 text-[10px]" value="' + (sessionStorage.getItem('dy_gh_token') ? '***' : '') + '">' +
-                    '<button onclick="AdminPanel.configureGitHubDesktop()" class="px-2 py-1 bg-gray-200 rounded text-[10px] hover:bg-gray-300"><i data-lucide="save" class="w-3 h-3"></i></button>' +
-                    '<span id="ghStatusDesktop" class="text-[9px]"></span>' +
+                  '<div class="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-lg" title="Cloudinary إعدادات رفع الصور">' +
+                    (ImageStorage.isConfigured()
+                      ? '<span class="text-[10px] text-green-600">☁️ ' + ImageStorage.getConfig().cloudName + '</span>'
+                      : '<span class="text-[10px] text-orange-500">⚠️ Cloudinary غير مُعدّل</span>') +
+                    '<button onclick="AdminPanel.showCloudinaryModal()" class="px-2 py-1 bg-gray-200 rounded text-[10px] hover:bg-gray-300"><i data-lucide="settings" class="w-3 h-3"></i></button>' +
                   '</div>' +
                   '<button onclick="AdminController.logout()" class="text-red-500 hover:text-red-700"><i data-lucide="log-out" class="w-5 h-5"></i></button>' +
                 '</div>' +
@@ -1149,48 +1158,47 @@
       featurePlace: async function(placeId) { await Admin.featurePlace(placeId); this.render(); },
       approvePlace: async function(placeId) { var note = prompt('ملاحظة الموافقة (اختياري):'); await Admin.approvePlace(placeId, note || ''); this.render(); },
       rejectPlace: async function(placeId) { var note = prompt('سبب الرفض (اختياري):'); await Admin.rejectPlace(placeId, note || ''); this.render(); },
-      configureGitHub: async function() {
-        var input = document.getElementById('ghTokenInput');
-        var status = document.getElementById('ghStatus');
-        var token = input.value.trim();
-        if (!token || token === '***') {
-          status.textContent = 'أدخل GitHub Token';
-          status.style.color = '#ef4444';
+      configureCloudinary: async function() {
+        var nameInput = document.getElementById('cldNameInput');
+        var presetInput = document.getElementById('cldPresetInput');
+        var status = document.getElementById('cldStatus');
+        var cloudName = nameInput ? nameInput.value.trim() : '';
+        var preset = presetInput ? presetInput.value.trim() : '';
+        if (!cloudName || !preset) {
+          if (status) { status.textContent = 'أدخل Cloud Name و Upload Preset'; status.style.color = '#ef4444'; }
           return;
         }
-        ImageStorage.configure(token);
-        var test = await ImageStorage.testConnection();
-        if (test.ok) {
-          status.textContent = '✅ متصل بـ ' + test.repo;
-          status.style.color = '#22c55e';
-          input.value = '***';
-        } else {
-          status.textContent = '❌ ' + (test.error || 'فشل الاتصال');
-          status.style.color = '#ef4444';
-        }
-        try { lucide.createIcons(); } catch(e) {}
+        ImageStorage.configure(cloudName, preset);
+        if (status) { status.textContent = '✅ تم الحفظ'; status.style.color = '#22c55e'; }
+        this.render();
       },
 
-      configureGitHubDesktop: async function() {
-        var input = document.getElementById('ghTokenDesktop');
-        var status = document.getElementById('ghStatusDesktop');
-        var token = input.value.trim();
-        if (!token || token === '***') {
-          status.textContent = 'أدخل Token';
-          status.style.color = '#ef4444';
+      testCloudinary: async function() {
+        var status = document.getElementById('cldStatus');
+        if (!ImageStorage.isConfigured()) {
+          if (status) { status.textContent = 'أدخل الإعدادات أولاً'; status.style.color = '#ef4444'; }
           return;
         }
-        ImageStorage.configure(token);
+        if (status) { status.textContent = 'جاري الاختبار...'; status.style.color = '#6b7280'; }
         var test = await ImageStorage.testConnection();
         if (test.ok) {
-          status.textContent = '✅';
-          status.style.color = '#22c55e';
-          input.value = '***';
+          if (status) { status.textContent = '✅ متصل بـ ' + test.cloud; status.style.color = '#22c55e'; }
         } else {
-          status.textContent = '❌';
-          status.style.color = '#ef4444';
+          if (status) { status.textContent = '❌ ' + (test.error || 'فشل الاتصال'); status.style.color = '#ef4444'; }
         }
-        try { lucide.createIcons(); } catch(e) {}
+      },
+
+      showCloudinaryModal: function() {
+        // Simple prompt-based config for desktop header
+        var cfg = ImageStorage.getConfig();
+        var cloudName = prompt('Cloudinary Cloud Name:', cfg.cloudName || '');
+        if (cloudName === null) return;
+        var preset = prompt('Upload Preset Name:', cfg.uploadPreset || '');
+        if (preset === null) return;
+        if (cloudName && preset) {
+          ImageStorage.configure(cloudName, preset);
+          this.render();
+        }
       },
 
       togglePlaceActive: async function(placeId, shouldActivate) {
