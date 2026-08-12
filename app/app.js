@@ -3,7 +3,7 @@
 // =============================================
 
 const App = {
-  currentView: 'home', searchQuery: '', selectedCategory: null, selectedSubCategory: null, selectedCity: null, _selectedRating: 0, _initialized: false,
+  currentView: 'home', searchQuery: '', selectedCategory: null, selectedSubCategory: null, selectedCity: null, _selectedRating: 0, _initialized: false, _lastRenderedView: null, _scrollPositions: {}, _isRestoringScroll: false,
 
   async init() {
     if (this._initialized) return;
@@ -64,6 +64,7 @@ const App = {
   handleRoute() {
     const hash = location.hash.slice(1) || 'home';
     const [view, ...params] = hash.split('/');
+    const previousView = this.currentView;
     this.currentView = view;
     if (view === 'place' && params[0]) this.showPlace(params[0]);
     else if (view === 'offer' && params[0]) this.showItemDetail(params[0], 'offer');
@@ -150,8 +151,19 @@ const App = {
         setTimeout(() => this.initPlaceMap(), 1500);
         setTimeout(() => this.initPlaceMap(), 3000);
       }
-      // Scroll to top on navigation
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // Smart scroll: save position of old view, restore new view position
+      if (this._lastRenderedView && this._lastRenderedView !== this.currentView) {
+        try { this._scrollPositions[this._lastRenderedView] = window.scrollY; } catch(e) {}
+      }
+      if (this._lastRenderedView !== this.currentView) {
+        const savedPos = this._scrollPositions[this.currentView];
+        if (savedPos && savedPos > 100) {
+          setTimeout(() => window.scrollTo(0, savedPos), 50);
+        } else {
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+      }
+      this._lastRenderedView = this.currentView;
     } catch (e) {
       console.error('Render error:', e);
       const payload = ErrorTracker.normalize(e, {
@@ -169,7 +181,15 @@ const App = {
     }
   },
 
-  initIcons() { try { lucide.createIcons(); } catch(e) { ErrorTracker.capture(e, { operation: 'app.icons.init', source: 'app_ui' }); } },
+  initIcons(container) { 
+    try { 
+      if (container) {
+        lucide.createIcons({ nodes: container.querySelectorAll('[data-lucide]') });
+      } else {
+        lucide.createIcons(); 
+      }
+    } catch(e) { /* icons are non-critical */ }
+  },
 
   // Mobile Search Toggle
   toggleMobileSearch() {
@@ -714,6 +734,11 @@ const App = {
   showPlace(pid) {
     const place = Data.getPlacesSync().find(p => p.id === pid);
     if (!place) { location.hash = 'home'; return; }
+    // Save scroll position of previous view
+    if (this.currentView !== 'place') {
+      try { this._scrollPositions[this.currentView] = window.scrollY; } catch(e) {}
+    }
+    this._lastRenderedView = 'place';
     place.views = (place.views || 0) + 1; Data.incrementViews(pid);
     const cat = Data.categories.find(c => c.id === place.category);
     const sub = place.subcategory ? Data.getSubCategory(place.subcategory) : null;
@@ -1418,7 +1443,7 @@ const App = {
           <div><h5 class="text-white font-semibold mb-2 text-sm">تواصل معنا</h5><a href="https://wa.me/967777492635" target="_blank" class="text-xs text-gray-400 flex items-center gap-1 hover:text-green-400 transition-colors"><svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>واتساب: 777492635</a><p class="text-xs text-gray-400 flex items-center gap-1 mt-1"><i data-lucide="mail" class="w-3 h-3"></i>info@yemendirectory.net</p><p class="text-xs text-gray-400 flex items-center gap-1 mt-1"><i data-lucide="globe" class="w-3 h-3"></i>الدليل اليمني التجاري</p></div>
         </div>
         <div class="border-t border-gray-800 mt-4 pt-4 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-gray-500">
-          <span>© 2024 الدليل اليمني التجاري. جميع الحقوق محفوظة.</span>
+          <span>© ${new Date().getFullYear()} الدليل اليمني التجاري. جميع الحقوق محفوظة.</span>
           <div class="flex gap-3"><a href="privacy.html" class="hover:text-white">سياسة الخصوصية</a><a href="about.html" class="hover:text-white">من نحن</a></div>
         </div>
       </div>
@@ -1751,6 +1776,24 @@ const App = {
     const n = document.getElementById('placeName').value, c = document.getElementById('placeCategory').value, s = document.getElementById('placeSubCategory').value, ci = document.getElementById('placeCity').value;
     const workDays = Array.from(document.querySelectorAll('.work-day-cb:checked')).map(cb => cb.value);
     try {
+      // Upload images to Firebase Storage (not base64 in Firestore)
+      let imageUrls = [];
+      if (this.placeImages && this.placeImages.length > 0) {
+        this.showToast('جاري رفع الصور...', 'info', 10000);
+        for (const dataUrl of this.placeImages) {
+          try {
+            const blob = await fetch(dataUrl).then(r => r.blob());
+            const fileName = 'places/' + Auth.currentUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.jpg';
+            const ref = storage.ref(fileName);
+            const snapshot = await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
+            const url = await snapshot.ref.getDownloadURL();
+            imageUrls.push(url);
+          } catch (uploadErr) {
+            console.error('Image upload failed:', uploadErr);
+          }
+        }
+      }
+
       await Data.addPlace({ 
         name:n, category:c, subcategory:s||null, city:ci, 
         description:document.getElementById('placeDesc').value, 
@@ -1767,7 +1810,7 @@ const App = {
         workDays:workDays.length > 0 ? workDays : null,
         lat:document.getElementById('placeLat').value || null,
         lng:document.getElementById('placeLng').value || null,
-        images:this.placeImages, owner:Auth.currentUser.id, verified:false, featured:false 
+        images:imageUrls, owner:Auth.currentUser.id, verified:false, featured:false 
       });
       Admin.notifyNewPlace(n, Auth.currentUser.name);
       this.placeImages = [];

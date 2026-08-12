@@ -305,6 +305,10 @@ const Data = {
   _placesListener: null,
   _renderDebounce: null,
   
+  _pageSize: 200,
+  _lastDoc: null,
+  _hasMore: true,
+
   async getPlaces() {
     // If listener is already active, return cached data
     if (this._placesListener) return this._placesCache || [];
@@ -314,7 +318,8 @@ const Data = {
         const setupListener = (useOrderBy) => {
           let query = db.collection('places')
             .where('isActive', '==', true)
-            .where('status', '==', 'approved');
+            .where('status', '==', 'approved')
+            .limit(this._pageSize);
           
           if (useOrderBy) {
             try { query = query.orderBy('createdAt', 'desc'); } catch(e) {}
@@ -322,6 +327,8 @@ const Data = {
           
           this._placesListener = query.onSnapshot((snapshot) => {
             const newData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            this._lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+            this._hasMore = snapshot.docs.length >= this._pageSize;
             const oldData = this._placesCache || [];
             this._placesCache = newData;
             this._placesCacheTime = Date.now();
@@ -368,8 +375,35 @@ const Data = {
 
   // نسخة متزامنة للتوافق مع الكود القديم (تقرأ من cache)
   getPlacesSync() {
-    return this._placesCache || [];
+    return this._placesCache || this.defaultPlaces || [];
   },
+
+  // تحميل المزيد من الأماكن (pagination)
+  async loadMorePlaces() {
+    if (!this._hasMore || !this._lastDoc) return this._placesCache || [];
+    try {
+      let query = db.collection('places')
+        .where('isActive', '==', true)
+        .where('status', '==', 'approved')
+        .orderBy('createdAt', 'desc')
+        .startAfter(this._lastDoc)
+        .limit(this._pageSize);
+      const snapshot = await query.get();
+      const newDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      this._lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+      this._hasMore = snapshot.docs.length >= this._pageSize;
+      // Append to cache, avoiding duplicates
+      const existingIds = new Set((this._placesCache || []).map(p => p.id));
+      const unique = newDocs.filter(p => !existingIds.has(p.id));
+      this._placesCache = (this._placesCache || []).concat(unique);
+      return this._placesCache;
+    } catch (e) {
+      console.error('loadMorePlaces error:', e);
+      return this._placesCache || [];
+    }
+  },
+
+  hasMorePlaces() { return this._hasMore; },
 
   // الأماكن المعتمدة فقط
   async getApprovedPlaces() {
@@ -745,7 +779,7 @@ const Data = {
   _favoritesCache: [],
 
   getApprovedPlacesSync() {
-    return (this._placesCache || []).filter(p => p.status === 'approved' || !p.status);
+    return (this._placesCache || this.defaultPlaces || []).filter(p => p.status === 'approved' || !p.status);
   },
 
   getStatsSync() {
@@ -768,7 +802,7 @@ const Data = {
   },
 
   searchSync(query, catFilter, subFilter, cityFilter) {
-    let places = this.getApprovedPlacesSync();
+    let places = this.getApprovedPlacesSync() || [];
     if (catFilter) places = places.filter(p => p.category === catFilter);
     if (subFilter) places = places.filter(p => p.subcategory === subFilter);
     if (cityFilter) places = places.filter(p => p.city === cityFilter);

@@ -1,67 +1,24 @@
 (function () {
   const build = window.__APP_BUILD__ || { version: 'dev' };
-  const VERSION_KEY = 'dy_client_version';
-  const RELOAD_KEY = 'dy_client_version_reload';
+  const VERSION_KEY = 'dy_build_version';
+  const RELOAD_KEY = 'dy_cli_reload';
   const PRESERVE_LOCAL_KEYS = new Set([
     VERSION_KEY,
     'dy_lang',
     'dy_dark_mode'
   ]);
-  const IDB_EXACT_NAMES = new Set([
-    'firebase-heartbeat-database'
-  ]);
-  const IDB_NAME_PATTERNS = [
-    'firestore/',
-    'firebase-messaging',
-    'firebase-installations',
-    'firebase-heartbeat',
-    'workbox',
-    'dalil-yemen'
-  ];
+  // Only clear caches we own — never Firestore/Firebase IndexedDB
+  const CACHE_PREFIX = 'dalil-yemen-static-';
 
-  function shouldDeleteDb(name) {
-    if (!name || name === 'firebaseLocalStorageDb') return false;
-    return IDB_EXACT_NAMES.has(name) || IDB_NAME_PATTERNS.some((pattern) => name.includes(pattern));
-  }
-
-  async function clearCaches() {
+  async function clearOldCaches() {
     if (!('caches' in window)) return;
     const keys = await caches.keys();
-    await Promise.all(keys.map((key) => caches.delete(key)));
-  }
-
-  async function unregisterServiceWorkers() {
-    if (!('serviceWorker' in navigator)) return;
-    const regs = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(regs.map((reg) => reg.unregister()));
-  }
-
-  async function clearIndexedDb() {
-    if (!('indexedDB' in window) || typeof indexedDB.deleteDatabase !== 'function') return;
-    if (typeof indexedDB.databases === 'function') {
-      const dbs = await indexedDB.databases();
-      await Promise.all((dbs || [])
-        .map((db) => db && db.name)
-        .filter((name) => shouldDeleteDb(name))
-        .map((name) => new Promise((resolve) => {
-          const req = indexedDB.deleteDatabase(name);
-          req.onsuccess = req.onerror = req.onblocked = () => resolve();
-        })));
-      return;
-    }
-
-    for (const name of [
-      'firebase-heartbeat-database',
-      'firestore/[DEFAULT]/deel-39f2e/main',
-      'firestore/deel-39f2e/main',
-      'firebase-messaging-database'
-    ]) {
-      if (!shouldDeleteDb(name)) continue;
-      await new Promise((resolve) => {
-        const req = indexedDB.deleteDatabase(name);
-        req.onsuccess = req.onerror = req.onblocked = () => resolve();
-      });
-    }
+    const currentCache = CACHE_PREFIX + build.version;
+    await Promise.all(
+      keys
+        .filter((key) => key.startsWith(CACHE_PREFIX) && key !== currentCache)
+        .map((key) => caches.delete(key))
+    );
   }
 
   function clearLegacyLocalStorage() {
@@ -78,50 +35,19 @@
     }
   }
 
-  async function forceSingleReload(version) {
+  function forceSingleReload(version) {
     try {
-      if (sessionStorage.getItem(RELOAD_KEY) === version) return;
+      if (sessionStorage.getItem(RELOAD_KEY) === version) return false;
       sessionStorage.setItem(RELOAD_KEY, version);
     } catch (_) {
       // ignore session storage failures
     }
 
+    // Preserve the current hash (route) during reload
     const url = new URL(window.location.href);
     url.searchParams.set('v', version);
     window.location.replace(url.toString());
-    await new Promise(() => {});
-  }
-
-  async function hasLegacyClientState(previousVersion) {
-    if (previousVersion) return true;
-
-    try {
-      if (Object.keys(localStorage).some((key) => key.startsWith('dy_'))) {
-        return true;
-      }
-    } catch (_) {
-      // ignore storage failures
-    }
-
-    try {
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        if (registrations.length > 0) return true;
-      }
-    } catch (_) {
-      // ignore SW inspection failures
-    }
-
-    try {
-      if ('caches' in window) {
-        const cacheKeys = await caches.keys();
-        if (cacheKeys.length > 0) return true;
-      }
-    } catch (_) {
-      // ignore cache inspection failures
-    }
-
-    return false;
+    return true;
   }
 
   async function ensureFreshClient() {
@@ -138,23 +64,8 @@
       return { changed: false, version: currentVersion };
     }
 
-    const shouldReset = await hasLegacyClientState(previousVersion);
-
-    if (!shouldReset) {
-      try {
-        localStorage.setItem(VERSION_KEY, currentVersion);
-      } catch (_) {
-        // ignore storage failures
-      }
-      return { changed: false, version: currentVersion };
-    }
-
-    await Promise.all([
-      clearCaches(),
-      unregisterServiceWorkers(),
-      clearIndexedDb()
-    ]);
-
+    // First visit or version changed — clear old caches only
+    await clearOldCaches();
     clearLegacyLocalStorage();
 
     try {
@@ -163,8 +74,16 @@
       // ignore storage failures
     }
 
-    await forceSingleReload(currentVersion);
-    return { changed: true, version: currentVersion };
+    // Only reload if we had a previous version (not first visit)
+    if (previousVersion && previousVersion !== 'dev') {
+      const reloaded = forceSingleReload(currentVersion);
+      if (reloaded) {
+        // Stop further execution — page is reloading
+        await new Promise(() => {});
+      }
+    }
+
+    return { changed: false, version: currentVersion };
   }
 
   async function handleWorkerActivation(message) {
@@ -180,7 +99,10 @@
     }
 
     if (incomingVersion !== currentVersion) {
-      await ensureFreshClient();
+      // Clear old caches and reload
+      await clearOldCaches();
+      try { localStorage.setItem(VERSION_KEY, incomingVersion); } catch (_) {}
+      forceSingleReload(incomingVersion);
     }
   }
 
@@ -197,7 +119,6 @@
   window.VersionManager = {
     version: build.version || 'dev',
     ready,
-    clearCaches,
-    clearIndexedDb
+    clearOldCaches
   };
 })();

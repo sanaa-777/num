@@ -1,8 +1,8 @@
 // =============================================
-// Service Worker - دليل Yemen PWA (Versioned)
+// Service Worker - دليل اليمن PWA (Versioned)
 // =============================================
 
-const BUILD_VERSION = '20260809231721';
+const BUILD_VERSION = '20260812193614';
 const CACHE_PREFIX = 'dalil-yemen-static-';
 const CACHE_NAME = `${CACHE_PREFIX}${BUILD_VERSION}`;
 const OFFLINE_FALLBACK = `/index.html?v=${BUILD_VERSION}`;
@@ -106,16 +106,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Always fetch these from network
   if (url.pathname === '/sw.js' || url.pathname === '/app/build-meta.js' || url.pathname === '/manifest.json') {
     event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
   }
 
+  // Navigation requests: network-first with offline fallback preserving hash
   if (isNavigationRequest(event.request)) {
-    event.respondWith(networkFirst(event.request, OFFLINE_FALLBACK));
+    event.respondWith(
+      networkFirst(event.request, OFFLINE_FALLBACK).catch(() => {
+        // Return cached index.html as fallback (SPA handles routing via hash)
+        return caches.match(OFFLINE_FALLBACK);
+      })
+    );
     return;
   }
 
+  // Static assets: cache-first
   event.respondWith(cacheFirst(event.request));
 });
 

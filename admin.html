@@ -9,9 +9,9 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png">
   <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png">
-  <link rel="stylesheet" href="app/tailwind.css">
+  <link rel="stylesheet" href="app/tailwind.css?v=20260812193614">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.js"></script>
   <style>
     * { font-family: 'Noto Kufi Arabic', sans-serif; box-sizing: border-box; }
     body { margin: 0; background: #f1f5f9; }
@@ -49,7 +49,7 @@
       <p style="color:#6b7280;font-size:13px;margin:0 0 24px;">الدليل اليمني التجاري</p>
       <div style="text-align:right;margin-bottom:12px;">
         <label class="field-label">البريد الإلكتروني</label>
-        <input type="email" id="adminEmail" class="field-input" value="admin@yemendirectory.net">
+        <input type="email" id="adminEmail" class="field-input" placeholder="البريد الإلكتروني">
       </div>
       <div style="text-align:right;margin-bottom:16px;">
         <label class="field-label">كلمة المرور</label>
@@ -71,16 +71,20 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
   <!-- Error Tracker -->
-  <script src="app/error-tracker.js"></script>
+  <script src="app/error-tracker.js?v=20260812193614"></script>
 
   <!-- Firebase Config -->
-  <script src="app/firebase-config.js"></script>
+  <script src="app/firebase-config.js?v=20260812193614"></script>
 
   <!-- App Modules -->
-  <script src="app/data-firestore.js"></script>
-  <script src="app/auth-firestore.js"></script>
-  <script src="app/admin-firestore.js"></script>
-  <script src="app/ads-firestore.js"></script>
+  <script src="app/data-firestore.js?v=20260812193614"></script>
+  <script src="app/auth-firestore.js?v=20260812193614"></script>
+  <script src="app/admin-firestore.js?v=20260812193614"></script>
+  <script src="app/ads-firestore.js?v=20260812193614"></script>
+  <script src="app/offers-firestore.js?v=20260812193614"></script>
+  <script src="app/jobs-firestore.js?v=20260812193614"></script>
+  <script src="app/events-firestore.js?v=20260812193614"></script>
+  <script src="app/pricing-firestore.js?v=20260812193614"></script>
 
   <script>
     // =============================================
@@ -216,37 +220,41 @@
       uploadImage: async function(file, folder) {
         if (!file) return null;
         try {
-          // Compress image and store as base64 data URL in Firestore
-          var compressed = await new Promise(function(resolve, reject) {
+          // 1. Compress image
+          var blob = await new Promise(function(resolve, reject) {
             var reader = new FileReader();
             reader.onload = function(e) {
               var img = new Image();
               img.onload = function() {
                 var canvas = document.createElement('canvas');
-                var maxSize = 600;
+                var maxSize = 1200;
                 var w = img.width, h = img.height;
                 if (w > maxSize) { h = (maxSize / w) * h; w = maxSize; }
                 if (h > maxSize) { w = (maxSize / h) * w; h = maxSize; }
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                resolve(canvas.toDataURL('image/jpeg', 0.7));
+                canvas.toBlob(function(b) { resolve(b); }, 'image/jpeg', 0.85);
               };
-              img.onerror = function() { reject(new Error('فشل تحميل الصورة')); };
+              img.onerror = function() { reject(new Error('فشل تحميل الصورة'));
+              };
               img.src = e.target.result;
             };
             reader.onerror = function() { reject(new Error('فشل قراءة الملف')); };
             reader.readAsDataURL(file);
           });
-          
-          // Check size (Firestore limit ~1MB per document)
-          if (compressed.length > 900000) {
-            throw new Error('الصورة كبيرة جداً. اختر صورة أصغر.');
-          }
-          
-          return compressed;
+
+          if (!blob) throw new Error('فشل ضغط الصورة');
+
+          // 2. Upload to Firebase Storage
+          var fileName = (folder || 'uploads') + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.jpg';
+          var storageRef = storage.ref(fileName);
+          var uploadTask = await storageRef.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
+          var downloadURL = await uploadTask.ref.getDownloadURL();
+
+          return downloadURL;
         } catch (e) {
-          console.error('Image processing error:', e);
-          throw new Error('فشل معالجة الصورة: ' + e.message);
+          console.error('Image upload error:', e);
+          throw new Error('فشل رفع الصورة: ' + e.message);
         }
       },
 

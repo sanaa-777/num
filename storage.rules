@@ -31,39 +31,37 @@ service firebase.storage {
         && isImageUpload(10 * 1024 * 1024);
     }
 
-    // صور الأماكن
+    // صور الأماكن (users and admin can upload)
     match /places/{userId}/{allPaths=**} {
       allow read: if true;
       allow write: if isSignedIn()
-        && request.auth.uid == userId
+        && (request.auth.uid == userId || isAdmin())
         && isImageUpload(10 * 1024 * 1024);
     }
 
-    // صور الإعلانات
-    match /ads/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAdmin()
-        && isImageUpload(10 * 1024 * 1024);
-    }
-
-    // صور العروض
+    // صور الأماكن (admin uploads via folder pattern)
     match /offers/{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin()
         && isImageUpload(10 * 1024 * 1024);
     }
 
-    // صور الوظائف
     match /jobs/{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin()
         && isImageUpload(10 * 1024 * 1024);
     }
 
-    // صور الفعاليات
     match /events/{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin()
+        && isImageUpload(10 * 1024 * 1024);
+    }
+
+    // Allow admin uploads to any folder (for admin panel image uploads)
+    match /uploads/{allPaths=**} {
+      allow read: if true;
+      allow write: if isSignedIn()
         && isImageUpload(10 * 1024 * 1024);
     }
   }
