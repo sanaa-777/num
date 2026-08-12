@@ -28,18 +28,16 @@ jobs:
       - name: Build production assets
         run: npm run build
 
-      - name: Write service account key
-        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEEL_39F2E }}' > /tmp/firebase-sa.json
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEEL_39F2E }}'
 
       - name: Deploy Firestore Rules & Indexes
         run: firebase deploy --only firestore --project deel-39f2e --force
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
 
       - name: Deploy Storage Rules
         run: firebase deploy --only storage --project deel-39f2e --force
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
 
       - name: Deploy Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
