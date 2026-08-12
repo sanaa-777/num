@@ -49,3 +49,4 @@ tmp/
 temp/
 .openclaw/
 firebase-sa.json
+.tools/
