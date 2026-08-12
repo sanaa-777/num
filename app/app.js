@@ -1390,37 +1390,157 @@ const App = {
     const activeTab = this._pricingTab || 'currencies';
     const items = Pricing.getByCategorySync(activeTab);
     const catInfo = Pricing.getCategoryInfo(activeTab);
-    return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
-      <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
-        <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
-        <i data-lucide="chevron-left" class="w-3 h-3"></i>
-        <span class="text-gray-700 font-medium">التسعيرات</span>
-      </div>
-      <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="trending-up" class="w-6 h-6 text-purple-500"></i>أسعار اليوم</h2>
-      <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
-        ${categories.map(c => `<button onclick="App._pricingTab='${c.id}';App.render()" class="px-4 py-2.5 rounded-xl text-xs font-medium ${activeTab === c.id ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'} flex items-center gap-1.5 whitespace-nowrap"><i data-lucide="${c.icon}" class="w-3.5 h-3.5"></i>${c.name}</button>`).join('')}
-      </div>
-      <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div class="p-3 md:p-4 border-b border-gray-100">
-          <p class="text-xs text-gray-500 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i>آخر تحديث: <strong>${items.length && items[0]?.lastUpdated?.toDate ? items[0].lastUpdated.toDate().toLocaleDateString('ar') : 'غير محدد'}</strong></p>
+
+    // Country flags for currencies
+    const FLAGS = {
+      'USD': '🇺🇸', 'EUR': '🇪🇺', 'SAR': '🇸🇦', 'YER': '🇾🇪', 'AED': '🇦🇪', 'KWD': '🇰🇼',
+      'BHD': '🇧🇭', 'QAR': '🇶🇦', 'OMR': '🇴🇲', 'JOD': '🇯🇴', 'EGP': '🇪🇬', 'GBP': '🇬🇧',
+      'TRY': '🇹🇷', 'RUB': '🇷🇺', 'INR': '🇮🇳', 'PKR': '🇵🇰', 'CNY': '🇨🇳', 'JPY': '🇯🇵',
+      'AUD': '🇦🇺', 'CAD': '🇨🇦', 'CHF': '🇨🇭', 'SYP': '🇸🇾', 'SDG': '🇸🇩', 'DZD': '🇩🇿',
+      'IQD': '🇮🇶', 'LBP': '🇱🇧', 'MAD': '🇲🇦', 'TND': '🇹🇳', 'LYD': '🇱🇾', 'SOS': '🇸🇴',
+      'DJF': '🇩🇯', 'ETB': '🇪🇹', 'KMF': '🇰🇲', 'MUR': '🇲🇺', 'SCR': '🇸🇨', 'BRL': '🇧🇷',
+      'MXN': '🇲🇽', 'ARS': '🇦🇷', 'CLP': '🇨🇱', 'COP': '🇨🇴', 'PEN': '🇵🇪', 'ZAR': '🇿🇦',
+      'NGN': '🇳🇬', 'GHS': '🇬🇭', 'KES': '🇰🇪', 'TZS': '🇹🇿', 'UGX': '🇺🇬', 'THB': '🇹🇭',
+      'SGD': '🇸🇬', 'MYR': '🇲🇾', 'IDR': '🇮🇩', 'PHP': '🇵🇭', 'VND': '🇻🇳', 'KRW': '🇰🇷',
+      'SEK': '🇸🇪', 'NOK': '🇳🇴', 'DKK': '🇩🇰', 'PLN': '🇵🇱', 'CZK': '🇨🇿', 'HUF': '🇭🇺',
+      'RON': '🇷🇴', 'BGN': '🇧🇬', 'HRK': '🇭🇷', 'ISK': '🇮🇸', 'NZD': '🇳🇿', 'HKD': '🇭🇰',
+      'TWD': '🇹🇼', 'BDT': '🇧🇩', 'LKR': '🇱🇰', 'NPR': '🇳🇵', 'AFN': '🇦🇫', 'MMK': '🇲🇲',
+      'KHR': '🇰🇭', 'LAK': '🇱🇦', 'MNT': '🇲🇳', 'UZS': '🇺🇿', 'KZT': '🇰🇿', 'GEL': '🇬🇪',
+      'AMD': '🇦🇲', 'AZN': '🇦🇿', 'TMT': '🇹🇲', 'IRR': '🇮🇷', 'BAM': '🇧🇦', 'MKD': '🇲🇰',
+      'ALL': '🇦🇱', 'RSD': '🇷🇸', 'MDL': '🇲🇩', 'UAH': '🇺🇦', 'BYN': '🇧🇾', 'GEL': '🇬🇪'
+    };
+
+    // Get flag or icon for item
+    function getItemIcon(item) {
+      if (activeTab === 'currencies') {
+        const code = (item.currencyCode || item.name || '').toUpperCase().substring(0, 3);
+        return FLAGS[code] ? `<span class="text-lg">${FLAGS[code]}</span>` : `<span class="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center"><i data-lucide="banknote" class="w-3.5 h-3.5 text-blue-500"></i></span>`;
+      }
+      if (activeTab === 'metals') {
+        return `<span class="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center"><i data-lucide="gem" class="w-3.5 h-3.5 text-amber-500"></i></span>`;
+      }
+      if (activeTab === 'fuel') {
+        return `<span class="w-7 h-7 rounded-full bg-red-50 flex items-center justify-center"><i data-lucide="fuel" class="w-3.5 h-3.5 text-red-500"></i></span>`;
+      }
+      if (activeTab === 'food') {
+        return `<span class="w-7 h-7 rounded-full bg-green-50 flex items-center justify-center"><i data-lucide="shopping-cart" class="w-3.5 h-3.5 text-green-500"></i></span>`;
+      }
+      if (activeTab === 'crypto') {
+        return `<span class="w-7 h-7 rounded-full bg-purple-50 flex items-center justify-center"><i data-lucide="bitcoin" class="w-3.5 h-3.5 text-purple-500"></i></span>`;
+      }
+      return `<span class="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center"><i data-lucide="circle" class="w-3.5 h-3.5 text-gray-400"></i></span>`;
+    }
+
+    // Price change indicator
+    function priceChange(item) {
+      const change = item.priceChange || 0;
+      if (change > 0) return `<span class="inline-flex items-center gap-0.5 text-green-600 text-[10px] font-medium"><i data-lucide="trending-up" class="w-3 h-3"></i></span>`;
+      if (change < 0) return `<span class="inline-flex items-center gap-0.5 text-red-500 text-[10px] font-medium"><i data-lucide="trending-down" class="w-3 h-3"></i></span>`;
+      return `<span class="inline-flex items-center gap-0.5 text-gray-400 text-[10px]"><i data-lucide="minus" class="w-3 h-3"></i></span>`;
+    }
+
+    // Column labels based on category
+    const colLabels = {
+      currencies: { col1: 'العملة', col2: 'الشراء', col3: 'البيع' },
+      metals: { col1: 'النوع', col2: 'الشراء', col3: 'البيع' },
+      fuel: { col1: 'الوقود', col2: 'السعر', col3: 'الوحدة' },
+      food: { col1: 'السلعة', col2: 'السعر', col3: 'الوحدة' },
+      crypto: { col1: 'العملة', col2: 'السعر', col3: 'التغير' }
+    };
+    const cols = colLabels[activeTab] || colLabels.currencies;
+
+    // Section color
+    const sectionColor = catInfo?.color || '#3b82f6';
+
+    return `<section class="py-6 md:py-8">
+      <div class="max-w-4xl mx-auto px-3">
+        <!-- Breadcrumb -->
+        <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
+          <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
+          <i data-lucide="chevron-left" class="w-3 h-3"></i>
+          <span class="text-gray-700 font-medium">التسعيرات</span>
         </div>
-        ${items.length ? `<div class="overflow-x-auto"><table class="w-full text-xs">
-          <thead class="bg-gray-50"><tr>
-            <th class="px-3 py-3 text-right font-medium text-gray-500">العملة / الدولة</th>
-            <th class="px-3 py-3 text-right font-medium text-gray-500">سعر الشراء</th>
-            <th class="px-3 py-3 text-right font-medium text-gray-500">سعر البيع</th>
-            <th class="px-3 py-3 text-right font-medium text-gray-500">المنطقة</th>
-          </tr></thead>
-          <tbody class="divide-y divide-gray-100">
-            ${items.map(item => `<tr class="hover:bg-gray-50">
-              <td class="px-3 py-3 font-medium text-gray-900">${item.name || item.currencyName || ''}</td>
-              <td class="px-3 py-3 text-green-600 font-bold">${item.buyPrice || '-'}</td>
-              <td class="px-3 py-3 text-red-600 font-bold">${item.sellPrice || '-'}</td>
-              <td class="px-3 py-3 text-gray-500">${item.region || '-'}</td>
-            </tr>`).join('')}
-          </tbody></table></div>` : '<div class="text-center py-12 text-gray-400"><i data-lucide="trending-up" class="w-16 h-16 mx-auto mb-3 text-gray-300"></i><br>لا توجد أسعار في هذا القسم</div>'}
+
+        <!-- Title -->
+        <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-5 flex items-center gap-2">
+          <i data-lucide="trending-up" class="w-6 h-6" style="color:${sectionColor}"></i>
+          أسعار اليوم
+        </h2>
+
+        <!-- Category Tabs -->
+        <div class="flex gap-2 mb-5 overflow-x-auto pb-2 scrollbar-hide">
+          ${categories.map(c => `
+            <button onclick="App._pricingTab='${c.id}';App.render()"
+              class="px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === c.id
+                  ? 'text-white shadow-md'
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+              }"
+              ${activeTab === c.id ? `style="background:${c.color}"` : ''}>
+              <i data-lucide="${c.icon}" class="w-3.5 h-3.5"></i>${c.name}
+            </button>
+          `).join('')}
+        </div>
+
+        <!-- Pricing Card -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <!-- Card Header -->
+          <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full" style="background:${sectionColor}"></span>
+              <h3 class="text-sm font-bold text-gray-800">${catInfo?.name || 'الأسعار'}</h3>
+            </div>
+            <span class="text-[10px] text-gray-400 flex items-center gap-1">
+              <i data-lucide="clock" class="w-3 h-3"></i>
+              ${items.length && items[0]?.lastUpdated?.toDate ? items[0].lastUpdated.toDate().toLocaleDateString('ar') : 'غير محدد'}
+            </span>
+          </div>
+
+          ${items.length ? `
+          <!-- Column Headers -->
+          <div class="grid grid-cols-[1fr_auto_auto] gap-3 px-4 py-2.5 border-b border-gray-100 bg-gray-50/80">
+            <div class="text-[11px] font-semibold text-gray-500 text-right">${cols.col1}</div>
+            <div class="text-[11px] font-semibold text-gray-500 text-right min-w-[80px]">${cols.col2}</div>
+            <div class="text-[11px] font-semibold text-gray-500 text-right min-w-[80px]">${cols.col3}</div>
+          </div>
+
+          <!-- Rows -->
+          <div class="divide-y divide-gray-50">
+            ${items.map((item, i) => `
+              <div class="grid grid-cols-[1fr_auto_auto] gap-3 items-center px-4 py-3 hover:bg-gray-50/50 transition-colors">
+                <!-- Name + Icon -->
+                <div class="flex items-center gap-2.5 min-w-0">
+                  ${getItemIcon(item)}
+                  <div class="min-w-0">
+                    <div class="text-sm font-semibold text-gray-900 truncate">${item.name || item.currencyName || ''}</div>
+                    ${item.unit ? `<div class="text-[10px] text-gray-400">${item.unit}</div>` : ''}
+                  </div>
+                </div>
+                <!-- Buy Price -->
+                <div class="text-right min-w-[80px]">
+                  <span class="text-sm font-bold text-gray-900 tabular-nums">${item.buyPrice || '-'}</span>
+                  ${item.currencyCode ? `<span class="text-[9px] text-gray-400 mr-1">${item.currencyCode}</span>` : ''}
+                </div>
+                <!-- Sell Price + Change -->
+                <div class="text-right min-w-[80px] flex items-center gap-1 justify-end">
+                  <span class="text-sm font-bold text-gray-900 tabular-nums">${item.sellPrice || '-'}</span>
+                  ${priceChange(item)}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          ` : `
+          <!-- Empty State -->
+          <div class="text-center py-16">
+            <div class="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-3">
+              <i data-lucide="trending-up" class="w-8 h-8 text-gray-300"></i>
+            </div>
+            <p class="text-sm text-gray-400">لا توجد أسعار في هذا القسم</p>
+          </div>
+          `}
+        </div>
       </div>
-    </div></section>`;
+    </section>`;
   },
 
   // ====== DETAIL PAGE (Offers/Jobs/Events) ======
