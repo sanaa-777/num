@@ -16,6 +16,7 @@ const APP_SHELL = [
   `/app/error-tracker.js?v=${BUILD_VERSION}`,
   `/app/firebase-config.js?v=${BUILD_VERSION}`,
   `/app/data-firestore.js?v=${BUILD_VERSION}`,
+  `/app/image-storage.js?v=${BUILD_VERSION}`,
   `/app/auth-firestore.js?v=${BUILD_VERSION}`,
   `/app/admin-firestore.js?v=${BUILD_VERSION}`,
   `/app/ads-firestore.js?v=${BUILD_VERSION}`,

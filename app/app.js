@@ -991,6 +991,7 @@ const App = {
               </label>
               <div id="placeImagePreview" class="flex flex-wrap gap-2"></div>
               <p class="text-[10px] text-gray-400 mt-1">${this.placeImages.length}/5 صور مرفوعة</p>
+              ${!ImageStorage.isConfigured() ? '<p class="text-[10px] text-orange-500 mt-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>رفع الصور غير مفعّل. يرجى التواصل مع الإدارة.</p>' : ''}
             </div>
             <button onclick="App.submitPlace()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i>إضافة المكان</button>
           </div>
@@ -1776,20 +1777,22 @@ const App = {
     const n = document.getElementById('placeName').value, c = document.getElementById('placeCategory').value, s = document.getElementById('placeSubCategory').value, ci = document.getElementById('placeCity').value;
     const workDays = Array.from(document.querySelectorAll('.work-day-cb:checked')).map(cb => cb.value);
     try {
-      // Upload images to Firebase Storage (not base64 in Firestore)
+      // Upload images to GitHub-based storage (free, no payment)
       let imageUrls = [];
       if (this.placeImages && this.placeImages.length > 0) {
-        this.showToast('جاري رفع الصور...', 'info', 10000);
-        for (const dataUrl of this.placeImages) {
-          try {
-            const blob = await fetch(dataUrl).then(r => r.blob());
-            const fileName = 'places/' + Auth.currentUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.jpg';
-            const ref = storage.ref(fileName);
-            const snapshot = await ref.put(blob, { contentType: 'image/jpeg', cacheControl: 'public,max-age=31536000,immutable' });
-            const url = await snapshot.ref.getDownloadURL();
-            imageUrls.push(url);
-          } catch (uploadErr) {
-            console.error('Image upload failed:', uploadErr);
+        if (!ImageStorage.isConfigured()) {
+          this.showToast('⚠️ الصور غير مفعّلة. أضف GitHub Token من لوحة التحكم لتمكين رفع الصور.', 'warning', 5000);
+        } else {
+          this.showToast('جاري رفع الصور...', 'info', 10000);
+          for (const dataUrl of this.placeImages) {
+            try {
+              const blob = await fetch(dataUrl).then(r => r.blob());
+              const result = await ImageStorage.upload(blob, 'places/' + (Auth.currentUser?.id || 'anon'));
+              imageUrls.push(result.url);
+            } catch (uploadErr) {
+              console.error('Image upload failed:', uploadErr);
+              this.showToast('فشل رفع صورة: ' + uploadErr.message, 'error');
+            }
           }
         }
       }
