@@ -14,9 +14,12 @@
 // =============================================
 
 const ImageStorage = {
-  // Cloudinary config — set via admin panel, persisted in localStorage
-  _cloudName: localStorage.getItem('dy_cloud_name') || '',
-  _uploadPreset: localStorage.getItem('dy_upload_preset') || '',
+  // Cloudinary config — defaults hardcoded (safe to expose: unsigned preset)
+  // Admin can override via localStorage if needed
+  _DEFAULT_CLOUD: 'unsin9eb',
+  _DEFAULT_PRESET: 'dalil_unsigned',
+  _cloudName: localStorage.getItem('dy_cloud_name') || 'unsin9eb',
+  _uploadPreset: localStorage.getItem('dy_upload_preset') || 'dalil_unsigned',
 
   // Compression settings
   MAX_DIMENSION: 1200,
