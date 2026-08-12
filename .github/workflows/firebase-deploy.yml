@@ -33,8 +33,11 @@ jobs:
         with:
           credentials_json: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEEL_39F2E }}'
 
-      - name: Deploy Firestore Rules & Indexes
-        run: firebase deploy --only firestore --project deel-39f2e --force
+      - name: Deploy Firestore Rules
+        run: firebase deploy --only firestore:rules --project deel-39f2e --force
+
+      - name: Deploy Firestore Indexes
+        run: firebase deploy --only firestore:indexes --project deel-39f2e --force
 
       - name: Deploy Storage Rules
         run: firebase deploy --only storage --project deel-39f2e --force
