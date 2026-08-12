@@ -26,9 +26,20 @@ const App = {
       await Promise.race([Auth.init(), authTimeout]);
       
       // Now render with auth state
-      this.render();
+      // If hash is a detail view, don't render home first (prevents flicker)
+      const initHash = location.hash.slice(1) || 'home';
+      const initView = initHash.split('/')[0];
+      const isDetailView = ['place', 'offer', 'job', 'event'].includes(initView);
+      
+      if (isDetailView) {
+        // Show loading state instead of home
+        this.currentView = initView;
+        this.handleRoute();
+      } else {
+        this.render();
+        this.handleRoute();
+      }
       window.addEventListener('hashchange', () => this.handleRoute());
-      this.handleRoute();
       
       // Load remaining data in background
       Admin.initDefaultAdmin().catch(() => {});
@@ -742,7 +753,32 @@ const App = {
   // ====== PLACE DETAILS ======
   showPlace(pid) {
     const place = Data.getPlacesSync().find(p => p.id === pid);
-    if (!place) { location.hash = 'home'; return; }
+    if (!place) {
+      // Data not loaded yet - show loading and wait
+      const app = document.getElementById('app');
+      app.innerHTML = `<div class="min-h-screen bg-gray-50">${this.renderHeader(Auth.currentUser)}
+        <section class="py-12 text-center">
+          <div class="max-w-md mx-auto">
+            <div class="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+            <p class="text-gray-500 text-sm">جاري تحميل النشاط...</p>
+          </div>
+        </section>
+      ${this.renderFooter()}</div>`;
+      this.initIcons();
+      // Wait for data to load, then try again
+      Data.preloadAll().then(() => {
+        const retryPlace = Data.getPlacesSync().find(p => p.id === pid);
+        if (retryPlace) {
+          this.showPlace(pid);
+        } else {
+          // Place truly doesn't exist
+          location.hash = 'home';
+        }
+      }).catch(() => {
+        location.hash = 'home';
+      });
+      return;
+    }
     // Save scroll position of previous view
     if (this.currentView !== 'place') {
       try { this._scrollPositions[this.currentView] = window.scrollY; } catch(e) {}
