@@ -1,4 +1,4 @@
-# Auto-deploy to Firebase Hosting + Firestore + Storage on push to main
+# Auto-deploy to Firebase Hosting + Rules on push to main
 name: Deploy to Firebase
 
 on:
@@ -25,23 +25,7 @@ jobs:
       - name: Build production assets
         run: npm run build
 
-      - name: Deploy Firestore Rules & Indexes
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only firestore
-        env:
-          FIREBASE_TOKEN: '${{ secrets.FIREBASE_TOKEN }}'
-          PROJECT_ID: deel-39f2e
-
-      - name: Deploy Storage Rules
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only storage
-        env:
-          FIREBASE_TOKEN: '${{ secrets.FIREBASE_TOKEN }}'
-          PROJECT_ID: deel-39f2e
-
-      - name: Deploy Hosting
+      - name: Deploy to dalil-yemen-deel.web.app
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
