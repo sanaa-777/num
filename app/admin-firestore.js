@@ -188,7 +188,11 @@ const Admin = {
 
   async approvePlace(placeId, note) {
     try {
-      await db.collection('places').doc(placeId).update({
+      const ref = db.collection('places').doc(placeId);
+      const doc = await ref.get();
+      if (!doc.exists) return false;
+      const place = doc.data();
+      await ref.update({
         status: 'approved',
         isActive: true,
         adminNote: note || '',
@@ -196,7 +200,19 @@ const Admin = {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       Data._invalidateCache();
-      await this.addNotification('approve', `تمت الموافقة على نشاط: ${placeId}`);
+      await this.addNotification('approve', `تمت الموافقة على نشاط: ${place.name || placeId}`);
+      // Notify the user
+      if (place.owner) {
+        try {
+          await db.collection('notifications').add({
+            userId: place.owner,
+            type: 'admin',
+            message: `✅ تمت الموافقة على نشاطك "${place.name || ''}"${note ? ' - ملاحظة: ' + note : ''}`,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (notifErr) { console.error('User notification error:', notifErr); }
+      }
       return true;
     } catch (e) {
       console.error('approvePlace error:', e);
@@ -206,7 +222,11 @@ const Admin = {
 
   async rejectPlace(placeId, note) {
     try {
-      await db.collection('places').doc(placeId).update({
+      const ref = db.collection('places').doc(placeId);
+      const doc = await ref.get();
+      if (!doc.exists) return false;
+      const place = doc.data();
+      await ref.update({
         status: 'rejected',
         isActive: false,
         adminNote: note || '',
@@ -214,7 +234,19 @@ const Admin = {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       Data._invalidateCache();
-      await this.addNotification('reject', `تم رفض نشاط: ${placeId}`);
+      await this.addNotification('reject', `تم رفض نشاط: ${place.name || placeId}`);
+      // Notify the user
+      if (place.owner) {
+        try {
+          await db.collection('notifications').add({
+            userId: place.owner,
+            type: 'admin',
+            message: `❌ تم رفض نشاطك "${place.name || ''}"${note ? ' - السبب: ' + note : ''}`,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (notifErr) { console.error('User notification error:', notifErr); }
+      }
       return true;
     } catch (e) {
       console.error('rejectPlace error:', e);

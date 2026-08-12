@@ -76,10 +76,10 @@
   <script src="app/firebase-config.js?v=20260812193614"></script>
 
   <!-- App Modules -->
-  <script src="app/image-storage.js?v=20260813041000"></script>
-  <script src="app/data-firestore.js?v=20260813041000"></script>
+  <script src="app/image-storage.js?v=20260813052000"></script>
+  <script src="app/data-firestore.js?v=20260813052000"></script>
   <script src="app/auth-firestore.js?v=20260812193614"></script>
-  <script src="app/admin-firestore.js?v=20260812193614"></script>
+  <script src="app/admin-firestore.js?v=20260813052000"></script>
   <script src="app/ads-firestore.js?v=20260812193614"></script>
   <script src="app/offers-firestore.js?v=20260812193614"></script>
   <script src="app/jobs-firestore.js?v=20260812193614"></script>
@@ -575,6 +575,7 @@
       },
 
       renderPlaces: function(places, stats) {
+        var self = this;
         var q = (this.placeSearch || '').trim().toLowerCase();
         var filter = this.placeFilter || 'all';
         var filtered = places.filter(function(p) {
@@ -589,7 +590,37 @@
           return true;
         });
 
+        // Place edit form
+        var formHtml = '';
+        if (self.editingPlace) {
+          var ep = self.editingPlace;
+          formHtml = '<div class="bg-white rounded-xl border border-gray-200 p-5 mb-4 shadow-sm">' +
+            '<div class="flex items-center justify-between mb-4">' +
+              '<h3 class="text-sm font-bold">تعديل النشاط: ' + (ep.name || '') + '</h3>' +
+              '<button onclick="AdminPanel.cancelPlaceEdit()" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"><i data-lucide="x" class="w-4 h-4"></i></button>' +
+            '</div>' +
+            '<div id="placeFormError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:12px;margin-bottom:12px;"></div>' +
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+              '<div><label class="field-label">اسم النشاط *</label><input type="text" id="editPlaceName" class="field-input" value="' + (ep.name || '') + '"></div>' +
+              '<div><label class="field-label">الهاتف</label><input type="tel" id="editPlacePhone" class="field-input" value="' + (ep.phone || '') + '"></div>' +
+              '<div><label class="field-label">واتساب</label><input type="tel" id="editPlaceWhatsapp" class="field-input" value="' + (ep.whatsapp || '') + '"></div>' +
+              '<div><label class="field-label">العنوان</label><input type="text" id="editPlaceAddress" class="field-input" value="' + (ep.address || '') + '"></div>' +
+              '<div class="md:col-span-2"><label class="field-label">الوصف</label><textarea id="editPlaceDesc" class="field-input" rows="3">' + (ep.description || '') + '</textarea></div>' +
+              '<div class="md:col-span-2"><label class="field-label">ملاحظة الأدمن</label><textarea id="editPlaceNote" class="field-input" rows="2">' + (ep.adminNote || '') + '</textarea></div>' +
+              '<div><label class="field-label">الصورة الحالية</label>' +
+                ((ep.image || (ep.images && ep.images[0])) ? '<img src="' + (ep.image || ep.images[0]) + '" class="w-20 h-20 rounded-lg object-cover mt-1">' : '<p class="text-gray-400 text-xs mt-1">لا توجد صورة</p>') +
+              '</div>' +
+              '<div><label class="field-label">صورة جديدة (اختياري)</label><input type="file" id="editPlaceImageFile" accept="image/*" class="text-xs mt-1"></div>' +
+            '</div>' +
+            '<div class="flex items-center gap-3 mt-5 pt-4 border-t border-gray-100">' +
+              '<button onclick="AdminPanel.savePlaceEdit(\'' + ep.id + '\')" class="px-5 py-2.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="save" class="w-3.5 h-3.5"></i>حفظ التعديلات</button>' +
+              '<button onclick="AdminPanel.cancelPlaceEdit()" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">إلغاء</button>' +
+            '</div>' +
+          '</div>';
+        }
+
         return '<div class="space-y-4">' +
+          formHtml +
           '<div class="bg-white rounded-xl border border-gray-100 p-4">' +
             '<div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">' +
               '<div class="flex flex-wrap gap-2">' +
@@ -623,7 +654,11 @@
                   ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 mr-1">معلّق</span>'
                   : '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 mr-1">نشط</span>';
                 return '<tr class="hover:bg-gray-50 align-top">' +
-                  '<td class="px-3 py-3"><div class="font-medium">' + (p.name || 'نشاط بدون اسم') + '</div><div class="text-[10px] text-gray-400">' + (p.phone || '') + ' • ' + (p.address || '') + '</div></td>' +
+                  '<td class="px-3 py-3"><div class="flex items-center gap-2">' +
+                    ((p.image || (p.images && p.images[0])) ? '<img src="' + (p.image || p.images[0]) + '" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.style.display=\'none\'">' : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>') +
+                    '<div><div class="font-medium">' + (p.name || 'نشاط بدون اسم') + '</div><div class="text-[10px] text-gray-400">' + (p.phone || '') + ' • ' + (p.address || '') + '</div>' +
+                    (p.images && p.images.length > 1 ? '<span class="text-[9px] text-blue-500">' + p.images.length + ' صور</span>' : '') +
+                    '</div></div></td>' +
                   '<td class="px-3 py-3 text-gray-600">' + (cat ? cat.name : '-') + '</td>' +
                   '<td class="px-3 py-3">' + statusBadge + activeBadge + (p.verified ? '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700 mr-1">موثّق</span>' : '') + (p.featured ? '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 mr-1">مميّز</span>' : '') + '</td>' +
                   '<td class="px-3 py-3 text-gray-500 max-w-xs">' + (p.adminNote || '-') + '</td>' +
@@ -633,6 +668,7 @@
                     '<button onclick="AdminPanel.togglePlaceActive(\'' + p.id + '\',' + (p.isActive === false ? 'true' : 'false') + ')" class="p-1.5 rounded-lg ' + (p.isActive === false ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-slate-100 text-slate-700 hover:bg-slate-200') + '" title="' + (p.isActive === false ? 'إعادة تفعيل' : 'تعليق') + '"><i data-lucide="' + (p.isActive === false ? 'play' : 'pause') + '" class="w-3.5 h-3.5"></i></button>' +
                     '<button onclick="AdminPanel.verifyPlace(\'' + p.id + '\')" class="p-1.5 rounded-lg ' + (p.verified ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-blue-200" title="توثيق"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>' +
                     '<button onclick="AdminPanel.featurePlace(\'' + p.id + '\')" class="p-1.5 rounded-lg ' + (p.featured ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-yellow-200" title="تمييز"><i data-lucide="star" class="w-3.5 h-3.5"></i></button>' +
+                    '<button onclick="AdminPanel.editPlaceItem(\'' + p.id + '\')" class="p-1.5 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200" title="تعديل"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>' +
                   '</div></td>' +
                 '</tr>';
               }).join('') +
@@ -1160,6 +1196,58 @@
       featurePlace: async function(placeId) { await Admin.featurePlace(placeId); this.render(); },
       approvePlace: async function(placeId) { var note = prompt('ملاحظة الموافقة (اختياري):'); await Admin.approvePlace(placeId, note || ''); this.render(); },
       rejectPlace: async function(placeId) { var note = prompt('سبب الرفض (اختياري):'); await Admin.rejectPlace(placeId, note || ''); this.render(); },
+      editPlaceItem: async function(placeId) {
+        try {
+          var doc = await db.collection('places').doc(placeId).get();
+          if (!doc.exists) { this.showToast('النشاط غير موجود', 'error'); return; }
+          var data = doc.data();
+          data.id = placeId;
+          this.editingPlace = data;
+          this.render();
+        } catch (e) {
+          console.error('Edit place error:', e);
+          this.showToast('تعذر جلب البيانات', 'error');
+        }
+      },
+      savePlaceEdit: async function(placeId) {
+        var errEl = document.getElementById('placeFormError');
+        if (errEl) errEl.style.display = 'none';
+        try {
+          var data = {
+            name: (document.getElementById('editPlaceName') || {}).value || '',
+            phone: (document.getElementById('editPlacePhone') || {}).value || '',
+            whatsapp: (document.getElementById('editPlaceWhatsapp') || {}).value || '',
+            address: (document.getElementById('editPlaceAddress') || {}).value || '',
+            description: (document.getElementById('editPlaceDesc') || {}).value || '',
+            adminNote: (document.getElementById('editPlaceNote') || {}).value || '',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+          if (!data.name) {
+            if (errEl) { errEl.textContent = 'اسم النشاط مطلوب'; errEl.style.display = 'block'; }
+            return;
+          }
+          // Handle image upload
+          var fileInput = document.getElementById('editPlaceImageFile');
+          if (fileInput && fileInput.files && fileInput.files[0]) {
+            try {
+              var imageUrl = await this.uploadImage(fileInput.files[0], 'places');
+              data.image = imageUrl;
+              data.images = [imageUrl];
+            } catch (uploadErr) {
+              if (errEl) { errEl.textContent = 'فشل رفع الصورة: ' + uploadErr.message; errEl.style.display = 'block'; }
+              return;
+            }
+          }
+          await db.collection('places').doc(placeId).update(data);
+          this.showToast('تم تحديث النشاط بنجاح', 'success');
+          this.editingPlace = null;
+          await this.render();
+        } catch (e) {
+          console.error('Save place error:', e);
+          if (errEl) { errEl.textContent = 'حدث خطأ: ' + e.message; errEl.style.display = 'block'; }
+        }
+      },
+      cancelPlaceEdit: function() { this.editingPlace = null; this.render(); },
       configureCloudinary: async function() {
         var nameInput = document.getElementById('cldNameInput');
         var presetInput = document.getElementById('cldPresetInput');

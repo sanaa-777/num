@@ -398,7 +398,16 @@ const Data = {
         .startAfter(this._lastDoc)
         .limit(this._pageSize);
       const snapshot = await query.get();
-      const newDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const newDocs = snapshot.docs.map(doc => {
+        const d = doc.data();
+        const place = { id: doc.id, ...d };
+        // Normalize: ensure images[] array always exists
+        if ((!place.images || place.images.length === 0) && place.image) {
+          place.images = [place.image];
+        }
+        if (!place.images) place.images = [];
+        return place;
+      });
       this._lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
       this._hasMore = snapshot.docs.length >= this._pageSize;
       // Append to cache, avoiding duplicates
