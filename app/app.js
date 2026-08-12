@@ -6,6 +6,15 @@ const App = {
   currentView: 'home', searchQuery: '', selectedCategory: null, selectedSubCategory: null, selectedCity: null, _selectedRating: 0, _initialized: false, _lastRenderedView: null, _scrollPositions: {}, _isRestoringScroll: false,
 
   async init() {
+    // Path-to-hash redirect: /place/ID → /#place/ID
+    var _p = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
+    var _pp = _p.split('/');
+    var _validTypes = {place:1, offer:1, job:1, event:1};
+    if (_pp[0] && _pp[1] && _validTypes[_pp[0]]) {
+      window.location.replace('/#' + _pp[0] + '/' + _pp[1]);
+      return;
+    }
+
     if (this._initialized) return;
     this._initialized = true;
     try {
@@ -1420,7 +1429,7 @@ const App = {
 
   // Share base URL — set to Cloudflare Worker domain for OG previews
   // After deploying the worker, update this to: https://og-dalil-yemen.YOUR_SUBDOMAIN.workers.dev
-  SHARE_BASE: 'https://og-dalil-yemen.fakyou050.workers.dev',
+  SHARE_BASE: location.origin,
 
   _buildShareUrl(type, id) {
     // Use clean path URL for social previews (OG proxy supports /type/id)

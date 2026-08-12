@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الدليل اليمني التجاري</title>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="الدليل اليمني التجاري">
+  <meta property="og:title" content="الدليل اليمني التجاري | الدليل الشامل للأعمال والأماكن في اليمن">
+  <meta property="og:description" content="الدليل اليمني التجاري - ابحث عن المطاعم والفنادق والعيادات والصيدليات والمتاجر وجميع الخدمات التجارية في اليمن.">
+  <meta property="og:image" content="https://dalil-yemen-deel.web.app/assets/branding/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:url" content="https://dalil-yemen-deel.web.app/">
+  <meta property="og:locale" content="ar_YE">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="الدليل اليمني التجاري">
+  <meta name="twitter:description" content="الدليل اليمني التجاري - الدليل الشامل للأعمال والأماكن في اليمن">
+  <meta name="twitter:image" content="https://dalil-yemen-deel.web.app/assets/branding/og-image.jpg">
+  <noscript>
+    <meta http-equiv="refresh" content="0;url=/">
+  </noscript>
+</head>
+<body>
+  <p>جاري التحميل...</p>
+  <script>
+    (function() {
+      var path = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
+      var parts = path.split('/');
+      var type = parts[0];
+      var id = parts[1];
+      var validTypes = {place: 'places', offer: 'offers', job: 'jobs', event: 'events'};
+
+      if (!type || !id || !validTypes[type]) {
+        window.location.replace('/');
+        return;
+      }
+
+      var collection = validTypes[type];
+      var hashUrl = '/#' + type + '/' + id;
+
+      // Fetch item from Firestore and update OG tags
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', 'https://firestore.googleapis.com/v1/projects/deel-39f2e/databases/(default)/documents/' + collection + '/' + id);
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          try {
+            var doc = JSON.parse(xhr.responseText);
+            var f = doc.fields || {};
+            var title = (f.title && f.title.stringValue) || (f.name && f.name.stringValue) || '';
+            var desc = (f.description && f.description.stringValue) || (f.bio && f.bio.stringValue) || '';
+            var image = '';
+
+            if (f.image && f.image.stringValue) image = f.image.stringValue;
+            else if (f.imageUrl && f.imageUrl.stringValue) image = f.imageUrl.stringValue;
+            else if (f.images && f.images.arrayValue && f.images.arrayValue.values && f.images.arrayValue.values.length > 0)
+              image = f.images.arrayValue.values[0].stringValue || '';
+
+            if (title) {
+              document.title = title + ' | الدليل اليمني التجاري';
+              setMeta('og:title', title);
+              setMeta('twitter:title', title);
+            }
+            if (desc) {
+              setMeta('og:description', desc);
+              setMeta('twitter:description', desc);
+            }
+            if (image) {
+              setMeta('og:image', image);
+              setMeta('twitter:image', image);
+            }
+            setMeta('og:url', 'https://dalil-yemen-deel.web.app/' + type + '/' + id);
+          } catch(e) {}
+        }
+        window.location.replace(hashUrl);
+      };
+      xhr.onerror = function() { window.location.replace(hashUrl); };
+      xhr.send();
+
+      // Timeout fallback
+      setTimeout(function() { window.location.replace(hashUrl); }, 3000);
+
+      function setMeta(property, content) {
+        var el = document.querySelector('meta[property="' + property + '"]') ||
+                 document.querySelector('meta[name="' + property + '"]');
+        if (el) el.setAttribute('content', content);
+      }
+    })();
+  </script>
+</body>
+</html>
