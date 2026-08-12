@@ -809,11 +809,11 @@ const App = {
             <!-- Social Share Links -->
             <div class="flex flex-wrap gap-2 mb-4">
               <span class="text-xs text-gray-400">مشاركة عبر:</span>
-              <a href="https://wa.me/?text=${encodeURIComponent(place.name + ' - الدليل اليمني التجاري\n' + location.origin + '/#place/' + place.id)}" target="_blank" class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600" title="واتساب"><i data-lucide="message-circle" class="w-4 h-4"></i></a>
-              <a href="https://t.me/share/url?url=${encodeURIComponent(location.origin + '/#place/' + place.id)}&text=${encodeURIComponent(place.name + ' - الدليل اليمني التجاري')}" target="_blank" class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600" title="تيليجرام"><i data-lucide="send" class="w-4 h-4"></i></a>
-              <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.origin + '/#place/' + place.id)}" target="_blank" class="w-8 h-8 rounded-full bg-blue-700 text-white flex items-center justify-center hover:bg-blue-800" title="فيسبوك"><i data-lucide="facebook" class="w-4 h-4"></i></a>
-              <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(place.name + ' - الدليل اليمني التجاري')}&url=${encodeURIComponent(location.origin + '/#place/' + place.id)}" target="_blank" class="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center hover:bg-sky-600" title="تويتر/X"><i data-lucide="twitter" class="w-4 h-4"></i></a>
-              <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(location.origin + '/#place/' + place.id)}" target="_blank" class="w-8 h-8 rounded-full bg-blue-800 text-white flex items-center justify-center hover:bg-blue-900" title="لينكدإن"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
+              <a href="https://wa.me/?text=${encodeURIComponent(place.name + ' - الدليل اليمني التجاري\n' + App._buildShareUrl('place', place.id))}" target="_blank" class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600" title="واتساب"><i data-lucide="message-circle" class="w-4 h-4"></i></a>
+              <a href="https://t.me/share/url?url=${encodeURIComponent(App._buildShareUrl('place', place.id))}&text=${encodeURIComponent(place.name + ' - الدليل اليمني التجاري')}" target="_blank" class="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600" title="تيليجرام"><i data-lucide="send" class="w-4 h-4"></i></a>
+              <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(App._buildShareUrl('place', place.id))}" target="_blank" class="w-8 h-8 rounded-full bg-blue-700 text-white flex items-center justify-center hover:bg-blue-800" title="فيسبوك"><i data-lucide="facebook" class="w-4 h-4"></i></a>
+              <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(place.name + ' - الدليل اليمني التجاري')}&url=${encodeURIComponent(App._buildShareUrl('place', place.id))}" target="_blank" class="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center hover:bg-sky-600" title="تويتر/X"><i data-lucide="twitter" class="w-4 h-4"></i></a>
+              <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(App._buildShareUrl('place', place.id))}" target="_blank" class="w-8 h-8 rounded-full bg-blue-800 text-white flex items-center justify-center hover:bg-blue-900" title="لينكدإن"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
             </div>
             ${place.address ? `<div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm flex items-start gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-gray-400 mt-0.5 shrink-0"></i><span>${place.address}</span></div>` : ''}
             
@@ -1418,18 +1418,26 @@ const App = {
     });
   },
 
+  // Share base URL — set to Cloudflare Worker domain for OG previews
+  // After deploying the worker, update this to: https://og-dalil-yemen.YOUR_SUBDOMAIN.workers.dev
+  SHARE_BASE: location.origin,
+
+  _buildShareUrl(type, id) {
+    // Use clean path URL for social previews (OG proxy supports /type/id)
+    return this.SHARE_BASE + '/' + type + '/' + id;
+  },
+
   shareItem(id, type) {
     const store = type === 'offer' ? Offers : type === 'job' ? Jobs : Events;
     const item = store.getAllSync().find(i => i.id === id);
     if (!item) return;
-    const backLink = type === 'offer' ? 'offers' : type === 'job' ? 'jobs' : 'events';
-    const shareUrl = location.origin + '/#' + type + '/' + id;
-    const shareText = `${item.title}\nالدليل اليمني التجاري\n${shareUrl}`;
+    const shareUrl = this._buildShareUrl(type, id);
+    const shareText = `${item.title} - الدليل اليمني التجاري`;
     if (navigator.share) {
       navigator.share({ title: item.title, text: shareText, url: shareUrl }).catch(() => {});
     } else {
       if (navigator.clipboard) {
-        navigator.clipboard.writeText(shareText).then(() => this.showToast('تم نسخ الرابط', 'success', 2000));
+        navigator.clipboard.writeText(shareUrl).then(() => this.showToast('تم نسخ الرابط', 'success', 2000));
       }
     }
   },
@@ -1841,10 +1849,9 @@ const App = {
     if (!place) return;
     const cat = Data.categories.find(c => c.id === place.category);
     const city = Data.cities.find(c => c.id === place.city);
-    const shareUrl = location.origin + '/#place/' + pid;
-    const shareText = `${place.name}\n${cat ? cat.name : ''} ${city ? '- ' + city.name : ''}\n\nالدليل اليمني التجاري\n${shareUrl}`;
+    const shareUrl = this._buildShareUrl('place', pid);
+    const shareText = `${place.name} - ${cat ? cat.name : ''} ${city ? '- ' + city.name : ''} | الدليل اليمني التجاري`;
 
-    // استخدام Web Share API (متاح على الموبايل)
     if (navigator.share) {
       navigator.share({
         title: place.name + ' - الدليل اليمني التجاري',
@@ -1852,27 +1859,23 @@ const App = {
         url: shareUrl
       }).catch((shareError) => { ErrorTracker.capture(shareError, { operation: 'app.place.share', source: 'navigator.share' }); });
     } else {
-      // نسخ الرابط كبديل
       this.copyPlaceLink(pid);
     }
   },
 
   copyPlaceLink(pid) {
-    const place = Data.getPlacesSync().find(p => p.id === pid);
-    if (!place) return;
-    const shareUrl = location.origin + '/#place/' + pid;
-    const shareText = `${place.name} - الدليل اليمني التجاري\n${shareUrl}`;
+    if (!Data.getPlacesSync().find(p => p.id === pid)) return;
+    const shareUrl = this._buildShareUrl('place', pid);
 
-    // نسخ الرابط
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(shareText).then(() => {
+      navigator.clipboard.writeText(shareUrl).then(() => {
         this.showCopyToast();
       }).catch((copyError) => {
         ErrorTracker.capture(copyError, { operation: 'app.place.copy_link', source: 'navigator.clipboard' });
-        this.fallbackCopy(shareText);
+        this.fallbackCopy(shareUrl);
       });
     } else {
-      this.fallbackCopy(shareText);
+      this.fallbackCopy(shareUrl);
     }
   },
 
