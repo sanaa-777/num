@@ -1271,7 +1271,7 @@ const App = {
     const dateStr = startDate && endDate ? `${startDate} - ${endDate}` : startDate || '';
     return `<div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all cursor-pointer active-scale" onclick="location.hash='${type}/${item.id}'">
       <div class="h-28 md:h-36 relative flex items-center justify-center" style="background:linear-gradient(135deg, ${typeColor}20, ${typeColor}40)">
-        ${item.image ? `<img src="${item.image}" alt="${item.title || ''}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">` : `<i data-lucide="${typeIcon}" class="w-12 h-12 md:w-16 md:h-16" style="color:${typeColor};opacity:0.3"></i>`}
+        ${(item.image || item.imageUrl) ? `<img src="${item.image || item.imageUrl}" alt="${item.title || ''}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">` : `<i data-lucide="${typeIcon}" class="w-12 h-12 md:w-16 md:h-16" style="color:${typeColor};opacity:0.3"></i>`}
         ${item.isActive === false ? `<div class="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[9px] font-medium">منتهي</div>` : ''}
       </div>
       <div class="p-2.5 md:p-3">
@@ -1388,7 +1388,7 @@ const App = {
         </div>
         <div class="bg-white rounded-xl overflow-hidden border border-gray-100">
           <div class="h-40 md:h-56 relative" style="background:linear-gradient(135deg, ${typeColor}20, ${typeColor}40)">
-            ${item.image ? `<img src="${item.image}" alt="${item.title}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="${typeIcon}" class="w-20 h-20" style="color:${typeColor};opacity:0.3"></i></div>`}
+            ${(item.image || item.imageUrl) ? `<img src="${item.image || item.imageUrl}" alt="${item.title}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="${typeIcon}" class="w-20 h-20" style="color:${typeColor};opacity:0.3"></i></div>`}
           </div>
           <div class="p-4 md:p-6">
             <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-2">${item.title || ''}</h2>

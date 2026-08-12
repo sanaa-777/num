@@ -674,7 +674,7 @@
               '<button onclick="AdminPanel.editingItem={_type:\'offer\'};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة عرض</button>' +
             '</div>' +
             this.renderDataTable(offers, 'offer', [
-              { label: 'الصورة', render: function(item) { return item.imageUrl ? '<img src="' + item.imageUrl + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
+              { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + (item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
               { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + (item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + (item.description || '').substring(0, 50) + '</div>'; } },
               { label: 'الوكيل', render: function(item) { return item.agentName || '-'; } },
               { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
@@ -719,7 +719,7 @@
               '<button onclick="AdminPanel.editingItem={_type:\'job\'};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة وظيفة</button>' +
             '</div>' +
             this.renderDataTable(jobs, 'job', [
-              { label: 'الصورة', render: function(item) { return item.imageUrl ? '<img src="' + item.imageUrl + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
+              { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + (item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
               { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + (item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + (item.description || '').substring(0, 50) + '</div>'; } },
               { label: 'الشركة', render: function(item) { return item.companyName || '-'; } },
               { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
@@ -764,7 +764,7 @@
               '<button onclick="AdminPanel.editingItem={_type:\'event\'};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة فعالية</button>' +
             '</div>' +
             this.renderDataTable(events, 'event', [
-              { label: 'الصورة', render: function(item) { return item.imageUrl ? '<img src="' + item.imageUrl + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
+              { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + (item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
               { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + (item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + (item.description || '').substring(0, 50) + '</div>'; } },
               { label: 'جهة التنظيم', render: function(item) { return item.organizer || '-'; } },
               { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
@@ -903,7 +903,7 @@
             '<label class="field-label">الصورة</label>' +
             '<div class="flex items-center gap-3">' +
               '<input type="file" id="itemImageFile" accept="image/*" onchange="AdminPanel.previewImage(this)" class="text-xs">' +
-              '<img id="itemImagePreview" class="img-preview" style="display:' + (item.imageUrl ? 'block' : 'none') + ';" src="' + (item.imageUrl || '') + '">' +
+              '<img id="itemImagePreview" class="img-preview" style="display:' + ((item.image || item.imageUrl) ? 'block' : 'none') + ';" src="' + (item.image || item.imageUrl || '') + '">' +
             '</div>' +
           '</div>' : '';
 
@@ -1008,7 +1008,7 @@
             if (fileInput && fileInput.files && fileInput.files[0]) {
               try {
                 var imageUrl = await self.uploadImage(fileInput.files[0], type + 's');
-                data.imageUrl = imageUrl;
+                data.image = imageUrl;
               } catch (uploadErr) {
                 errEl.textContent = uploadErr.message || 'فشل رفع الصورة';
                 errEl.style.display = 'block';
@@ -1018,7 +1018,7 @@
                 return;
               }
             } else if (id && self.editingItem && self.editingItem.imageUrl) {
-              data.imageUrl = self.editingItem.imageUrl;
+              data.image = self.editingItem.image || self.editingItem.imageUrl;
             }
           }
 
