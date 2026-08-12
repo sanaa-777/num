@@ -52,14 +52,12 @@ const App = {
           Pricing.getAll().catch(() => {})
         ]);
       }).then(() => {
-        // Don't call render() for detail views — it would flash empty content
+        // Only re-render for non-detail views
+        // Detail views handle their own data loading in showPlace/showItemDetail
         const curHash = location.hash.slice(1) || 'home';
         const curView = curHash.split('/')[0];
         const isDetail = ['place', 'offer', 'job', 'event'].includes(curView);
-        if (isDetail) {
-          // Just re-render the detail view directly
-          this.handleRoute();
-        } else {
+        if (!isDetail) {
           this.render();
           this.handleRoute();
         }
@@ -777,16 +775,20 @@ const App = {
         </section>
       ${this.renderFooter()}${this.renderBottomNav(Auth.currentUser)}</div>`;
       this.initIcons();
-      // Wait for data to load, then try again
-      Data.preloadAll().then(() => {
-        const retryPlace = Data.getPlacesSync().find(p => p.id === pid);
-        if (retryPlace) {
+      // Wait for data to load, then try again (use global preload if in progress)
+      if (!this._preloadPromise) {
+        this._preloadPromise = Data.preloadAll();
+      }
+      this._preloadPromise.then(() => {
+        this._preloadPromise = null;
+        // Check if we're still on the same detail view
+        const curHash = location.hash.slice(1) || 'home';
+        const curPid = curHash.split('/')[1];
+        if (curPid === pid) {
           this.showPlace(pid);
-        } else {
-          // Place truly doesn't exist
-          location.hash = 'home';
         }
       }).catch(() => {
+        this._preloadPromise = null;
         location.hash = 'home';
       });
       return;
