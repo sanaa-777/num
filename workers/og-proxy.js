@@ -16,7 +16,7 @@
 // ============================================================
 
 const FIREBASE_PROJECT = 'deel-39f2e';
-const FIREBASE_API_KEY = 'AIzaSy…VdG4';
+const FIREBASE_API_KEY = 'AIzaSyBAGdUGSb1tAVNA_PC6LbNM_jTG6P6VdG4';
 const SPA_BASE = 'https://dalil-yemen-deel.web.app';
 const DEFAULT_IMAGE = 'https://dalil-yemen-deel.web.app/assets/branding/og-image.jpg';
 const SITE_NAME = 'الدليل اليمني التجاري';

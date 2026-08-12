@@ -1420,7 +1420,7 @@ const App = {
 
   // Share base URL — set to Cloudflare Worker domain for OG previews
   // After deploying the worker, update this to: https://og-dalil-yemen.YOUR_SUBDOMAIN.workers.dev
-  SHARE_BASE: location.origin,
+  SHARE_BASE: 'https://og-dalil-yemen.fakyou050.workers.dev',
 
   _buildShareUrl(type, id) {
     // Use clean path URL for social previews (OG proxy supports /type/id)
