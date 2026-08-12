@@ -40,15 +40,27 @@ const ImageStorage = {
       return { ok: false, error: 'الرجاء إدخال Cloud Name و Upload Preset' };
     }
     try {
-      // Verify the cloud exists by requesting the resource list endpoint (returns 401/200)
-      const resp = await fetch(
-        `https://res.cloudinary.com/${this._cloudName}/image/list/dalil-yemen.json`
+      // Test using the same unsigned upload endpoint as real uploads.
+      // Upload a tiny 1x1 transparent PNG to verify credentials work.
+      var TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==';
+      var blob = this._dataURLtoBlob(TINY_PNG);
+      var formData = new FormData();
+      formData.append('file', blob);
+      formData.append('upload_preset', this._uploadPreset);
+      formData.append('folder', 'dalil-yemen/_test');
+      formData.append('public_id', 'conn_test_' + Date.now());
+
+      var resp = await fetch(
+        'https://api.cloudinary.com/v1_1/' + this._cloudName + '/image/upload',
+        { method: 'POST', body: formData }
       );
-      // 200 or 404 both mean the cloud name is valid
-      if (resp.status === 200 || resp.status === 404) {
-        return { ok: true, cloud: this._cloudName };
+
+      if (resp.ok) {
+        var result = await resp.json();
+        return { ok: true, cloud: this._cloudName, testUrl: result.secure_url };
       }
-      return { ok: false, error: `HTTP ${resp.status}` };
+      var err = await resp.json().catch(function () { return {}; });
+      return { ok: false, error: err.error?.message || 'HTTP ' + resp.status };
     } catch (e) {
       return { ok: false, error: e.message };
     }
