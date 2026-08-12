@@ -52,8 +52,17 @@ const App = {
           Pricing.getAll().catch(() => {})
         ]);
       }).then(() => {
-        this.render();
-        this.handleRoute();
+        // Don't call render() for detail views — it would flash empty content
+        const curHash = location.hash.slice(1) || 'home';
+        const curView = curHash.split('/')[0];
+        const isDetail = ['place', 'offer', 'job', 'event'].includes(curView);
+        if (isDetail) {
+          // Just re-render the detail view directly
+          this.handleRoute();
+        } else {
+          this.render();
+          this.handleRoute();
+        }
       }).catch(e => {
         console.warn('Background data load:', e.message);
       });
@@ -148,7 +157,10 @@ const App = {
       const app = document.getElementById('app');
       const user = Auth.currentUser;
       const bg = this.C('bg-gray-50', 'bg-dark-950');
-      app.innerHTML = `<div class="min-h-screen ${bg}">${this.renderHeader(user)}${Ads.renderPosition('header')}<main class="fade-in pb-20 md:pb-0">${this['render_' + this.currentView]?.() || ''}</main>${this.renderFooter()}${this.renderBottomNav(user)}</div>`;
+      // Skip rendering main content for detail views (they set innerHTML directly)
+      const isDetail = ['place', 'offer', 'job', 'event'].includes(this.currentView);
+      const mainContent = isDetail ? '' : (this['render_' + this.currentView]?.() || '');
+      app.innerHTML = `<div class="min-h-screen ${bg}">${this.renderHeader(user)}${Ads.renderPosition('header')}<main class="fade-in pb-20 md:pb-0">${mainContent}</main>${this.renderFooter()}${this.renderBottomNav(user)}</div>`;
       this.initIcons();
       this.initAllCustomSelects();
       Ads.initAllSliders();
