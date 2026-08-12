@@ -19,27 +19,27 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@11.30.0
+
       - name: Install dependencies
         run: npm install
 
       - name: Build production assets
         run: npm run build
 
+      - name: Write service account key
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEEL_39F2E }}' > /tmp/firebase-sa.json
+
       - name: Deploy Firestore Rules & Indexes
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only firestore
+        run: firebase deploy --only firestore --project deel-39f2e --force
         env:
-          GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEEL_39F2E }}'
-          PROJECT_ID: deel-39f2e
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
 
       - name: Deploy Storage Rules
-        uses: w9jds/firebase-action@master
-        with:
-          args: deploy --only storage
+        run: firebase deploy --only storage --project deel-39f2e --force
         env:
-          GCP_SA_KEY: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEEL_39F2E }}'
-          PROJECT_ID: deel-39f2e
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
 
       - name: Deploy Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
