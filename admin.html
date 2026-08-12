@@ -76,8 +76,8 @@
   <script src="app/firebase-config.js?v=20260812193614"></script>
 
   <!-- App Modules -->
-  <script src="app/image-storage.js?v=20260812193614"></script>
-  <script src="app/data-firestore.js?v=20260812193614"></script>
+  <script src="app/image-storage.js?v=20260813041000"></script>
+  <script src="app/data-firestore.js?v=20260813041000"></script>
   <script src="app/auth-firestore.js?v=20260812193614"></script>
   <script src="app/admin-firestore.js?v=20260812193614"></script>
   <script src="app/ads-firestore.js?v=20260812193614"></script>
@@ -1009,6 +1009,7 @@
               try {
                 var imageUrl = await self.uploadImage(fileInput.files[0], type + 's');
                 data.image = imageUrl;
+                data.images = [imageUrl];
               } catch (uploadErr) {
                 errEl.textContent = uploadErr.message || 'فشل رفع الصورة';
                 errEl.style.display = 'block';
@@ -1019,6 +1020,7 @@
               }
             } else if (id && self.editingItem && self.editingItem.imageUrl) {
               data.image = self.editingItem.image || self.editingItem.imageUrl;
+              data.images = self.editingItem.images && self.editingItem.images.length > 0 ? self.editingItem.images : [data.image];
             }
           }
 

@@ -326,7 +326,16 @@ const Data = {
           }
           
           this._placesListener = query.onSnapshot((snapshot) => {
-            const newData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const newData = snapshot.docs.map(doc => {
+              const d = doc.data();
+              const place = { id: doc.id, ...d };
+              // Normalize: ensure images[] array always exists
+              if ((!place.images || place.images.length === 0) && place.image) {
+                place.images = [place.image];
+              }
+              if (!place.images) place.images = [];
+              return place;
+            });
             this._lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
             this._hasMore = snapshot.docs.length >= this._pageSize;
             const oldData = this._placesCache || [];
