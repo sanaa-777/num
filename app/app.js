@@ -1398,45 +1398,70 @@ const App = {
       'TRY': '🇹🇷', 'RUB': '🇷🇺', 'INR': '🇮🇳', 'PKR': '🇵🇰', 'CNY': '🇨🇳', 'JPY': '🇯🇵',
       'AUD': '🇦🇺', 'CAD': '🇨🇦', 'CHF': '🇨🇭', 'SYP': '🇸🇾', 'SDG': '🇸🇩', 'DZD': '🇩🇿',
       'IQD': '🇮🇶', 'LBP': '🇱🇧', 'MAD': '🇲🇦', 'TND': '🇹🇳', 'LYD': '🇱🇾', 'SOS': '🇸🇴',
-      'DJF': '🇩🇯', 'ETB': '🇪🇹', 'KMF': '🇰🇲', 'MUR': '🇲🇺', 'SCR': '🇸🇨', 'BRL': '🇧🇷',
-      'MXN': '🇲🇽', 'ARS': '🇦🇷', 'CLP': '🇨🇱', 'COP': '🇨🇴', 'PEN': '🇵🇪', 'ZAR': '🇿🇦',
-      'NGN': '🇳🇬', 'GHS': '🇬🇭', 'KES': '🇰🇪', 'TZS': '🇹🇿', 'UGX': '🇺🇬', 'THB': '🇹🇭',
-      'SGD': '🇸🇬', 'MYR': '🇲🇾', 'IDR': '🇮🇩', 'PHP': '🇵🇭', 'VND': '🇻🇳', 'KRW': '🇰🇷',
+      'DJF': '🇩🇯', 'ETB': '🇪🇹', 'BRL': '🇧🇷', 'MXN': '🇲🇽', 'ZAR': '🇿🇦', 'NGN': '🇳🇬',
+      'THB': '🇹🇭', 'SGD': '🇸🇬', 'MYR': '🇲🇾', 'IDR': '🇮🇩', 'PHP': '🇵🇭', 'KRW': '🇰🇷',
       'SEK': '🇸🇪', 'NOK': '🇳🇴', 'DKK': '🇩🇰', 'PLN': '🇵🇱', 'CZK': '🇨🇿', 'HUF': '🇭🇺',
-      'RON': '🇷🇴', 'BGN': '🇧🇬', 'HRK': '🇭🇷', 'ISK': '🇮🇸', 'NZD': '🇳🇿', 'HKD': '🇭🇰',
-      'TWD': '🇹🇼', 'BDT': '🇧🇩', 'LKR': '🇱🇰', 'NPR': '🇳🇵', 'AFN': '🇦🇫', 'MMK': '🇲🇲',
-      'KHR': '🇰🇭', 'LAK': '🇱🇦', 'MNT': '🇲🇳', 'UZS': '🇺🇿', 'KZT': '🇰🇿', 'GEL': '🇬🇪',
-      'AMD': '🇦🇲', 'AZN': '🇦🇿', 'TMT': '🇹🇲', 'IRR': '🇮🇷', 'BAM': '🇧🇦', 'MKD': '🇲🇰',
-      'ALL': '🇦🇱', 'RSD': '🇷🇸', 'MDL': '🇲🇩', 'UAH': '🇺🇦', 'BYN': '🇧🇾', 'GEL': '🇬🇪'
+      'NZD': '🇳🇿', 'HKD': '🇭🇰', 'TWD': '🇹🇼', 'BDT': '🇧🇩', 'AFN': '🇦🇫', 'IRR': '🇮🇷',
+      'UAH': '🇺🇦', 'RSD': '🇷🇸', 'RON': '🇷🇴', 'BGN': '🇧🇬', 'HRK': '🇭🇷', 'ISK': '🇮🇸'
     };
 
-    // Get flag or icon for item
+    // Map common currency names to codes for flag lookup
+    const NAME_TO_CODE = {
+      'الدولار': 'USD', 'دولار': 'USD', 'dollar': 'USD', 'usd': 'USD',
+      'اليورو': 'EUR', 'يورو': 'EUR', 'euro': 'EUR', 'eur': 'EUR',
+      'الريال السعودي': 'SAR', 'ريال سعودي': 'SAR', 'sar': 'SAR',
+      'الريال اليمني': 'YER', 'ريال يمني': 'YER', 'yer': 'YER',
+      'الدرهم': 'AED', 'درهم': 'AED', 'aed': 'AED',
+      'الدينار الكويتي': 'KWD', 'دينار كويتي': 'KWD', 'kwd': 'KWD',
+      'الجنيه المصري': 'EGP', 'جنيه مصري': 'EGP', 'egp': 'EGP',
+      'الجنيه الاسترليني': 'GBP', 'استرليني': 'GBP', 'gbp': 'GBP',
+      'الليرة التركية': 'TRY', 'ليرة تركية': 'TRY', 'try': 'TRY',
+      'الروبل': 'RUB', 'روبل': 'RUB', 'rub': 'RUB',
+      'الروبية': 'INR', 'روبية هندية': 'INR', 'inr': 'INR',
+      'الين': 'JPY', 'ين ياباني': 'JPY', 'jpy': 'JPY',
+      'اليوان': 'CNY', 'يوان صيني': 'CNY', 'cny': 'CNY',
+      ' الدينار العراقي': 'IQD', 'دينار عراقي': 'IQD', 'iqd': 'IQD',
+      'الليرة اللبنانية': 'LBP', 'ليرة لبنانية': 'LBP', 'lbp': 'LBP'
+    };
+
+    // Get flag or category icon
     function getItemIcon(item) {
       if (activeTab === 'currencies') {
-        const code = (item.currencyCode || item.name || '').toUpperCase().substring(0, 3);
-        return FLAGS[code] ? `<span class="text-lg">${FLAGS[code]}</span>` : `<span class="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center"><i data-lucide="banknote" class="w-3.5 h-3.5 text-blue-500"></i></span>`;
+        // Try currencyCode first, then name lookup
+        let code = (item.currencyCode || '').toUpperCase().trim();
+        if (!code || code.length !== 3 || !FLAGS[code]) {
+          // Try to match from name
+          const nameLower = (item.name || '').toLowerCase();
+          for (const [key, val] of Object.entries(NAME_TO_CODE)) {
+            if (nameLower.includes(key.toLowerCase())) { code = val; break; }
+          }
+        }
+        if (code && FLAGS[code]) {
+          return `<span class="text-xl leading-none">${FLAGS[code]}</span>`;
+        }
+        return `<span class="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0"><i data-lucide="banknote" class="w-4 h-4 text-blue-500"></i></span>`;
       }
       if (activeTab === 'metals') {
-        return `<span class="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center"><i data-lucide="gem" class="w-3.5 h-3.5 text-amber-500"></i></span>`;
+        return `<span class="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center shrink-0"><i data-lucide="gem" class="w-4 h-4 text-amber-500"></i></span>`;
       }
       if (activeTab === 'fuel') {
-        return `<span class="w-7 h-7 rounded-full bg-red-50 flex items-center justify-center"><i data-lucide="fuel" class="w-3.5 h-3.5 text-red-500"></i></span>`;
+        return `<span class="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center shrink-0"><i data-lucide="fuel" class="w-4 h-4 text-red-500"></i></span>`;
       }
       if (activeTab === 'food') {
-        return `<span class="w-7 h-7 rounded-full bg-green-50 flex items-center justify-center"><i data-lucide="shopping-cart" class="w-3.5 h-3.5 text-green-500"></i></span>`;
+        return `<span class="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center shrink-0"><i data-lucide="shopping-cart" class="w-4 h-4 text-green-500"></i></span>`;
       }
       if (activeTab === 'crypto') {
-        return `<span class="w-7 h-7 rounded-full bg-purple-50 flex items-center justify-center"><i data-lucide="bitcoin" class="w-3.5 h-3.5 text-purple-500"></i></span>`;
+        return `<span class="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center shrink-0"><i data-lucide="bitcoin" class="w-4 h-4 text-purple-500"></i></span>`;
       }
-      return `<span class="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center"><i data-lucide="circle" class="w-3.5 h-3.5 text-gray-400"></i></span>`;
+      return `<span class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center shrink-0"><i data-lucide="circle" class="w-4 h-4 text-gray-400"></i></span>`;
     }
 
     // Price change indicator
     function priceChange(item) {
       const change = item.priceChange || 0;
-      if (change > 0) return `<span class="inline-flex items-center gap-0.5 text-green-600 text-[10px] font-medium"><i data-lucide="trending-up" class="w-3 h-3"></i></span>`;
-      if (change < 0) return `<span class="inline-flex items-center gap-0.5 text-red-500 text-[10px] font-medium"><i data-lucide="trending-down" class="w-3 h-3"></i></span>`;
-      return `<span class="inline-flex items-center gap-0.5 text-gray-400 text-[10px]"><i data-lucide="minus" class="w-3 h-3"></i></span>`;
+      if (change > 0) return `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 text-[10px] font-bold"><i data-lucide="arrow-up" class="w-2.5 h-2.5"></i>${Math.abs(change).toFixed(2)}</span>`;
+      if (change < 0) return `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-red-50 text-red-500 text-[10px] font-bold"><i data-lucide="arrow-down" class="w-2.5 h-2.5"></i>${Math.abs(change).toFixed(2)}</span>`;
+      return `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gray-50 text-gray-400 text-[10px] font-bold"><i data-lucide="minus" class="w-2.5 h-2.5"></i>0.00</span>`;
     }
 
     // Column labels based on category
@@ -1458,7 +1483,7 @@ const App = {
         <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
           <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
           <i data-lucide="chevron-left" class="w-3 h-3"></i>
-          <span class="text-gray-700 font-medium">التسعيرات</span>
+          <span class="text-gray-700 font-medium">أسعار اليوم</span>
         </div>
 
         <!-- Title -->
@@ -1487,7 +1512,7 @@ const App = {
           <!-- Card Header -->
           <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full" style="background:${sectionColor}"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background:${sectionColor}"></span>
               <h3 class="text-sm font-bold text-gray-800">${catInfo?.name || 'الأسعار'}</h3>
             </div>
             <span class="text-[10px] text-gray-400 flex items-center gap-1">
@@ -1498,32 +1523,32 @@ const App = {
 
           ${items.length ? `
           <!-- Column Headers -->
-          <div class="grid grid-cols-[1fr_auto_auto] gap-3 px-4 py-2.5 border-b border-gray-100 bg-gray-50/80">
-            <div class="text-[11px] font-semibold text-gray-500 text-right">${cols.col1}</div>
-            <div class="text-[11px] font-semibold text-gray-500 text-right min-w-[80px]">${cols.col2}</div>
-            <div class="text-[11px] font-semibold text-gray-500 text-right min-w-[80px]">${cols.col3}</div>
+          <div class="grid grid-cols-[1fr_1fr_1fr] px-4 py-2.5 border-b border-gray-100 bg-gray-50/80">
+            <div class="text-[11px] font-bold text-gray-500 text-right">${cols.col1}</div>
+            <div class="text-[11px] font-bold text-gray-500 text-center">${cols.col2}</div>
+            <div class="text-[11px] font-bold text-gray-500 text-left">${cols.col3}</div>
           </div>
 
           <!-- Rows -->
           <div class="divide-y divide-gray-50">
             ${items.map((item, i) => `
-              <div class="grid grid-cols-[1fr_auto_auto] gap-3 items-center px-4 py-3 hover:bg-gray-50/50 transition-colors">
+              <div class="grid grid-cols-[1fr_1fr_1fr] items-center px-4 py-3.5 hover:bg-gray-50/50 transition-colors">
                 <!-- Name + Icon -->
                 <div class="flex items-center gap-2.5 min-w-0">
                   ${getItemIcon(item)}
                   <div class="min-w-0">
-                    <div class="text-sm font-semibold text-gray-900 truncate">${item.name || item.currencyName || ''}</div>
-                    ${item.unit ? `<div class="text-[10px] text-gray-400">${item.unit}</div>` : ''}
+                    <div class="text-[13px] font-bold text-gray-900 truncate">${item.name || item.currencyName || ''}</div>
+                    ${item.unit ? `<div class="text-[10px] text-gray-400 mt-0.5">${item.unit}</div>` : ''}
                   </div>
                 </div>
                 <!-- Buy Price -->
-                <div class="text-right min-w-[80px]">
-                  <span class="text-sm font-bold text-gray-900 tabular-nums">${item.buyPrice || '-'}</span>
-                  ${item.currencyCode ? `<span class="text-[9px] text-gray-400 mr-1">${item.currencyCode}</span>` : ''}
+                <div class="text-center">
+                  <span class="text-[13px] font-bold text-gray-900 tabular-nums">${item.buyPrice || '-'}</span>
+                  ${item.currencyCode ? `<div class="text-[9px] text-gray-400 mt-0.5">${item.currencyCode}</div>` : ''}
                 </div>
                 <!-- Sell Price + Change -->
-                <div class="text-right min-w-[80px] flex items-center gap-1 justify-end">
-                  <span class="text-sm font-bold text-gray-900 tabular-nums">${item.sellPrice || '-'}</span>
+                <div class="text-left flex items-center gap-1.5 justify-end">
+                  <span class="text-[13px] font-bold text-gray-900 tabular-nums">${item.sellPrice || '-'}</span>
                   ${priceChange(item)}
                 </div>
               </div>
