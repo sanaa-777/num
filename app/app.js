@@ -763,7 +763,7 @@ const App = {
             <p class="text-gray-500 text-sm">جاري تحميل النشاط...</p>
           </div>
         </section>
-      ${this.renderFooter()}</div>`;
+      ${this.renderFooter()}${this.renderBottomNav(Auth.currentUser)}</div>`;
       this.initIcons();
       // Wait for data to load, then try again
       Data.preloadAll().then(() => {
@@ -914,7 +914,7 @@ const App = {
           </div>`).join('') : '<p class="text-gray-400 text-center py-4 text-xs">لا توجد مراجعات</p>'}
         </div>
       </div>
-    </section>${this.renderFooter()}</div>`;
+    </section>${this.renderFooter()}${this.renderBottomNav(Auth.currentUser)}</div>`;
     this.initIcons();
     // Initialize gallery if images exist
     if (place.images && place.images.length > 0) { this.initGallery(place.images); }
@@ -1458,7 +1458,7 @@ const App = {
             </div>` : ''}
           </div>
         </div>
-      </div></section>${this.renderFooter()}</div>`;
+      </div></section>${this.renderFooter()}${this.renderBottomNav(Auth.currentUser)}</div>`;
       this.initIcons();
     });
   },
