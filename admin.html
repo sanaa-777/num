@@ -912,24 +912,24 @@
         if (ok) {
           this._viewingEdit = null;
           this._pendingEdits = (this._pendingEdits || []).filter(function(e) { return e.id !== editId; });
-          this.toast('تمت الموافقة على التعديل ونشره');
+          this.showToast('✅ تمت الموافقة على التعديل ونشره بنجاح', 'success');
           this.render();
         } else {
-          this.toast('فشلت الموافقة', true);
+          this.showToast('❌ فشلت الموافقة على التعديل', 'error');
         }
       },
 
       rejectEdit: async function(editId) {
         var note = (document.getElementById('editReviewNote_' + editId) || {}).value || '';
-        if (!note) { this.toast('يرجى كتابة سبب الرفض', true); return; }
+        if (!note) { this.showToast('⚠️ يرجى كتابة سبب الرفض', 'error'); return; }
         var ok = await Admin.rejectPlaceEdit(editId, note);
         if (ok) {
           this._viewingEdit = null;
           this._pendingEdits = (this._pendingEdits || []).filter(function(e) { return e.id !== editId; });
-          this.toast('تم رفض التعديل');
+          this.showToast('✅ تم رفض التعديل وإشعار المالك', 'success');
           this.render();
         } else {
-          this.toast('فشل الرفض', true);
+          this.showToast('❌ فشل رفض التعديل', 'error');
         }
       },
 
@@ -1443,14 +1443,65 @@
       // =============================================
       // Existing CRUD (Users & Places)
       // =============================================
-      toggleActiveUser: async function(userId) { await Admin.toggleActive(userId); this.render(); },
-      toggleVerify: async function(userId) { await Admin.toggleVerify(userId); this.render(); },
-      toggleSuspend: async function(userId) { await Admin.toggleSuspend(userId); this.render(); },
-      deleteUser: async function(userId) { if (confirm('هل تريد تعطيل هذا المستخدم وإخفاء أنشطته؟')) { await Admin.deleteUser(userId); this.render(); } },
-      verifyPlace: async function(placeId) { await Admin.verifyPlace(placeId); this.render(); },
-      featurePlace: async function(placeId) { await Admin.featurePlace(placeId); this.render(); },
-      approvePlace: async function(placeId) { var note = prompt('ملاحظة الموافقة (اختياري):'); await Admin.approvePlace(placeId, note || ''); this.render(); },
-      rejectPlace: async function(placeId) { var note = prompt('سبب الرفض (اختياري):'); await Admin.rejectPlace(placeId, note || ''); this.render(); },
+      toggleActiveUser: async function(userId) {
+        try {
+          var result = await Admin.toggleActive(userId);
+          this.showToast(result ? '✅ تم تغيير حالة التفعيل' : '❌ فشل تغيير الحالة', result ? 'success' : 'error');
+          this.render();
+        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
+      },
+      toggleVerify: async function(userId) {
+        try {
+          var result = await Admin.toggleVerify(userId);
+          this.showToast(result !== false ? '✅ تم تغيير حالة التوثيق' : '❌ فشل', result !== false ? 'success' : 'error');
+          this.render();
+        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
+      },
+      toggleSuspend: async function(userId) {
+        try {
+          var result = await Admin.toggleSuspend(userId);
+          this.showToast(result !== false ? '✅ تم تغيير حالة الإيقاف' : '❌ فشل', result !== false ? 'success' : 'error');
+          this.render();
+        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
+      },
+      deleteUser: async function(userId) {
+        if (!confirm('هل تريد تعطيل هذا المستخدم وإخفاء أنشطته؟')) return;
+        try {
+          var result = await Admin.deleteUser(userId);
+          this.showToast(result ? '✅ تم تعطيل المستخدم' : '❌ فشل التعطيل', result ? 'success' : 'error');
+          this.render();
+        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
+      },
+      verifyPlace: async function(placeId) {
+        try {
+          var result = await Admin.verifyPlace(placeId);
+          this.showToast(result !== false ? '✅ تم تغيير حالة التوثيق' : '❌ فشل', result !== false ? 'success' : 'error');
+          this.render();
+        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
+      },
+      featurePlace: async function(placeId) {
+        try {
+          var result = await Admin.featurePlace(placeId);
+          this.showToast(result !== false ? '✅ تم تغيير حالة التمييز' : '❌ فشل', result !== false ? 'success' : 'error');
+          this.render();
+        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
+      },
+      approvePlace: async function(placeId) {
+        var note = prompt('ملاحظة الموافقة (اختياري):');
+        try {
+          var result = await Admin.approvePlace(placeId, note || '');
+          this.showToast(result ? '✅ تمت الموافقة على النشاط' : '❌ فشلت الموافقة', result ? 'success' : 'error');
+          this.render();
+        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
+      },
+      rejectPlace: async function(placeId) {
+        var note = prompt('سبب الرفض (اختياري):');
+        try {
+          var result = await Admin.rejectPlace(placeId, note || '');
+          this.showToast(result ? '✅ تم رفض النشاط' : '❌ فشل الرفض', result ? 'success' : 'error');
+          this.render();
+        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
+      },
       editPlaceItem: async function(placeId) {
         try {
           var doc = await db.collection('places').doc(placeId).get();
