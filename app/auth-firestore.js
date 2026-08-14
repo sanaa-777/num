@@ -227,8 +227,12 @@ const Auth = {
           }
 
           // تحديث الواجهة إذا كان التطبيق مُحمّلاً
+          // لا تمسح صفحات التفاصيل — تدير محتواها بنفسها
           if (typeof App !== 'undefined' && App.render) {
-            App.render();
+            const v = App.currentView;
+            if (!['place', 'offer', 'job', 'event', 'editplace'].includes(v)) {
+              App.render();
+            }
           }
         });
       } catch (e) {

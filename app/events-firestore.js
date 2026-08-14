@@ -36,7 +36,7 @@ const Events = {
             this._listener = retryQuery.onSnapshot((snap) => {
               this._cache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
               this._cacheTime = Date.now();
-              if (typeof App !== 'undefined' && App._initialized) App.render();
+              if (typeof App !== 'undefined' && App._initialized) { var _v = App.currentView; if (['place','offer','job','event','editplace'].indexOf(_v) === -1) App.render(); }
               resolve(this._cache);
             }, (retryErr) => {
               console.error('Events retry error:', retryErr);
