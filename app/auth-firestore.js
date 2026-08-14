@@ -8,6 +8,86 @@ const Auth = {
   _authListenerAttached: false,
   _initResolve: null,
 
+  // ====== Login Rate Limiting ======
+  _loginAttempts: {},   // { email: { count, firstAttempt, lastAttempt, lockedUntil } }
+  _MAX_ATTEMPTS: 5,     // max failed attempts before lockout
+  _WINDOW_MS: 300000,   // 5-minute sliding window
+  _LOCKOUT_BASE: 30000, // 30-second initial lockout
+  _MAX_LOCKOUT: 900000, // 15-minute max lockout
+
+  _getRateLimitKey(email) {
+    return (email || '').toLowerCase().trim();
+  },
+
+  _checkRateLimit(email) {
+    const key = this._getRateLimitKey(email);
+    if (!key) return { allowed: true };
+
+    const entry = this._loginAttempts[key];
+    if (!entry) return { allowed: true };
+
+    const now = Date.now();
+
+    // Check if currently locked out
+    if (entry.lockedUntil && now < entry.lockedUntil) {
+      const remainingSec = Math.ceil((entry.lockedUntil - now) / 1000);
+      return {
+        allowed: false,
+        message: `تم إيقاف الدخول مؤقتاً. حاول بعد ${remainingSec} ثانية`,
+        remainingMs: entry.lockedUntil - now
+      };
+    }
+
+    // Reset if window has expired
+    if (now - entry.firstAttempt > this._WINDOW_MS) {
+      delete this._loginAttempts[key];
+      return { allowed: true };
+    }
+
+    // Check attempt count within window
+    if (entry.count >= this._MAX_ATTEMPTS) {
+      // Apply progressive lockout: 30s, 60s, 120s, 240s... up to 15min
+      const lockoutMultiplier = Math.pow(2, entry.lockoutCount || 0);
+      const lockoutDuration = Math.min(this._LOCKOUT_BASE * lockoutMultiplier, this._MAX_LOCKOUT);
+      entry.lockedUntil = now + lockoutDuration;
+      entry.lockoutCount = (entry.lockoutCount || 0) + 1;
+      const lockoutSec = Math.ceil(lockoutDuration / 1000);
+      return {
+        allowed: false,
+        message: `تم إيقاف الدخول مؤقتاً بعد ${this._MAX_ATTEMPTS} محاولات فاشلة. حاول بعد ${lockoutSec} ثانية`,
+        remainingMs: lockoutDuration
+      };
+    }
+
+    return { allowed: true };
+  },
+
+  _recordFailedAttempt(email) {
+    const key = this._getRateLimitKey(email);
+    if (!key) return;
+
+    const now = Date.now();
+    const entry = this._loginAttempts[key];
+
+    if (!entry || (now - entry.firstAttempt > this._WINDOW_MS)) {
+      this._loginAttempts[key] = {
+        count: 1,
+        firstAttempt: now,
+        lastAttempt: now,
+        lockedUntil: null,
+        lockoutCount: entry ? entry.lockoutCount : 0
+      };
+    } else {
+      entry.count++;
+      entry.lastAttempt = now;
+    }
+  },
+
+  _clearFailedAttempts(email) {
+    const key = this._getRateLimitKey(email);
+    if (key) delete this._loginAttempts[key];
+  },
+
   // ====== التهيئة (تستدعى مرة واحدة) ======
   init() {
     return new Promise((resolve) => {
@@ -140,6 +220,14 @@ const Auth = {
 
   // ====== تسجيل الدخول ======
   async login(email, password) {
+    // Check rate limit before attempting
+    const rateCheck = this._checkRateLimit(email);
+    if (!rateCheck.allowed) {
+      const err = new Error(rateCheck.message);
+      err.code = 'auth/too-many-attempts';
+      throw this._handleError(err);
+    }
+
     try {
       const userCredential = await auth.signInWithEmailAndPassword(email, password);
       const user = userCredential.user;
@@ -151,6 +239,9 @@ const Auth = {
         await auth.signOut();
         throw new Error('تم إيقاف هذا الحساب. تواصل مع الإدارة');
       }
+
+      // Clear failed attempts on successful login
+      this._clearFailedAttempts(email);
 
       this.currentUser = {
         id: user.uid, uid: user.uid,
@@ -164,6 +255,15 @@ const Auth = {
 
       return this.currentUser;
     } catch (error) {
+      // Record failed attempt (only for credential errors, not network/suspended)
+      if (error.code && (
+        error.code === 'auth/wrong-password' ||
+        error.code === 'auth/invalid-credential' ||
+        error.code === 'auth/user-not-found' ||
+        error.code === 'auth/invalid-email'
+      )) {
+        this._recordFailedAttempt(email);
+      }
       throw this._handleError(error);
     }
   },
@@ -401,7 +501,8 @@ const Auth = {
       'auth/operation-not-supported-in-this-environment': 'المتصفح لا يدعم هذه الطريقة',
       'auth/web-storage-unsupported': 'المتصفح لا يدعم التخزين المطلوب',
       'auth/missing-initial-state': 'حدث خطأ في عملية تسجيل الدخول، يرجى المحاولة مرة أخرى',
-      'auth/account-exists-with-different-credential': 'يوجد حساب بنفس البريد الإلكتروني بطريقة دخول مختلفة'
+      'auth/account-exists-with-different-credential': 'يوجد حساب بنفس البريد الإلكتروني بطريقة دخول مختلفة',
+      'auth/too-many-attempts': 'محاولات كثيرة، حاول لاحقاً'
     };
     return ErrorTracker.createUserError(error, {
       operation: 'auth.firebase',

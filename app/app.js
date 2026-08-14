@@ -5,6 +5,19 @@
 const App = {
   currentView: 'home', searchQuery: '', selectedCategory: null, selectedSubCategory: null, selectedCity: null, _selectedRating: 0, _initialized: false, _lastRenderedView: null, _scrollPositions: {}, _isRestoringScroll: false,
 
+  // ====== HTML Sanitization (XSS Prevention) ======
+  _escHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+  // For use inside template literals: App.h(place.description)
+  h(str) { return this._escHtml(str); },
+
   async init() {
     // Path-to-hash redirect: /place/ID → /#place/ID
     var _p = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
@@ -125,7 +138,7 @@ const App = {
             return `<div class="flex items-start gap-3 p-3 rounded-xl ${n.read ? 'bg-white' : 'bg-blue-50'} border border-gray-100">
               <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="${icon}" class="w-4 h-4 ${color}"></i></div>
               <div class="flex-1 min-w-0">
-                <p class="text-sm ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}">${n.message || ''}</p>
+                <p class="text-sm ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}">${App.h(n.message || '')}</p>
                 <span class="text-[10px] text-gray-400">${date}</span>
               </div>
             </div>`;
@@ -629,14 +642,14 @@ const App = {
     return `
     <div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all cursor-pointer active-scale" onclick="location.hash='place/${p.id}'">
       <div class="h-28 md:h-36 relative flex items-center justify-center" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
-        ${hasImages ? `<img src="${p.images[0]}" alt="${p.name}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">` : `<div style="color:${catColor};opacity:0.3">${cat ? I(cat.icon, 'w-16 h-16 md:w-20 md:h-20') : I('map-pin', 'w-16 h-16')}</div>`}
+        ${hasImages ? `<img src="${p.images[0]}" alt="${App.h(p.name)}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">` : `<div style="color:${catColor};opacity:0.3">${cat ? I(cat.icon, 'w-16 h-16 md:w-20 md:h-20') : I('map-pin', 'w-16 h-16')}</div>`}
         ${p.verified ? `<div class="absolute top-2 right-2 bg-green-500 text-white px-2 py-0.5 rounded text-[9px] font-medium flex items-center gap-0.5"><i data-lucide="check-circle" class="w-3 h-3"></i>موثّق</div>` : ''}
         ${p.featured ? `<div class="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded text-[9px] font-medium flex items-center gap-0.5"><i data-lucide="star" class="w-3 h-3"></i></div>` : ''}
         ${p.images && p.images.length > 1 ? `<div class="absolute bottom-2 right-2 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="image" class="w-3 h-3"></i>${p.images.length}</div>` : ''}
         ${Auth.currentUser ? `<button onclick="event.stopPropagation();App.toggleFav('${p.id}')" class="absolute bottom-2 left-2 w-7 h-7 rounded-full bg-white/80 flex items-center justify-center"><i data-lucide="heart" class="w-4 h-4 ${isFav ? 'text-red-500 fill-red-500' : 'text-gray-400'}"></i></button>` : ''}
       </div>
       <div class="p-2.5 md:p-3">
-        <h4 class="font-bold text-gray-900 text-xs md:text-sm mb-1 truncate">${p.name}</h4>
+        <h4 class="font-bold text-gray-900 text-xs md:text-sm mb-1 truncate">${App.h(p.name)}</h4>
         <div class="flex items-center gap-1 text-[10px] md:text-xs text-gray-500 mb-1.5">
           ${sub ? `<span class="bg-gray-100 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="${sub.icon}" class="w-3 h-3"></i>${sub.name}</span>` : (cat ? `<span class="bg-gray-100 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="${cat.icon}" class="w-3 h-3"></i>${cat.name}</span>` : '')}
           ${city ? `<span class="flex items-center gap-0.5"><i data-lucide="map-pin" class="w-3 h-3"></i>${city.name}</span>` : ''}
@@ -840,7 +853,7 @@ const App = {
           <div class="p-4 md:p-6">
             <div class="flex items-start justify-between mb-3">
               <div>
-                <h2 class="text-xl md:text-2xl font-bold text-gray-900">${place.name}</h2>
+                <h2 class="text-xl md:text-2xl font-bold text-gray-900">${App.h(place.name)}</h2>
                 <div class="flex flex-wrap items-center gap-2 mt-1.5">
                   ${sub ? `<span class="bg-gray-100 px-2 py-0.5 rounded text-xs flex items-center gap-1"><i data-lucide="${sub.icon}" class="w-3 h-3"></i>${sub.name}</span>` : (cat ? `<span class="bg-gray-100 px-2 py-0.5 rounded text-xs flex items-center gap-1"><i data-lucide="${cat.icon}" class="w-3 h-3"></i>${cat.name}</span>` : '')}
                   ${city ? `<span class="text-xs text-gray-500 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>${city.name}</span>` : ''}
@@ -855,7 +868,7 @@ const App = {
               <span class="flex items-center gap-1"><i data-lucide="star" class="w-4 h-4 text-yellow-500 fill-yellow-500"></i><span class="font-bold">${place.rating || '0'}</span><span class="text-gray-400 text-xs">(${place.reviews || 0})</span></span>
               <span class="text-gray-400 text-xs flex items-center gap-1"><i data-lucide="eye" class="w-3.5 h-3.5"></i>${place.views || 0} مشاهدة</span>
             </div>
-            ${place.description ? `<p class="text-gray-600 mb-4 text-sm leading-relaxed">${place.description}</p>` : ''}
+            ${place.description ? `<p class="text-gray-600 mb-4 text-sm leading-relaxed">${App.h(place.description)}</p>` : ''}
             <!-- Action Buttons -->
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 px-1">
               ${place.phone ? `<a href="tel:${place.phone}" class="bg-green-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="phone" class="w-4 h-4"></i>اتصال</a>` : ''}
@@ -874,7 +887,7 @@ const App = {
               <a href="https://twitter.com/intent/tweet?text=${encodeURIComponent(place.name + ' - الدليل اليمني التجاري')}&url=${encodeURIComponent(App._buildShareUrl('place', place.id))}" target="_blank" class="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center hover:bg-sky-600" title="تويتر/X"><i data-lucide="twitter" class="w-4 h-4"></i></a>
               <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(App._buildShareUrl('place', place.id))}" target="_blank" class="w-8 h-8 rounded-full bg-blue-800 text-white flex items-center justify-center hover:bg-blue-900" title="لينكدإن"><i data-lucide="linkedin" class="w-4 h-4"></i></a>
             </div>
-            ${place.address ? `<div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm flex items-start gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-gray-400 mt-0.5 shrink-0"></i><span>${place.address}</span></div>` : ''}
+            ${place.address ? `<div class="bg-gray-50 rounded-lg p-3 mb-4 text-sm flex items-start gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-gray-400 mt-0.5 shrink-0"></i><span>${App.h(place.address)}</span></div>` : ''}
             
             <!-- ساعات العمل -->
             ${(place.openTime || place.closeTime || place.workDays) ? `
@@ -884,9 +897,9 @@ const App = {
                 ${place.openTime && place.closeTime ? `
                 <div class="flex items-center gap-2 text-xs">
                   <i data-lucide="sunrise" class="w-3.5 h-3.5 text-orange-500"></i>
-                  <span class="text-gray-600">يفتح: <strong>${place.openTime}</strong></span>
+                  <span class="text-gray-600">يفتح: <strong>${App.h(place.openTime)}</strong></span>
                   <i data-lucide="sunset" class="w-3.5 h-3.5 text-indigo-500"></i>
-                  <span class="text-gray-600">يغلق: <strong>${place.closeTime}</strong></span>
+                  <span class="text-gray-600">يغلق: <strong>${App.h(place.closeTime)}</strong></span>
                 </div>` : ''}
                 ${place.workDays && place.workDays.length > 0 ? `
                 <div class="flex items-center gap-1.5 text-xs">
@@ -922,8 +935,8 @@ const App = {
             <button onclick="App.submitReview('${place.id}')" class="mt-2 bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:bg-blue-700 flex items-center gap-1"><i data-lucide="send" class="w-3.5 h-3.5"></i>إرسال</button>
           </div>` : '<p class="text-gray-400 text-xs mb-3"><a href="#login" class="text-blue-600 font-medium">سجّل دخول</a> لكتابة مراجعة</p>'}
           ${reviews.length ? reviews.map(r => `<div class="border-b border-gray-100 py-2.5 last:border-0">
-            <div class="flex items-center justify-between mb-1"><span class="font-semibold text-xs">${r.userName}</span><span class="flex">${Array(r.rating).fill(0).map(() => '<i data-lucide="star" class="w-3.5 h-3.5 text-yellow-500 fill-yellow-500"></i>').join('')}</span></div>
-            <p class="text-gray-600 text-xs">${r.comment}</p>
+            <div class="flex items-center justify-between mb-1"><span class="font-semibold text-xs">${App.h(r.userName)}</span><span class="flex">${Array(r.rating).fill(0).map(() => '<i data-lucide="star" class="w-3.5 h-3.5 text-yellow-500 fill-yellow-500"></i>').join('')}</span></div>
+            <p class="text-gray-600 text-xs">${App.h(r.comment)}</p>
             <span class="text-[10px] text-gray-400 flex items-center gap-1 mt-1"><i data-lucide="clock" class="w-3 h-3"></i>${r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('ar') : (r.createdAt ? new Date(r.createdAt).toLocaleDateString('ar') : '')}</span>
           </div>`).join('') : '<p class="text-gray-400 text-center py-4 text-xs">لا توجد مراجعات</p>'}
         </div>
@@ -1268,9 +1281,9 @@ const App = {
             </div>
           </div>
           <div class="space-y-3">
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">الاسم</label><input type="text" id="profileName" value="${u.name}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">الهاتف</label><input type="tel" id="profilePhone" value="${u.phone||''}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">نبذة عنك</label><textarea id="profileBio" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" rows="2">${u.bio||''}</textarea></div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">الاسم</label><input type="text" id="profileName" value="${App.h(u.name)}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">الهاتف</label><input type="tel" id="profilePhone" value="${App.h(u.phone||'')}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">نبذة عنك</label><textarea id="profileBio" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" rows="2">${App.h(u.bio||'')}</textarea></div>
             <button onclick="App.updateProfile()" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-blue-700 text-sm flex items-center gap-2"><i data-lucide="save" class="w-4 h-4"></i>حفظ التعديلات</button>
           </div>
         </div>
@@ -1295,14 +1308,14 @@ const App = {
         return `<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center gap-3">
           <div class="flex-1">
             <div class="flex items-center gap-2 mb-1">
-              <h4 class="font-bold text-sm text-gray-900">${p.name}</h4>
+              <h4 class="font-bold text-sm text-gray-900">${App.h(p.name)}</h4>
               <span class="text-[10px] px-2 py-0.5 rounded-full border ${statusColors[status]}">${statusLabels[status]}</span>
             </div>
             <div class="flex items-center gap-2 text-xs text-gray-500">
               ${cat ? `<span>${cat.name}</span>` : ''}
               ${city ? `<span>• ${city.name}</span>` : ''}
             </div>
-            ${p.adminNote ? `<p class="text-xs text-gray-500 mt-1">📝 ${p.adminNote}</p>` : ''}
+            ${p.adminNote ? `<p class="text-xs text-gray-500 mt-1">📝 ${App.h(p.adminNote)}</p>` : ''}
           </div>
           <div class="flex gap-2">
             <a href="#place/${p.id}" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i data-lucide="eye" class="w-4 h-4"></i></a>
@@ -1330,12 +1343,12 @@ const App = {
     const dateStr = startDate && endDate ? `${startDate} - ${endDate}` : startDate || '';
     return `<div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all cursor-pointer active-scale" onclick="location.hash='${type}/${item.id}'">
       <div class="h-28 md:h-36 relative flex items-center justify-center" style="background:linear-gradient(135deg, ${typeColor}20, ${typeColor}40)">
-        ${(item.image || item.imageUrl) ? `<img src="${item.image || item.imageUrl}" alt="${item.title || ''}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">` : `<i data-lucide="${typeIcon}" class="w-12 h-12 md:w-16 md:h-16" style="color:${typeColor};opacity:0.3"></i>`}
+        ${(item.image || item.imageUrl) ? `<img src="${item.image || item.imageUrl}" alt="${App.h(item.title || '')}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">` : `<i data-lucide="${typeIcon}" class="w-12 h-12 md:w-16 md:h-16" style="color:${typeColor};opacity:0.3"></i>`}
         ${item.isActive === false ? `<div class="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[9px] font-medium">منتهي</div>` : ''}
       </div>
       <div class="p-2.5 md:p-3">
-        <h4 class="font-bold text-gray-900 text-xs md:text-sm mb-1 truncate">${item.title || 'بدون عنوان'}</h4>
-        ${subtitle ? `<p class="text-[10px] md:text-xs text-gray-500 truncate mb-1">${subtitle}</p>` : ''}
+        <h4 class="font-bold text-gray-900 text-xs md:text-sm mb-1 truncate">${App.h(item.title || 'بدون عنوان')}</h4>
+        ${subtitle ? `<p class="text-[10px] md:text-xs text-gray-500 truncate mb-1">${App.h(subtitle)}</p>` : ''}
         ${dateStr ? `<p class="text-[9px] text-gray-400 flex items-center gap-0.5"><i data-lucide="calendar" class="w-2.5 h-2.5"></i>${dateStr}</p>` : ''}
       </div>
     </div>`;
@@ -1592,16 +1605,16 @@ const App = {
         </div>
         <div class="bg-white rounded-xl overflow-hidden border border-gray-100">
           <div class="h-40 md:h-56 relative" style="background:linear-gradient(135deg, ${typeColor}20, ${typeColor}40)">
-            ${(item.image || item.imageUrl) ? `<img src="${item.image || item.imageUrl}" alt="${item.title}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="${typeIcon}" class="w-20 h-20" style="color:${typeColor};opacity:0.3"></i></div>`}
+            ${(item.image || item.imageUrl) ? `<img src="${item.image || item.imageUrl}" alt="${App.h(item.title)}" class="w-full h-full object-cover">` : `<div class="flex items-center justify-center h-full"><i data-lucide="${typeIcon}" class="w-20 h-20" style="color:${typeColor};opacity:0.3"></i></div>`}
           </div>
           <div class="p-4 md:p-6">
-            <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-2">${item.title || ''}</h2>
-            ${subtitleVal ? `<p class="text-sm text-gray-500 mb-3 flex items-center gap-1"><i data-lucide="user" class="w-4 h-4"></i>${subtitle}: <strong>${subtitleVal}</strong></p>` : ''}
-            ${item.description ? `<p class="text-gray-600 mb-4 text-sm leading-relaxed">${item.description}</p>` : ''}
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-2">${App.h(item.title || '')}</h2>
+            ${subtitleVal ? `<p class="text-sm text-gray-500 mb-3 flex items-center gap-1"><i data-lucide="user" class="w-4 h-4"></i>${App.h(subtitle)}: <strong>${App.h(subtitleVal)}</strong></p>` : ''}
+            ${item.description ? `<p class="text-gray-600 mb-4 text-sm leading-relaxed">${App.h(item.description)}</p>` : ''}
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
               ${startDate ? `<div class="bg-gray-50 rounded-lg p-2 text-xs"><span class="text-gray-400">يبدأ:</span> <strong>${startDate}</strong></div>` : ''}
               ${endDate ? `<div class="bg-gray-50 rounded-lg p-2 text-xs"><span class="text-gray-400">ينتهي:</span> <strong>${endDate}</strong></div>` : ''}
-              ${item.location ? `<div class="bg-gray-50 rounded-lg p-2 text-xs flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3 text-gray-400"></i>${item.location}</div>` : ''}
+              ${item.location ? `<div class="bg-gray-50 rounded-lg p-2 text-xs flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3 text-gray-400"></i>${App.h(item.location)}</div>` : ''}
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
               ${item.phone ? `<a href="tel:${item.phone}" class="bg-green-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="phone" class="w-4 h-4"></i>اتصال</a>` : ''}
@@ -1700,17 +1713,17 @@ const App = {
             <span class="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full border ${statusColors[status]}">${statusLabels[status]}</span>
           </div>
           <div class="p-3">
-            <h4 class="font-bold text-sm text-gray-900 mb-1">${p.name}</h4>
+            <h4 class="font-bold text-sm text-gray-900 mb-1">${App.h(p.name)}</h4>
             <div class="flex items-center gap-2 text-xs text-gray-500 mb-2">
-              ${cat ? `<span>${cat.name}</span>` : ''}
-              ${city ? `<span>• ${city.name}</span>` : ''}
+              ${cat ? `<span>${App.h(cat.name)}</span>` : ''}
+              ${city ? `<span>• ${App.h(city.name)}</span>` : ''}
             </div>
             <div class="flex items-center gap-2 text-[10px] text-gray-400">
               <span class="flex items-center gap-0.5"><i data-lucide="eye" class="w-3 h-3"></i>${p.views || 0}</span>
               <span class="flex items-center gap-0.5"><i data-lucide="star" class="w-3 h-3"></i>${p.rating || 0}</span>
               <span class="flex items-center gap-0.5"><i data-lucide="message-circle" class="w-3 h-3"></i>${p.reviews || 0}</span>
             </div>
-            ${p.adminNote ? `<p class="text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded">📝 ${p.adminNote}</p>` : ''}
+            ${p.adminNote ? `<p class="text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded">📝 ${App.h(p.adminNote)}</p>` : ''}
             <div class="flex gap-2 mt-3">
               <a href="#place/${p.id}" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-center text-xs font-medium hover:bg-blue-100">عرض</a>
               <button onclick="App.sharePlace('${p.id}')" class="flex-1 bg-gray-50 text-gray-600 py-2 rounded-lg text-center text-xs font-medium hover:bg-gray-100">مشاركة</button>

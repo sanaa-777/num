@@ -91,6 +91,38 @@
     // Admin Panel Controller
     // =============================================
     var AdminController = {
+      // Admin login rate limiting (separate from Auth rate limiter)
+      _adminAttempts: 0,
+      _adminLockedUntil: 0,
+      _ADMIN_MAX_ATTEMPTS: 5,
+      _ADMIN_LOCKOUT_MS: 60000,
+
+      _checkAdminRateLimit: function() {
+        var now = Date.now();
+        if (this._adminLockedUntil && now < this._adminLockedUntil) {
+          var remaining = Math.ceil((this._adminLockedUntil - now) / 1000);
+          return { allowed: false, message: 'تم إيقاف الدخول مؤقتاً. حاول بعد ' + remaining + ' ثانية' };
+        }
+        if (this._adminLockedUntil && now >= this._adminLockedUntil) {
+          this._adminAttempts = 0;
+          this._adminLockedUntil = 0;
+        }
+        return { allowed: true };
+      },
+
+      _recordAdminFailure: function() {
+        this._adminAttempts++;
+        if (this._adminAttempts >= this._ADMIN_MAX_ATTEMPTS) {
+          var multiplier = Math.pow(2, Math.floor(this._adminAttempts / this._ADMIN_MAX_ATTEMPTS) - 1);
+          this._adminLockedUntil = Date.now() + (this._ADMIN_LOCKOUT_MS * multiplier);
+        }
+      },
+
+      _clearAdminAttempts: function() {
+        this._adminAttempts = 0;
+        this._adminLockedUntil = 0;
+      },
+
       init: async function() {
         try {
           await Auth.init();
@@ -124,6 +156,14 @@
             return;
           }
 
+          // Check admin-level rate limit
+          var rateCheck = self._checkAdminRateLimit();
+          if (!rateCheck.allowed) {
+            errEl.textContent = rateCheck.message;
+            errEl.style.display = 'block';
+            return;
+          }
+
           btn.disabled = true;
           btn.innerHTML = '<span class="spinner"></span>جاري الدخول...';
           errEl.style.display = 'none';
@@ -132,10 +172,13 @@
             var user = await Auth.login(email, pass);
             if (!user || user.role !== 'admin') {
               await Auth.logout();
+              self._recordAdminFailure();
               throw new Error('هذا الحساب لا يملك صلاحية الأدمن');
             }
+            self._clearAdminAttempts();
             await self.showAdminPanel();
           } catch (e) {
+            self._recordAdminFailure();
             errEl.textContent = e.message || 'فشل تسجيل الدخول';
             errEl.style.display = 'block';
             btn.disabled = false;
@@ -176,6 +219,17 @@
 
     var AdminPanel = {
       currentTab: 'dashboard',
+
+      // ====== HTML Sanitization (XSS Prevention) ======
+      _escHtml: function(str) {
+        if (str == null) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      },
       
       openSidebar: function() {
         document.getElementById('adminSidebar')?.classList.add('open');
@@ -454,7 +508,7 @@
           notifs.slice(0, 8).map(function(n) {
             return '<div class="flex items-center gap-2 p-2 rounded-lg ' + (n.read ? 'bg-gray-50' : 'bg-blue-50') + ' text-xs">' +
               '<i data-lucide="' + (n.type === 'request' ? 'user-plus' : n.type === 'new_place' ? 'building-2' : 'info') + '" class="w-4 h-4 ' + (n.read ? 'text-gray-400' : 'text-blue-600') + ' shrink-0"></i>' +
-              '<span class="flex-1 ' + (n.read ? 'text-gray-600' : 'text-gray-900 font-medium') + '">' + n.message + '</span>' +
+              '<span class="flex-1 ' + (n.read ? 'text-gray-600' : 'text-gray-900 font-medium') + '">' + AdminPanel._escHtml(n.message) + '</span>' +
               '<span class="text-[10px] text-gray-400 shrink-0">' + (n.createdAt && n.createdAt.toDate ? n.createdAt.toDate().toLocaleString('ar') : '') + '</span>' +
             '</div>';
           }).join('') +
@@ -480,7 +534,7 @@
               recentUsers.map(function(u) {
                 return '<div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 text-xs">' +
                   '<img src="' + (u.avatar || '') + '" class="w-7 h-7 rounded-full" alt="">' +
-                  '<div class="flex-1"><div class="font-medium">' + (u.name || 'بدون اسم') + '</div><div class="text-[10px] text-gray-400">' + (u.email || '') + '</div></div>' +
+                  '<div class="flex-1"><div class="font-medium">' + AdminPanel._escHtml(u.name || 'بدون اسم') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml(u.email || '') + '</div></div>' +
                   '<span class="text-[10px] px-2 py-0.5 rounded ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : u.suspended ? 'bg-red-100 text-red-700' : u.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700') + '">' + (u.role === 'admin' ? 'أدمن' : u.suspended ? 'موقوف' : u.verified ? 'موثّق' : 'معلّق') + '</span>' +
                 '</div>';
               }).join('') +
@@ -491,8 +545,8 @@
             '<div class="space-y-2">' +
               (pendingPlaces.length ? pendingPlaces.map(function(p) {
                 return '<div class="p-2 rounded-lg bg-yellow-50 border border-yellow-200 text-xs">' +
-                  '<div class="font-medium">' + (p.name || 'نشاط بدون اسم') + '</div>' +
-                  '<div class="text-[10px] text-gray-500 mt-1">' + (p.address || p.city || '') + '</div>' +
+                  '<div class="font-medium">' + AdminPanel._escHtml(p.name || 'نشاط بدون اسم') + '</div>' +
+                  '<div class="text-[10px] text-gray-500 mt-1">' + AdminPanel._escHtml(p.address || p.city || '') + '</div>' +
                   '<div class="flex gap-2 mt-2">' +
                     '<button onclick="AdminPanel.approvePlace(\'' + p.id + '\')" class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700">موافقة</button>' +
                     '<button onclick="AdminPanel.rejectPlace(\'' + p.id + '\')" class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700">رفض</button>' +
@@ -518,8 +572,8 @@
               recentApproved.map(function(p) {
                 var cat = Data.categories.find(function(c) { return c.id === p.category; });
                 return '<div class="p-3 rounded-lg bg-gray-50 border border-gray-100 text-xs">' +
-                  '<div class="font-bold text-gray-900">' + (p.name || 'نشاط بدون اسم') + '</div>' +
-                  '<div class="text-gray-500 mt-1">' + (cat ? cat.name : '-') + ' • ' + (p.city || '') + '</div>' +
+                  '<div class="font-bold text-gray-900">' + AdminPanel._escHtml(p.name || 'نشاط بدون اسم') + '</div>' +
+                  '<div class="text-gray-500 mt-1">' + (cat ? AdminPanel._escHtml(cat.name) : '-') + ' • ' + AdminPanel._escHtml(p.city || '') + '</div>' +
                   '<div class="mt-2 flex gap-2 flex-wrap">' +
                     (p.verified ? '<span class="px-2 py-0.5 rounded bg-green-100 text-green-700">موثّق</span>' : '') +
                     (p.featured ? '<span class="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700">مميّز</span>' : '') +
@@ -557,8 +611,8 @@
             '<tbody class="divide-y divide-gray-100">' +
               filtered.map(function(u) {
                 return '<tr class="hover:bg-gray-50">' +
-                  '<td class="px-3 py-3"><div class="flex items-center gap-2"><img src="' + (u.avatar || '') + '" class="w-8 h-8 rounded-full" alt=""><div><div class="font-medium">' + (u.name || 'بدون اسم') + '</div></div></div></td>' +
-                  '<td class="px-3 py-3 text-gray-600">' + (u.email || '') + '</td>' +
+                  '<td class="px-3 py-3"><div class="flex items-center gap-2"><img src="' + (u.avatar || '') + '" class="w-8 h-8 rounded-full" alt=""><div><div class="font-medium">' + AdminPanel._escHtml(u.name || 'بدون اسم') + '</div></div></div></td>' +
+                  '<td class="px-3 py-3 text-gray-600">' + AdminPanel._escHtml(u.email || '') + '</td>' +
                   '<td class="px-3 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-medium ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700') + '">' + (u.role === 'admin' ? 'أدمن' : 'مستخدم') + '</span></td>' +
                   '<td class="px-3 py-3">' + (u.suspended ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">موقوف</span>' : u.verified ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">موثّق</span>' : u.active ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">مفعّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-700">معلّق</span>') + '</td>' +
                   '<td class="px-3 py-3">' + (u.role !== 'admin' ?
@@ -596,17 +650,17 @@
           var ep = self.editingPlace;
           formHtml = '<div class="bg-white rounded-xl border border-gray-200 p-5 mb-4 shadow-sm">' +
             '<div class="flex items-center justify-between mb-4">' +
-              '<h3 class="text-sm font-bold">تعديل النشاط: ' + (ep.name || '') + '</h3>' +
+              '<h3 class="text-sm font-bold">تعديل النشاط: ' + AdminPanel._escHtml(ep.name || '') + '</h3>' +
               '<button onclick="AdminPanel.cancelPlaceEdit()" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"><i data-lucide="x" class="w-4 h-4"></i></button>' +
             '</div>' +
             '<div id="placeFormError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:12px;margin-bottom:12px;"></div>' +
             '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
-              '<div><label class="field-label">اسم النشاط *</label><input type="text" id="editPlaceName" class="field-input" value="' + (ep.name || '') + '"></div>' +
-              '<div><label class="field-label">الهاتف</label><input type="tel" id="editPlacePhone" class="field-input" value="' + (ep.phone || '') + '"></div>' +
-              '<div><label class="field-label">واتساب</label><input type="tel" id="editPlaceWhatsapp" class="field-input" value="' + (ep.whatsapp || '') + '"></div>' +
-              '<div><label class="field-label">العنوان</label><input type="text" id="editPlaceAddress" class="field-input" value="' + (ep.address || '') + '"></div>' +
-              '<div class="md:col-span-2"><label class="field-label">الوصف</label><textarea id="editPlaceDesc" class="field-input" rows="3">' + (ep.description || '') + '</textarea></div>' +
-              '<div class="md:col-span-2"><label class="field-label">ملاحظة الأدمن</label><textarea id="editPlaceNote" class="field-input" rows="2">' + (ep.adminNote || '') + '</textarea></div>' +
+              '<div><label class="field-label">اسم النشاط *</label><input type="text" id="editPlaceName" class="field-input" value="' + AdminPanel._escHtml(ep.name || '') + '"></div>' +
+              '<div><label class="field-label">الهاتف</label><input type="tel" id="editPlacePhone" class="field-input" value="' + AdminPanel._escHtml(ep.phone || '') + '"></div>' +
+              '<div><label class="field-label">واتساب</label><input type="tel" id="editPlaceWhatsapp" class="field-input" value="' + AdminPanel._escHtml(ep.whatsapp || '') + '"></div>' +
+              '<div><label class="field-label">العنوان</label><input type="text" id="editPlaceAddress" class="field-input" value="' + AdminPanel._escHtml(ep.address || '') + '"></div>' +
+              '<div class="md:col-span-2"><label class="field-label">الوصف</label><textarea id="editPlaceDesc" class="field-input" rows="3">' + AdminPanel._escHtml(ep.description || '') + '</textarea></div>' +
+              '<div class="md:col-span-2"><label class="field-label">ملاحظة الأدمن</label><textarea id="editPlaceNote" class="field-input" rows="2">' + AdminPanel._escHtml(ep.adminNote || '') + '</textarea></div>' +
               '<div><label class="field-label">الصورة الحالية</label>' +
                 ((ep.image || (ep.images && ep.images[0])) ? '<img src="' + (ep.image || ep.images[0]) + '" class="w-20 h-20 rounded-lg object-cover mt-1">' : '<p class="text-gray-400 text-xs mt-1">لا توجد صورة</p>') +
               '</div>' +
@@ -656,12 +710,12 @@
                 return '<tr class="hover:bg-gray-50 align-top">' +
                   '<td class="px-3 py-3"><div class="flex items-center gap-2">' +
                     ((p.image || (p.images && p.images[0])) ? '<img src="' + (p.image || p.images[0]) + '" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.style.display=\'none\'">' : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>') +
-                    '<div><div class="font-medium">' + (p.name || 'نشاط بدون اسم') + '</div><div class="text-[10px] text-gray-400">' + (p.phone || '') + ' • ' + (p.address || '') + '</div>' +
+                    '<div><div class="font-medium">' + AdminPanel._escHtml(p.name || 'نشاط بدون اسم') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml(p.phone || '') + ' • ' + AdminPanel._escHtml(p.address || '') + '</div>' +
                     (p.images && p.images.length > 1 ? '<span class="text-[9px] text-blue-500">' + p.images.length + ' صور</span>' : '') +
                     '</div></div></td>' +
-                  '<td class="px-3 py-3 text-gray-600">' + (cat ? cat.name : '-') + '</td>' +
+                  '<td class="px-3 py-3 text-gray-600">' + (cat ? AdminPanel._escHtml(cat.name) : '-') + '</td>' +
                   '<td class="px-3 py-3">' + statusBadge + activeBadge + (p.verified ? '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700 mr-1">موثّق</span>' : '') + (p.featured ? '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 mr-1">مميّز</span>' : '') + '</td>' +
-                  '<td class="px-3 py-3 text-gray-500 max-w-xs">' + (p.adminNote || '-') + '</td>' +
+                  '<td class="px-3 py-3 text-gray-500 max-w-xs">' + AdminPanel._escHtml(p.adminNote || '-') + '</td>' +
                   '<td class="px-3 py-3"><div class="flex items-center gap-1 flex-wrap">' +
                     '<button onclick="AdminPanel.approvePlace(\'' + p.id + '\')" class="p-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200" title="موافقة"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>' +
                     '<button onclick="AdminPanel.rejectPlace(\'' + p.id + '\')" class="p-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200" title="رفض"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>' +
@@ -711,8 +765,8 @@
             '</div>' +
             this.renderDataTable(offers, 'offer', [
               { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + (item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
-              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + (item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + (item.description || '').substring(0, 50) + '</div>'; } },
-              { label: 'الوكيل', render: function(item) { return item.agentName || '-'; } },
+              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
+              { label: 'الوكيل', render: function(item) { return AdminPanel._escHtml(item.agentName || '-'); } },
               { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
               { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>'); } }
             ]) +
@@ -756,8 +810,8 @@
             '</div>' +
             this.renderDataTable(jobs, 'job', [
               { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + (item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
-              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + (item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + (item.description || '').substring(0, 50) + '</div>'; } },
-              { label: 'الشركة', render: function(item) { return item.companyName || '-'; } },
+              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
+              { label: 'الشركة', render: function(item) { return AdminPanel._escHtml(item.companyName || '-'); } },
               { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
               { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>'); } }
             ]) +
@@ -801,8 +855,8 @@
             '</div>' +
             this.renderDataTable(events, 'event', [
               { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + (item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
-              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + (item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + (item.description || '').substring(0, 50) + '</div>'; } },
-              { label: 'جهة التنظيم', render: function(item) { return item.organizer || '-'; } },
+              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
+              { label: 'جهة التنظيم', render: function(item) { return AdminPanel._escHtml(item.organizer || '-'); } },
               { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
               { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>'); } }
             ]) +
@@ -869,10 +923,10 @@
               '<tbody class="divide-y divide-gray-100">' +
                 (filtered.length > 0 ? filtered.map(function(item) {
                   return '<tr class="hover:bg-gray-50">' +
-                    '<td class="px-3 py-3 font-medium">' + (item.name || '-') + '</td>' +
-                    '<td class="px-3 py-3">' + (item.buyPrice || '-') + '</td>' +
-                    '<td class="px-3 py-3">' + (item.sellPrice || '-') + '</td>' +
-                    '<td class="px-3 py-3 text-gray-500">' + (item.region || '-') + '</td>' +
+                    '<td class="px-3 py-3 font-medium">' + AdminPanel._escHtml(item.name || '-') + '</td>' +
+                    '<td class="px-3 py-3">' + AdminPanel._escHtml(item.buyPrice || '-') + '</td>' +
+                    '<td class="px-3 py-3">' + AdminPanel._escHtml(item.sellPrice || '-') + '</td>' +
+                    '<td class="px-3 py-3 text-gray-500">' + AdminPanel._escHtml(item.region || '-') + '</td>' +
                     '<td class="px-3 py-3 text-gray-400">' + self.formatDate(item.updatedAt || item.createdAt) + '</td>' +
                     '<td class="px-3 py-3"><div class="flex items-center gap-1">' +
                       '<button onclick="AdminPanel.editPricing(\'' + item.id + '\')" class="p-1.5 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200" title="تعديل"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>' +
@@ -945,16 +999,18 @@
 
         var fieldsHtml = fields.map(function(f) {
           var val = item[f.name] || '';
+          var escVal = AdminPanel._escHtml(val);
+          var escPlaceholder = AdminPanel._escHtml(f.placeholder || '');
           if (f.type === 'textarea') {
-            return '<div><label class="field-label">' + f.label + (f.required ? ' *' : '') + '</label><textarea id="field_' + f.name + '" class="field-input" rows="3" placeholder="' + (f.placeholder || '') + '">' + val + '</textarea></div>';
+            return '<div><label class="field-label">' + f.label + (f.required ? ' *' : '') + '</label><textarea id="field_' + f.name + '" class="field-input" rows="3" placeholder="' + escPlaceholder + '">' + escVal + '</textarea></div>';
           }
           if (f.type === 'select') {
             var opts = (f.options || []).map(function(o) {
-              return '<option value="' + o.value + '"' + (val === o.value ? ' selected' : '') + '>' + o.label + '</option>';
+              return '<option value="' + AdminPanel._escHtml(o.value) + '"' + (val === o.value ? ' selected' : '') + '>' + AdminPanel._escHtml(o.label) + '</option>';
             }).join('');
             return '<div><label class="field-label">' + f.label + (f.required ? ' *' : '') + '</label><select id="field_' + f.name + '" class="field-input">' + opts + '</select></div>';
           }
-          return '<div><label class="field-label">' + f.label + (f.required ? ' *' : '') + '</label><input type="' + f.type + '" id="field_' + f.name + '" class="field-input" value="' + val + '" placeholder="' + (f.placeholder || '') + '"></div>';
+          return '<div><label class="field-label">' + f.label + (f.required ? ' *' : '') + '</label><input type="' + f.type + '" id="field_' + f.name + '" class="field-input" value="' + escVal + '" placeholder="' + escPlaceholder + '"></div>';
         }).join('');
 
         return '<div class="bg-white rounded-xl border border-gray-200 p-5 mb-4 shadow-sm">' +
