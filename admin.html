@@ -527,6 +527,7 @@
       renderDashboard: function(stats, users, places, offers, jobs, events, pricing, unreadCount, notifs, pendingEdits) {
         var recentUsers = users.slice(0, 5);
         var pendingPlaces = places.filter(function(p) { return p.status === 'pending'; }).slice(0, 5);
+        var recentApproved = places.filter(function(p) { return p.status === 'approved'; }).slice(0, 5);
         return '' +
           // Stats Grid - only on dashboard
           '<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 mb-6">' +
