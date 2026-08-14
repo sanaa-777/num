@@ -476,7 +476,17 @@ const Data = {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       this._invalidateCache();
-      return { id: docRef.id, ...place };
+      // Immediately add to my-places cache so it shows up right away
+      const newPlace = {
+        id: docRef.id, ...place,
+        verified: false, featured: false, isActive: true, status: 'pending',
+        views: 0, reviews: 0, rating: 0, adminNote: '',
+        images: place.images || [],
+        createdAt: { toMillis: () => Date.now() },
+        updatedAt: { toMillis: () => Date.now() }
+      };
+      this._myPlacesCache = [newPlace, ...this._myPlacesCache];
+      return newPlace;
     } catch (e) {
       console.error('addPlace error:', e);
       throw e;
@@ -769,6 +779,82 @@ const Data = {
       });
     }
     console.log('Default places seeded');
+  },
+
+  // ====== My Places (all statuses for current user) ======
+  _myPlacesCache: [],
+  _myPlacesListener: null,
+
+  async getMyPlaces(userId) {
+    if (!userId) return [];
+
+    // Set up real-time listener for this user's places
+    if (this._myPlacesListener) return this._myPlacesCache;
+
+    return new Promise((resolve) => {
+      try {
+        this._myPlacesListener = db.collection('places')
+          .where('owner', '==', userId)
+          .onSnapshot((snapshot) => {
+            this._myPlacesCache = snapshot.docs.map(doc => {
+              const d = doc.data();
+              const place = { id: doc.id, ...d };
+              if ((!place.images || place.images.length === 0) && place.image) {
+                place.images = [place.image];
+              }
+              if (!place.images) place.images = [];
+              return place;
+            });
+            // Sort client-side: pending first, then by createdAt desc
+            this._myPlacesCache.sort((a, b) => {
+              const statusOrder = { pending: 0, approved: 1, rejected: 2 };
+              const sa = statusOrder[a.status] ?? 1;
+              const sb = statusOrder[b.status] ?? 1;
+              if (sa !== sb) return sa - sb;
+              const ta = a.createdAt?.toMillis?.() || 0;
+              const tb = b.createdAt?.toMillis?.() || 0;
+              return tb - ta;
+            });
+
+            // Re-render if myplaces view is active
+            if (typeof App !== 'undefined' && App._initialized && App.currentView === 'myplaces') {
+              clearTimeout(this._myPlacesDebounce);
+              this._myPlacesDebounce = setTimeout(() => App.render(), 200);
+            }
+
+            resolve(this._myPlacesCache);
+          }, (error) => {
+            console.error('MyPlaces listener error:', error);
+            // Fallback: one-time query
+            db.collection('places')
+              .where('owner', '==', userId)
+              .get()
+              .then(snap => {
+                this._myPlacesCache = snap.docs.map(doc => {
+                  const d = doc.data();
+                  return { id: doc.id, ...d, images: d.images || (d.image ? [d.image] : []) };
+                });
+                resolve(this._myPlacesCache);
+              })
+              .catch(() => resolve(this._myPlacesCache));
+          });
+      } catch (e) {
+        console.error('getMyPlaces error:', e);
+        resolve(this._myPlacesCache);
+      }
+    });
+  },
+
+  getMyPlacesSync() {
+    return this._myPlacesCache;
+  },
+
+  _stopMyPlacesListener() {
+    if (this._myPlacesListener) {
+      this._myPlacesListener();
+      this._myPlacesListener = null;
+    }
+    this._myPlacesCache = [];
   },
 
   // ====== نسخ متزامنة للتوافق مع app.js ======

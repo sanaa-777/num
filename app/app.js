@@ -1347,7 +1347,30 @@ const App = {
 
   render_myplaces() {
     if (!Auth.currentUser) return this.render_login();
-    const my = Data.getPlacesSync().filter(p => p.owner === Auth.currentUser.id);
+    // Use dedicated my-places cache (includes all statuses: pending, approved, rejected)
+    const my = Data.getMyPlacesSync();
+    // If cache is empty, ensure listener is started (handles first load + race conditions)
+    if (my.length === 0) {
+      Data.getMyPlaces(Auth.currentUser.id).then((places) => {
+        // Only re-render if we actually got data and still on the same view
+        if (places.length > 0 && App.currentView === 'myplaces') App.render();
+      });
+      // Show loading only if listener hasn't produced data yet
+      if (Data._myPlacesCache.length === 0) {
+        return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="building-2" class="w-5 h-5 text-blue-600"></i>مواقعي</h3>
+            <a href="#add" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-semibold text-xs flex items-center gap-1"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة</a>
+          </div>
+          <div class="text-center py-8"><div class="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div><p class="text-gray-400 text-sm">جاري التحميل...</p></div>
+        </div></section>`;
+      }
+    }
+
+    const statusColors = { pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', approved: 'bg-green-50 text-green-700 border-green-200', rejected: 'bg-red-50 text-red-700 border-red-200' };
+    const statusLabels = { pending: '⏳ قيد المراجعة', approved: '✅ معتمد', rejected: '❌ مرفوض' };
+    const statusMessages = { pending: 'نشاطك قيد المراجعة من قبل الإدارة. سيظهر للمستخدمين بعد الموافقة.', approved: 'تمت الموافقة على نشاطك وهو ظاهر الآن للجميع.', rejected: 'تم رفض نشاطك. يمكنك مراجعة سبب الرفض أدناه أو إعادة المحاولة.' };
+
     return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="building-2" class="w-5 h-5 text-blue-600"></i>مواقعي (${my.length})</h3>
@@ -1356,27 +1379,40 @@ const App = {
       ${my.length ? `<div class="space-y-3">${my.map(p => {
         const cat = Data.categories.find(c => c.id === p.category);
         const city = Data.cities.find(c => c.id === p.city);
-        const statusColors = { pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', approved: 'bg-green-50 text-green-700 border-green-200', rejected: 'bg-red-50 text-red-700 border-red-200' };
-        const statusLabels = { pending: '⏳ قيد المراجعة', approved: '✅ معتمد', rejected: '❌ مرفوض' };
         const status = p.status || 'approved';
-        return `<div class="bg-white rounded-xl p-4 border border-gray-100 flex items-center gap-3">
-          <div class="flex-1">
-            <div class="flex items-center gap-2 mb-1">
-              <h4 class="font-bold text-sm text-gray-900">${App.h(p.name)}</h4>
-              <span class="text-[10px] px-2 py-0.5 rounded-full border ${statusColors[status]}">${statusLabels[status]}</span>
+        const statusColor = statusColors[status] || statusColors.approved;
+        const statusLabel = statusLabels[status] || statusLabels.approved;
+        const statusMsg = statusMessages[status] || '';
+        const hasImage = p.images && p.images.length > 0 && p.images[0];
+        return `<div class="bg-white rounded-xl overflow-hidden border border-gray-100">
+          <div class="flex items-center gap-3 p-4">
+            ${hasImage ? `<img src="${p.images[0]}" alt="" class="w-14 h-14 rounded-lg object-cover shrink-0" onerror="this.style.display='none'">` : `<div class="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="building-2" class="w-6 h-6 text-gray-300"></i></div>`}
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <h4 class="font-bold text-sm text-gray-900 truncate">${App.h(p.name)}</h4>
+                <span class="text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap ${statusColor}">${statusLabel}</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                ${cat ? `<span>${App.h(cat.name)}</span>` : ''}
+                ${city ? `<span>• ${App.h(city.name)}</span>` : ''}
+              </div>
+              ${status === 'pending' ? `<p class="text-[11px] text-amber-600 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i>${statusMsg}</p>` : ''}
+              ${status === 'rejected' ? `<p class="text-[11px] text-red-600 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>${statusMsg}</p>` : ''}
+              ${status === 'approved' ? `<p class="text-[11px] text-green-600 flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i>${statusMsg}</p>` : ''}
+              ${p.adminNote ? `<p class="text-[11px] text-gray-500 mt-1 bg-gray-50 rounded px-2 py-1">📝 ${App.h(p.adminNote)}</p>` : ''}
             </div>
-            <div class="flex items-center gap-2 text-xs text-gray-500">
-              ${cat ? `<span>${cat.name}</span>` : ''}
-              ${city ? `<span>• ${city.name}</span>` : ''}
+            <div class="flex flex-col gap-1.5 shrink-0">
+              ${status === 'approved' ? `<a href="#place/${p.id}" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center" title="عرض"><i data-lucide="eye" class="w-4 h-4"></i></a>` : ''}
+              ${status === 'rejected' ? `<button onclick="App.deletePlaceConfirm('${p.id}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center" title="حذف"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
             </div>
-            ${p.adminNote ? `<p class="text-xs text-gray-500 mt-1">📝 ${App.h(p.adminNote)}</p>` : ''}
-          </div>
-          <div class="flex gap-2">
-            <a href="#place/${p.id}" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center"><i data-lucide="eye" class="w-4 h-4"></i></a>
-            ${status === 'rejected' ? `<button onclick="App.deletePlaceConfirm('${p.id}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
           </div>
         </div>`;
-      }).join('')}</div>` : '<div class="text-center py-8 text-gray-400 text-sm"><i data-lucide="building-2" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i><br>لم تضف أي مكان<br><a href="#add" class="text-blue-600 font-medium">أضف مكانك الأول</a></div>'}
+      }).join('')}</div>` : `<div class="text-center py-12">
+        <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3"><i data-lucide="building-2" class="w-8 h-8 text-gray-300"></i></div>
+        <p class="text-gray-500 text-sm mb-1">لم تضف أي مكان بعد</p>
+        <p class="text-gray-400 text-xs mb-4">أضف نشاطك التجاري ليظهر في الدليل</p>
+        <a href="#add" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"><i data-lucide="plus" class="w-4 h-4"></i>أضف مكانك الأول</a>
+      </div>`}
     </div></section>`;
   },
 

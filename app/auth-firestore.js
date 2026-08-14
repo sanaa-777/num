@@ -217,8 +217,13 @@ const Auth = {
           // Start notification listener for logged-in users
           if (this.currentUser) {
             this._startNotifListener();
+            // Start my-places listener so My Places page has data immediately
+            if (typeof Data !== 'undefined' && Data.getMyPlaces) {
+              Data.getMyPlaces(this.currentUser.id).catch(() => {});
+            }
           } else {
             this._stopNotifListener();
+            if (typeof Data !== 'undefined') Data._stopMyPlacesListener();
           }
 
           // تحديث الواجهة إذا كان التطبيق مُحمّلاً
@@ -382,6 +387,7 @@ const Auth = {
   async logout() {
     try {
       this._stopNotifListener();
+      if (typeof Data !== 'undefined') Data._stopMyPlacesListener();
       await auth.signOut();
       this.currentUser = null;
       if (typeof App !== 'undefined' && App.render) App.render();
