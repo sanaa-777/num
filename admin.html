@@ -410,6 +410,7 @@
         this._notifs = notifs;
         this._pendingEdits = pendingEdits;
         this._unreadCount = unreadCount;
+        this._ads = ads;
 
         app.innerHTML =
           '<div class="min-h-screen bg-gray-50">' +
@@ -933,17 +934,173 @@
         }
       },
 
+      // ====== ADS TAB ======
       renderAdsTab: function(ads) {
-        return '<div class="bg-white rounded-xl border border-gray-100 p-4">' +
-          '<h3 class="text-sm font-bold mb-3">الإعلانات (' + ads.length + ')</h3>' +
-          '<div class="space-y-2">' +
-            (ads.length > 0 ? ads.map(function(ad) {
-              return '<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">' +
-                '<div class="flex-1"><div class="font-medium text-sm">' + AdminPanel._escHtml(ad.title || 'بدون عنوان') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml(ad.position || '') + ' • ' + (ad.views || 0) + ' مشاهدة</div></div>' +
-                '<span class="px-2 py-0.5 rounded text-[10px] ' + (ad.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') + '">' + (ad.isActive ? 'نشط' : 'معطل') + '</span>' +
-              '</div>';
-            }).join('') : '<p class="text-gray-400 text-sm text-center py-4">لا توجد إعلانات</p>') +
+        var self = this;
+        var formHtml = '';
+        if (self._editingAd) {
+          formHtml = self.renderAdForm(self._editingAd);
+        }
+
+        return '<div class="space-y-4">' +
+          formHtml +
+          '<div class="bg-white rounded-xl border border-gray-100 p-4">' +
+            '<div class="flex items-center justify-between mb-4">' +
+              '<h3 class="text-sm font-bold flex items-center gap-2"><i data-lucide="megaphone" class="w-4 h-4 text-purple-600"></i>الإعلانات (' + ads.length + ')</h3>' +
+              '<button onclick="AdminPanel._editingAd={_isNew:true};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة إعلان</button>' +
+            '</div>' +
+            (ads.length > 0 ? '<div class="overflow-x-auto"><table class="w-full text-xs">' +
+              '<thead class="bg-gray-50"><tr>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">الصورة</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">العنوان</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">الموضع</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">الجدولة</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">الإحصائيات</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">الحالة</th>' +
+                '<th class="px-3 py-3 text-right font-medium text-gray-500">الإجراءات</th>' +
+              '</tr></thead>' +
+              '<tbody class="divide-y divide-gray-100">' +
+              ads.map(function(ad) {
+                var posName = (Ads.positions.find(function(p){return p.id===ad.position;}) || {}).name || ad.position || '-';
+                var startStr = ad.startDate ? self.formatDate(ad.startDate) : '-';
+                var endStr = ad.endDate ? self.formatDate(ad.endDate) : '-';
+                var now = new Date();
+                var isExpired = ad.endDate && ad.endDate.toDate && ad.endDate.toDate() < now;
+                var isScheduled = ad.startDate && ad.startDate.toDate && ad.startDate.toDate() > now;
+                var statusHtml = '';
+                if (!ad.isActive) statusHtml = '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>';
+                else if (isExpired) statusHtml = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>';
+                else if (isScheduled) statusHtml = '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700">مجدول</span>';
+                else statusHtml = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>';
+
+                return '<tr class="hover:bg-gray-50">' +
+                  '<td class="px-3 py-3">' + ((ad.images && ad.images[0]) ? '<img src="' + AdminPanel._escHtml(ad.images[0]) + '" class="w-16 h-10 rounded-lg object-cover" onerror="this.style.display=\'none\'">' : '<div class="w-16 h-10 rounded-lg bg-gray-100 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>') + '</td>' +
+                  '<td class="px-3 py-3"><div class="font-medium">' + AdminPanel._escHtml(ad.title || 'بدون عنوان') + '</div>' + (ad.description ? '<div class="text-[10px] text-gray-400 truncate max-w-[200px]">' + AdminPanel._escHtml(ad.description) + '</div>' : '') + '</td>' +
+                  '<td class="px-3 py-3 text-gray-500">' + AdminPanel._escHtml(posName) + '</td>' +
+                  '<td class="px-3 py-3 text-gray-500 text-[10px]">' + startStr + '<br>إلى ' + endStr + '</td>' +
+                  '<td class="px-3 py-3 text-gray-500 text-[10px]">👁 ' + (ad.views || 0) + ' • 🖱 ' + (ad.clicks || 0) + '</td>' +
+                  '<td class="px-3 py-3">' + statusHtml + '</td>' +
+                  '<td class="px-3 py-3"><div class="flex items-center gap-1">' +
+                    '<button onclick="AdminPanel._editingAd=JSON.parse(JSON.stringify(AdminPanel._ads.find(function(a){return a.id===\'' + ad.id + '\';})||{}));AdminPanel._editingAd.id=\'' + ad.id + '\';AdminPanel.render()" class="p-1.5 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200" title="تعديل"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>' +
+                    '<button onclick="AdminPanel.toggleAdActive(\'' + ad.id + '\')" class="p-1.5 rounded-lg ' + (ad.isActive ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500') + '" title="' + (ad.isActive ? 'تعطيل' : 'تفعيل') + '"><i data-lucide="' + (ad.isActive ? 'pause' : 'play') + '" class="w-3.5 h-3.5"></i></button>' +
+                    '<button onclick="AdminPanel.deleteAd(\'' + ad.id + '\')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="حذف"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>' +
+                  '</div></td>' +
+                '</tr>';
+              }).join('') + '</tbody></table></div>' : '<div class="text-center py-8"><i data-lucide="megaphone" class="w-12 h-12 text-gray-300 mx-auto mb-2"></i><p class="text-gray-400 text-sm">لا توجد إعلانات</p></div>') +
           '</div></div>';
+      },
+
+      renderAdForm: function(ad) {
+        var isNew = ad._isNew;
+        var posOptions = Ads.positions.map(function(p) {
+          return '<option value="' + p.id + '"' + (ad.position === p.id ? ' selected' : '') + '>' + p.name + '</option>';
+        }).join('');
+        var sizeOptions = Ads.sizes.map(function(s) {
+          return '<option value="' + s.id + '"' + (ad.size === s.id ? ' selected' : '') + '>' + s.name + '</option>';
+        }).join('');
+
+        return '<div class="bg-white rounded-xl border border-gray-200 p-5 mb-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-4">' +
+            '<h3 class="text-sm font-bold">' + (isNew ? 'إضافة إعلان جديد' : 'تعديل الإعلان') + '</h3>' +
+            '<button onclick="AdminPanel._editingAd=null;AdminPanel.render()" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"><i data-lucide="x" class="w-4 h-4"></i></button>' +
+          '</div>' +
+          '<div id="adFormError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:12px;margin-bottom:12px;"></div>' +
+          '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+            '<div><label class="field-label">اسم الإعلان *</label><input type="text" id="adTitle" class="field-input" value="' + AdminPanel._escHtml(ad.title || '') + '" placeholder="اسم الإعلان"></div>' +
+            '<div><label class="field-label">وصف مختصر</label><input type="text" id="adDescription" class="field-input" value="' + AdminPanel._escHtml(ad.description || '') + '" placeholder="وصف اختياري"></div>' +
+            '<div><label class="field-label">موضع العرض *</label><select id="adPosition" class="field-input">' + posOptions + '</select></div>' +
+            '<div><label class="field-label">حجم الإعلان</label><select id="adSize" class="field-input">' + sizeOptions + '</select></div>' +
+            '<div><label class="field-label">رابط الوجهة (يُفتح عند النقر)</label><input type="url" id="adLinkUrl" class="field-input" value="' + AdminPanel._escHtml(ad.linkUrl || '') + '" placeholder="https://example.com"></div>' +
+            '<div><label class="field-label">رابط الوجهة (اختياري - نافذة جديدة)</label><select id="adLinkTarget" class="field-input"><option value="_blank"' + (ad.linkTarget !== '_self' ? ' selected' : '') + '>نافذة جديدة</option><option value="_self"' + (ad.linkTarget === '_self' ? ' selected' : '') + '>نفس النافذة</option></select></div>' +
+            '<div><label class="field-label">تاريخ البداية</label><input type="datetime-local" id="adStartDate" class="field-input" value="' + (ad.startDate && ad.startDate.toDate ? ad.startDate.toDate().toISOString().slice(0,16) : '') + '"></div>' +
+            '<div><label class="field-label">تاريخ النهاية</label><input type="datetime-local" id="adEndDate" class="field-input" value="' + (ad.endDate && ad.endDate.toDate ? ad.endDate.toDate().toISOString().slice(0,16) : '') + '"></div>' +
+          '</div>' +
+          '<div class="mt-4">' +
+            '<label class="field-label">صورة الإعلان *</label>' +
+            '<div class="flex items-center gap-3">' +
+              '<input type="file" id="adImageFile" accept="image/*" class="text-xs">' +
+              ((ad.images && ad.images[0]) ? '<img src="' + AdminPanel._escHtml(ad.images[0]) + '" class="w-24 h-16 rounded-lg object-cover border">' : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="flex items-center gap-3 mt-5 pt-4 border-t border-gray-100">' +
+            '<button onclick="AdminPanel.saveAd(\'' + (ad.id || '') + '\')" class="px-5 py-2.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="save" class="w-3.5 h-3.5"></i>' + (isNew ? 'إنشاء الإعلان' : 'حفظ التعديلات') + '</button>' +
+            '<button onclick="AdminPanel._editingAd=null;AdminPanel.render()" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">إلغاء</button>' +
+          '</div>' +
+        '</div>';
+      },
+
+      saveAd: async function(id) {
+        var errEl = document.getElementById('adFormError');
+        if (errEl) errEl.style.display = 'none';
+        var title = (document.getElementById('adTitle').value || '').trim();
+        var position = document.getElementById('adPosition').value;
+        if (!title || !position) {
+          if (errEl) { errEl.textContent = 'يرجى ملء اسم الإعلان وموضع العرض'; errEl.style.display = 'block'; }
+          return;
+        }
+
+        try {
+          var data = {
+            title: title,
+            description: document.getElementById('adDescription').value || '',
+            position: position,
+            size: document.getElementById('adSize').value || 'responsive',
+            linkUrl: document.getElementById('adLinkUrl').value || '',
+            linkTarget: document.getElementById('adLinkTarget').value || '_blank'
+          };
+
+          // Handle scheduling
+          var startVal = document.getElementById('adStartDate').value;
+          var endVal = document.getElementById('adEndDate').value;
+          if (startVal) data.startDate = firebase.firestore.Timestamp.fromDate(new Date(startVal));
+          if (endVal) data.endDate = firebase.firestore.Timestamp.fromDate(new Date(endVal));
+
+          // Handle image upload
+          var fileInput = document.getElementById('adImageFile');
+          if (fileInput && fileInput.files && fileInput.files[0]) {
+            self.showToast('جاري رفع الصورة...', 'info');
+            var imageUrl = await Ads.uploadImage(fileInput.files[0]);
+            if (imageUrl) data.images = [imageUrl];
+            else { if (errEl) { errEl.textContent = 'فشل رفع الصورة'; errEl.style.display = 'block'; } return; }
+          } else if (id && this._editingAd && this._editingAd.images) {
+            data.images = this._editingAd.images;
+          }
+
+          if (id) {
+            await Ads.update(id, data);
+            self.showToast('✅ تم تحديث الإعلان بنجاح', 'success');
+          } else {
+            await Ads.add(data);
+            self.showToast('✅ تم إنشاء الإعلان بنجاح', 'success');
+          }
+
+          this._editingAd = null;
+          this._ads = await Ads.getAll();
+          this.render();
+        } catch (e) {
+          console.error('saveAd error:', e);
+          if (errEl) { errEl.textContent = 'خطأ: ' + (e.message || 'تعذر الحفظ'); errEl.style.display = 'block'; }
+          self.showToast('❌ فشل حفظ الإعلان', 'error');
+        }
+      },
+
+      toggleAdActive: async function(id) {
+        try {
+          var result = await Ads.toggleActive(id);
+          this.showToast(result ? '✅ تم تفعيل الإعلان' : '✅ تم تعطيل الإعلان', 'success');
+          this._ads = await Ads.getAll();
+          this.render();
+        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
+      },
+
+      deleteAd: async function(id) {
+        if (!confirm('هل تريد حذف هذا الإعلان نهائياً؟')) return;
+        try {
+          await Ads.delete(id);
+          this.showToast('✅ تم حذف الإعلان', 'success');
+          this._ads = await Ads.getAll();
+          this.render();
+        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
       },
 
       // =============================================

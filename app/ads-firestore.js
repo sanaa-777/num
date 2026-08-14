@@ -106,6 +106,9 @@ const Ads = {
     const now = new Date();
     return ads.filter(ad => {
       if (!ad.isActive) return false;
+      // Check scheduling
+      if (ad.startDate && ad.startDate.toDate && ad.startDate.toDate() > now) return false;
+      if (ad.endDate && ad.endDate.toDate && ad.endDate.toDate() < now) return false;
       return ad.position === position;
     });
   },
@@ -184,10 +187,9 @@ const Ads = {
     if (!ad || !ad.images || ad.images.length === 0) return '';
     const hasMultiple = ad.images.length > 1;
     const sliderId = 'slider_' + ad.id;
+    const clickHandler = ad.linkUrl ? `onclick="Ads.recordClick('${ad.id}');window.open('${ad.linkUrl.replace(/'/g, "\\'")}','${ad.linkTarget || '_blank'}')"` : '';
     return `
-    <div class="ad-container ${containerClass} relative overflow-hidden rounded-xl bg-white border border-gray-100 ${ad.linkUrl ? 'cursor-pointer' : ''}"
-         onclick="${ad.linkUrl ? `Ads.recordClick('${ad.id}');window.open('${ad.linkUrl}','_blank')` : ''}"
-         data-ad-id="${ad.id}">
+    <div class="ad-container ${containerClass} relative overflow-hidden rounded-xl bg-white border border-gray-100 ${ad.linkUrl ? 'cursor-pointer' : ''}" ${clickHandler} data-ad-id="${ad.id}">
       ${hasMultiple ? `
         <div id="${sliderId}" class="ad-slider relative" style="aspect-ratio:${ad.size === 'banner' ? '728/90' : ad.size === 'leaderboard' ? '728/60' : ad.size === 'square' ? '1/1' : ad.size === 'rectangle' ? '300/250' : '16/9'}">
           ${ad.images.map((img, i) => `
