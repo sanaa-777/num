@@ -25,7 +25,7 @@ const Jobs = {
           // Debounced re-render to prevent flickering
           if (typeof App !== 'undefined' && App._initialized) {
             clearTimeout(this._renderDebounce);
-            this._renderDebounce = setTimeout(function() { App.render(); }, 300);
+            this._renderDebounce = setTimeout(function() { var v = App.currentView; if (["place","offer","job","event","editplace"].indexOf(v) === -1) App.render(); }, 300);
           }
           
           resolve(this._cache);

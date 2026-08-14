@@ -843,21 +843,50 @@ const App = {
         </section>
       ${this.renderFooter()}${this.renderBottomNav(Auth.currentUser)}</div>`;
       this.initIcons();
-      // Wait for data to load, then try again (use global preload if in progress)
-      if (!this._preloadPromise) {
-        this._preloadPromise = Data.preloadAll();
-      }
-      this._preloadPromise.then(() => {
-        this._preloadPromise = null;
-        // Check if we're still on the same detail view
-        const curHash = location.hash.slice(1) || 'home';
-        const curPid = curHash.split('/')[1];
-        if (curPid === pid) {
-          this.showPlace(pid);
+      // Try loading the single place directly first (fast path)
+      Data.getPlace(pid).then(async (directPlace) => {
+        if (directPlace) {
+          // Place found directly — add to cache and render
+          if (!Data._placesCache) Data._placesCache = [];
+          const exists = Data._placesCache.find(p => p.id === pid);
+          if (!exists) {
+            Data._placesCache.push(directPlace);
+          }
+          // Check if we're still on this page
+          const curHash = location.hash.slice(1) || 'home';
+          if (curHash.split('/')[1] === pid) {
+            this.showPlace(pid);
+          }
+        } else {
+          // Place not found — try full preload as fallback
+          if (!this._preloadPromise) {
+            this._preloadPromise = Data.preloadAll();
+          }
+          this._preloadPromise.then(() => {
+            this._preloadPromise = null;
+            const curHash = location.hash.slice(1) || 'home';
+            if (curHash.split('/')[1] === pid) {
+              this.showPlace(pid);
+            }
+          }).catch(() => {
+            this._preloadPromise = null;
+            // Don't redirect — show error instead
+            const curHash = location.hash.slice(1) || 'home';
+            if (curHash.split('/')[1] === pid) {
+              const app = document.getElementById('app');
+              app.innerHTML = `<div class="min-h-screen bg-gray-50">${this.renderHeader(Auth.currentUser)}
+                <section class="py-12 text-center">
+                  <div class="max-w-md mx-auto">
+                    <i data-lucide="alert-circle" class="w-12 h-12 text-red-400 mx-auto mb-3"></i>
+                    <h3 class="text-lg font-bold text-gray-700 mb-2">تعذر تحميل النشاط</h3>
+                    <p class="text-gray-500 text-sm mb-4">تحقق من اتصالك بالإنترنت وحاول مرة أخرى</p>
+                    <a href="#home" class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">العودة للرئيسية</a>
+                  </div>
+                </section>${this.renderFooter()}${this.renderBottomNav(Auth.currentUser)}</div>`;
+              this.initIcons();
+            }
+          });
         }
-      }).catch(() => {
-        this._preloadPromise = null;
-        location.hash = 'home';
       });
       return;
     }

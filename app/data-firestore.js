@@ -342,15 +342,19 @@ const Data = {
             this._placesCache = newData;
             this._placesCacheTime = Date.now();
             
-            // Only re-render if data actually changed
+            // Only re-render if data actually changed AND we're not on a detail view
+            // Detail views (place/offer/job/event) manage their own content
             const hasChanged = newData.length !== oldData.length || 
               JSON.stringify(newData.map(p=>p.id).sort()) !== JSON.stringify(oldData.map(p=>p.id).sort());
             
             if (hasChanged && typeof App !== 'undefined' && App._initialized) {
-              // Debounce re-render to prevent flickering
               clearTimeout(this._renderDebounce);
               this._renderDebounce = setTimeout(() => {
-                App.render();
+                // Don't wipe detail views — they render their own content
+                const curView = App.currentView;
+                if (!['place', 'offer', 'job', 'event', 'editplace'].includes(curView)) {
+                  App.render();
+                }
               }, 300);
             }
             
