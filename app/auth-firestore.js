@@ -8,84 +8,145 @@ const Auth = {
   _authListenerAttached: false,
   _initResolve: null,
 
-  // ====== Login Rate Limiting ======
-  _loginAttempts: {},   // { email: { count, firstAttempt, lastAttempt, lockedUntil } }
-  _MAX_ATTEMPTS: 5,     // max failed attempts before lockout
-  _WINDOW_MS: 300000,   // 5-minute sliding window
-  _LOCKOUT_BASE: 30000, // 30-second initial lockout
-  _MAX_LOCKOUT: 900000, // 15-minute max lockout
+  // ====== Login Rate Limiting (Dual-Layer) ======
+  // Layer 1: In-memory (fast, UX feedback) — resets on page refresh
+  // Layer 2: Firestore (persistent, harder to bypass) — survives refresh
+  // Layer 3: Firebase Auth server-side IP blocking (automatic, cannot be bypassed)
+  _loginAttempts: {},
+  _MAX_ATTEMPTS: 5,
+  _WINDOW_MS: 300000,
+  _LOCKOUT_BASE: 30000,
+  _MAX_LOCKOUT: 900000,
 
   _getRateLimitKey(email) {
     return (email || '').toLowerCase().trim();
   },
 
-  _checkRateLimit(email) {
+  async _checkRateLimit(email) {
     const key = this._getRateLimitKey(email);
     if (!key) return { allowed: true };
 
-    const entry = this._loginAttempts[key];
-    if (!entry) return { allowed: true };
-
-    const now = Date.now();
-
-    // Check if currently locked out
-    if (entry.lockedUntil && now < entry.lockedUntil) {
-      const remainingSec = Math.ceil((entry.lockedUntil - now) / 1000);
-      return {
-        allowed: false,
-        message: `تم إيقاف الدخول مؤقتاً. حاول بعد ${remainingSec} ثانية`,
-        remainingMs: entry.lockedUntil - now
-      };
+    // Layer 1: Check in-memory (fast path)
+    const memEntry = this._loginAttempts[key];
+    if (memEntry) {
+      const now = Date.now();
+      if (memEntry.lockedUntil && now < memEntry.lockedUntil) {
+        const remainingSec = Math.ceil((memEntry.lockedUntil - now) / 1000);
+        return { allowed: false, message: `تم إيقاف الدخول مؤقتاً. حاول بعد ${remainingSec} ثانية` };
+      }
+      if (now - memEntry.firstAttempt > this._WINDOW_MS) {
+        delete this._loginAttempts[key];
+      } else if (memEntry.count >= this._MAX_ATTEMPTS) {
+        const lockoutMultiplier = Math.pow(2, memEntry.lockoutCount || 0);
+        const lockoutDuration = Math.min(this._LOCKOUT_BASE * lockoutMultiplier, this._MAX_LOCKOUT);
+        memEntry.lockedUntil = now + lockoutDuration;
+        memEntry.lockoutCount = (memEntry.lockoutCount || 0) + 1;
+        return { allowed: false, message: `تم إيقاف الدخول مؤقتاً. حاول بعد ${Math.ceil(lockoutDuration / 1000)} ثانية` };
+      }
     }
 
-    // Reset if window has expired
-    if (now - entry.firstAttempt > this._WINDOW_MS) {
-      delete this._loginAttempts[key];
-      return { allowed: true };
-    }
-
-    // Check attempt count within window
-    if (entry.count >= this._MAX_ATTEMPTS) {
-      // Apply progressive lockout: 30s, 60s, 120s, 240s... up to 15min
-      const lockoutMultiplier = Math.pow(2, entry.lockoutCount || 0);
-      const lockoutDuration = Math.min(this._LOCKOUT_BASE * lockoutMultiplier, this._MAX_LOCKOUT);
-      entry.lockedUntil = now + lockoutDuration;
-      entry.lockoutCount = (entry.lockoutCount || 0) + 1;
-      const lockoutSec = Math.ceil(lockoutDuration / 1000);
-      return {
-        allowed: false,
-        message: `تم إيقاف الدخول مؤقتاً بعد ${this._MAX_ATTEMPTS} محاولات فاشلة. حاول بعد ${lockoutSec} ثانية`,
-        remainingMs: lockoutDuration
-      };
+    // Layer 2: Check Firestore (persistent, cross-session)
+    try {
+      const doc = await db.collection('login_attempts').doc(key).get();
+      if (doc.exists) {
+        const data = doc.data();
+        const now = Date.now();
+        // Check lockout
+        if (data.lockedUntil && data.lockedUntil.toMillis && data.lockedUntil.toMillis() > now) {
+          const remainingSec = Math.ceil((data.lockedUntil.toMillis() - now) / 1000);
+          // Sync to memory
+          this._loginAttempts[key] = {
+            count: data.count || 0,
+            firstAttempt: data.firstAttempt ? data.firstAttempt.toMillis() : now,
+            lastAttempt: now,
+            lockedUntil: data.lockedUntil.toMillis(),
+            lockoutCount: data.lockoutCount || 0
+          };
+          return { allowed: false, message: `تم إيقاف الدخول مؤقتاً. حاول بعد ${remainingSec} ثانية` };
+        }
+        // Check window
+        const firstAttemptMs = data.firstAttempt ? data.firstAttempt.toMillis() : 0;
+        if (firstAttemptMs && (now - firstAttemptMs) > this._WINDOW_MS) {
+          // Window expired — clean up
+          try { await db.collection('login_attempts').doc(key).delete(); } catch(e) {}
+        } else if (data.count >= this._MAX_ATTEMPTS) {
+          // Apply lockout in Firestore
+          const lockoutMultiplier = Math.pow(2, data.lockoutCount || 0);
+          const lockoutDuration = Math.min(this._LOCKOUT_BASE * lockoutMultiplier, this._MAX_LOCKOUT);
+          const lockoutUntil = new Date(now + lockoutDuration);
+          try {
+            await db.collection('login_attempts').doc(key).update({
+              lockedUntil: firebase.firestore.Timestamp.fromDate(lockoutUntil),
+              lockoutCount: (data.lockoutCount || 0) + 1
+            });
+          } catch(e) {}
+          // Sync to memory
+          this._loginAttempts[key] = {
+            count: data.count,
+            firstAttempt: firstAttemptMs,
+            lastAttempt: now,
+            lockedUntil: lockoutUntil.getTime(),
+            lockoutCount: (data.lockoutCount || 0) + 1
+          };
+          return { allowed: false, message: `تم إيقاف الدخول مؤقتاً. حاول بعد ${Math.ceil(lockoutDuration / 1000)} ثانية` };
+        }
+      }
+    } catch (e) {
+      // Firestore check failed — fall through to allow (memory check already passed)
+      console.warn('Rate limit Firestore check failed:', e.message);
     }
 
     return { allowed: true };
   },
 
-  _recordFailedAttempt(email) {
+  async _recordFailedAttempt(email) {
     const key = this._getRateLimitKey(email);
     if (!key) return;
-
     const now = Date.now();
-    const entry = this._loginAttempts[key];
 
-    if (!entry || (now - entry.firstAttempt > this._WINDOW_MS)) {
+    // Layer 1: Update memory
+    const memEntry = this._loginAttempts[key];
+    if (!memEntry || (now - memEntry.firstAttempt > this._WINDOW_MS)) {
       this._loginAttempts[key] = {
-        count: 1,
-        firstAttempt: now,
-        lastAttempt: now,
-        lockedUntil: null,
-        lockoutCount: entry ? entry.lockoutCount : 0
+        count: 1, firstAttempt: now, lastAttempt: now,
+        lockedUntil: null, lockoutCount: memEntry ? memEntry.lockoutCount : 0
       };
     } else {
-      entry.count++;
-      entry.lastAttempt = now;
+      memEntry.count++;
+      memEntry.lastAttempt = now;
+    }
+
+    // Layer 2: Update Firestore (persistent)
+    try {
+      const docRef = db.collection('login_attempts').doc(key);
+      const doc = await docRef.get();
+      if (!doc.exists || (doc.data().firstAttempt && (now - doc.data().firstAttempt.toMillis()) > this._WINDOW_MS)) {
+        await docRef.set({
+          email: key,
+          count: 1,
+          firstAttempt: firebase.firestore.FieldValue.serverTimestamp(),
+          lastAttempt: firebase.firestore.FieldValue.serverTimestamp(),
+          lockedUntil: null,
+          lockoutCount: doc.exists ? (doc.data().lockoutCount || 0) : 0
+        });
+      } else {
+        await docRef.update({
+          count: firebase.firestore.FieldValue.increment(1),
+          lastAttempt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    } catch (e) {
+      console.warn('Rate limit Firestore write failed:', e.message);
     }
   },
 
-  _clearFailedAttempts(email) {
+  async _clearFailedAttempts(email) {
     const key = this._getRateLimitKey(email);
-    if (key) delete this._loginAttempts[key];
+    if (!key) return;
+    // Clear memory
+    delete this._loginAttempts[key];
+    // Clear Firestore
+    try { await db.collection('login_attempts').doc(key).delete(); } catch(e) {}
   },
 
   // ====== التهيئة (تستدعى مرة واحدة) ======
@@ -151,6 +212,13 @@ const Auth = {
           if (this._initResolve) {
             this._initResolve(this.currentUser);
             this._initResolve = null;
+          }
+
+          // Start notification listener for logged-in users
+          if (this.currentUser) {
+            this._startNotifListener();
+          } else {
+            this._stopNotifListener();
           }
 
           // تحديث الواجهة إذا كان التطبيق مُحمّلاً
@@ -220,8 +288,8 @@ const Auth = {
 
   // ====== تسجيل الدخول ======
   async login(email, password) {
-    // Check rate limit before attempting
-    const rateCheck = this._checkRateLimit(email);
+    // Check rate limit (both memory + Firestore)
+    const rateCheck = await this._checkRateLimit(email);
     if (!rateCheck.allowed) {
       const err = new Error(rateCheck.message);
       err.code = 'auth/too-many-attempts';
@@ -237,11 +305,12 @@ const Auth = {
 
       if (userData.suspended) {
         await auth.signOut();
-        throw new Error('تم إيقاف هذا الحساب. تواصل مع الإدارة');
+        // Use generic message — don't reveal account status
+        throw new Error('بيانات الدخول غير صحيحة');
       }
 
       // Clear failed attempts on successful login
-      this._clearFailedAttempts(email);
+      await this._clearFailedAttempts(email);
 
       this.currentUser = {
         id: user.uid, uid: user.uid,
@@ -255,14 +324,14 @@ const Auth = {
 
       return this.currentUser;
     } catch (error) {
-      // Record failed attempt (only for credential errors, not network/suspended)
+      // Record failed attempt for credential errors
       if (error.code && (
         error.code === 'auth/wrong-password' ||
         error.code === 'auth/invalid-credential' ||
         error.code === 'auth/user-not-found' ||
         error.code === 'auth/invalid-email'
       )) {
-        this._recordFailedAttempt(email);
+        await this._recordFailedAttempt(email);
       }
       throw this._handleError(error);
     }
@@ -312,6 +381,7 @@ const Auth = {
   // ====== تسجيل الخروج ======
   async logout() {
     try {
+      this._stopNotifListener();
       await auth.signOut();
       this.currentUser = null;
       if (typeof App !== 'undefined' && App.render) App.render();
@@ -439,6 +509,96 @@ const Auth = {
     return this.currentUser;
   },
 
+  // ====== Unified Notification System ======
+  _notifListener: null,
+  _unreadCount: 0,
+  _notifCallbacks: [],
+
+  getUnreadCount() {
+    return this._unreadCount;
+  },
+
+  onUnreadCountChange(callback) {
+    this._notifCallbacks.push(callback);
+    // Immediately call with current count
+    callback(this._unreadCount);
+    return () => {
+      this._notifCallbacks = this._notifCallbacks.filter(cb => cb !== callback);
+    };
+  },
+
+  _notifyCountListeners() {
+    this._notifCallbacks.forEach(cb => {
+      try { cb(this._unreadCount); } catch(e) {}
+    });
+  },
+
+  _startNotifListener() {
+    if (!this.currentUser) return;
+    if (this._notifListener) { this._notifListener(); this._notifListener = null; }
+
+    try {
+      this._notifListener = db.collection('notifications')
+        .where('userId', '==', this.currentUser.id)
+        .where('read', '==', false)
+        .onSnapshot((snapshot) => {
+          this._unreadCount = snapshot.size;
+          this._notifyCountListeners();
+        }, (error) => {
+          console.warn('Notification listener error:', error.message);
+          // Fallback: one-time count
+          db.collection('notifications')
+            .where('userId', '==', this.currentUser.id)
+            .where('read', '==', false)
+            .get()
+            .then(snap => { this._unreadCount = snap.size; this._notifyCountListeners(); })
+            .catch(() => {});
+        });
+    } catch (e) {
+      console.warn('Notification listener setup failed:', e.message);
+    }
+  },
+
+  _stopNotifListener() {
+    if (this._notifListener) {
+      this._notifListener();
+      this._notifListener = null;
+    }
+    this._unreadCount = 0;
+    this._notifyCountListeners();
+  },
+
+  async markNotificationRead(notifId) {
+    try {
+      await db.collection('notifications').doc(notifId).update({ read: true });
+      // Optimistically decrement count
+      if (this._unreadCount > 0) {
+        this._unreadCount--;
+        this._notifyCountListeners();
+      }
+    } catch (e) {
+      console.error('markNotificationRead error:', e);
+    }
+  },
+
+  async markAllNotificationsRead() {
+    if (!this.currentUser) return;
+    try {
+      const snap = await db.collection('notifications')
+        .where('userId', '==', this.currentUser.id)
+        .where('read', '==', false)
+        .get();
+      if (snap.empty) return;
+      const batch = db.batch();
+      snap.docs.forEach(d => batch.update(d.ref, { read: true }));
+      await batch.commit();
+      this._unreadCount = 0;
+      this._notifyCountListeners();
+    } catch (e) {
+      console.error('markAllNotificationsRead error:', e);
+    }
+  },
+
   // ====== مساعدات ======
   isVerified() {
     return this.currentUser && this.currentUser.verified;
@@ -490,8 +650,8 @@ const Auth = {
       'auth/operation-not-allowed': 'عملية غير مسموحة',
       'auth/weak-password': 'كلمة المرور ضعيفة (6 أحرف على الأقل)',
       'auth/user-disabled': 'تم تعطيل هذا الحساب',
-      'auth/user-not-found': 'البريد الإلكتروني غير مسجل',
-      'auth/wrong-password': 'كلمة المرور غير صحيحة',
+      'auth/user-not-found': 'بيانات الدخول غير صحيحة',
+      'auth/wrong-password': 'بيانات الدخول غير صحيحة',
       'auth/invalid-credential': 'بيانات الدخول غير صحيحة',
       'auth/too-many-requests': 'محاولات كثيرة، حاول لاحقاً',
       'auth/network-request-failed': 'خطأ في الاتصال بالشبكة',

@@ -116,7 +116,38 @@ const App = {
     else this.render();
   },
 
-  // Load notifications when visiting the page
+  // ====== Notification Badge Updater (Unified) ======
+  _notifBadgeUnsub: null,
+  _updateNotifBadge() {
+    // Unsubscribe from previous listener
+    if (this._notifBadgeUnsub) { this._notifBadgeUnsub(); this._notifBadgeUnsub = null; }
+
+    if (!Auth.currentUser) {
+      // Hide badges when logged out
+      ['desktopNotifBadge', 'mobileNotifBadge'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.add('hidden'); el.textContent = ''; }
+      });
+      return;
+    }
+
+    // Subscribe to Auth's unified unread count
+    this._notifBadgeUnsub = Auth.onUnreadCountChange((count) => {
+      ['desktopNotifBadge', 'mobileNotifBadge'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (count > 0) {
+          el.classList.remove('hidden');
+          el.textContent = count > 99 ? '99+' : count;
+        } else {
+          el.classList.add('hidden');
+          el.textContent = '';
+        }
+      });
+    });
+  },
+
+  // Load notifications when visiting the page (unified system)
   _loadNotifications: async function() {
     if (!Auth.currentUser) return;
     try {
@@ -135,29 +166,42 @@ const App = {
             const date = n.createdAt?.toDate ? n.createdAt.toDate().toLocaleDateString('ar') : '';
             const icon = n.type === 'review' ? 'star' : n.type === 'comment' ? 'message-circle' : n.type === 'admin' ? 'shield' : 'bell';
             const color = n.read ? 'text-gray-400' : 'text-blue-600';
-            return `<div class="flex items-start gap-3 p-3 rounded-xl ${n.read ? 'bg-white' : 'bg-blue-50'} border border-gray-100">
+            return `<div class="flex items-start gap-3 p-3 rounded-xl ${n.read ? 'bg-white' : 'bg-blue-50'} border border-gray-100 cursor-pointer" onclick="App._onNotifClick('${n.id}', ${n.read})">
               <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="${icon}" class="w-4 h-4 ${color}"></i></div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}">${App.h(n.message || '')}</p>
                 <span class="text-[10px] text-gray-400">${date}</span>
               </div>
+              ${!n.read ? '<div class="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-2"></div>' : ''}
             </div>`;
           }).join('');
         }
         try { lucide.createIcons(); } catch(e) {}
-        // Mark as read
-        const unread = notifs.filter(n => !n.read);
-        if (unread.length > 0) {
-          const batch = db.batch();
-          unread.forEach(n => batch.update(db.collection('notifications').doc(n.id), {read: true}));
-          await batch.commit();
-        }
       }
     } catch(e) {
       console.error('Load notifications error:', e);
       const container = document.getElementById('notifsList');
       if (container) container.innerHTML = '<div class="text-center py-8 text-gray-400">تعذر تحميل الإشعارات</div>';
     }
+  },
+
+  // Handle notification click — mark as read via unified system
+  _onNotifClick: async function(notifId, alreadyRead) {
+    if (!alreadyRead) {
+      await Auth.markNotificationRead(notifId);
+      // Update the visual state of the clicked item
+      const container = document.getElementById('notifsList');
+      if (container) {
+        // Re-render to reflect read state
+        this._loadNotifications();
+      }
+    }
+  },
+
+  // Mark all notifications as read
+  _markAllRead: async function() {
+    await Auth.markAllNotificationsRead();
+    this._loadNotifications();
   },
 
   // Dark mode helper
@@ -175,6 +219,8 @@ const App = {
       this.initIcons();
       this.initAllCustomSelects();
       Ads.initAllSliders();
+      // Update notification badge from unified Auth listener
+      this._updateNotifBadge();
       // Load notifications when visiting the page
       if (this.currentView === 'notifications' && Auth.currentUser) {
         setTimeout(() => this._loadNotifications(), 100);
@@ -437,7 +483,11 @@ const App = {
           <button onclick="App.toggleMobileSearch()" class="mobile-header-btn">
             <i data-lucide="search" class="w-5 h-5"></i>
           </button>
-          ${user ? `<a href="#favorites" class="mobile-header-btn relative">
+          ${user ? `<a href="#notifications" class="mobile-header-btn relative" id="mobileNotifBell">
+            <i data-lucide="bell" class="w-5 h-5"></i>
+            <span id="mobileNotifBadge" class="hidden absolute -top-0.5 -left-0.5 bg-red-500 text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-bold"></span>
+          </a>
+          <a href="#favorites" class="mobile-header-btn relative">
             <i data-lucide="heart" class="w-5 h-5"></i>
             ${favCount > 0 ? `<span class="absolute -top-0.5 -left-0.5 bg-red-500 text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-bold">${favCount > 9 ? '9+' : favCount}</span>` : ''}
           </a>` : ''}
@@ -477,6 +527,10 @@ const App = {
               ${isAr ? 'EN' : 'عربي'}
             </button>
             ${user ? `
+              <a href="#notifications" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 relative" title="الإشعارات" id="desktopNotifBell">
+                <i data-lucide="bell" class="w-4 h-4"></i>
+                <span id="desktopNotifBadge" class="hidden absolute top-0.5 left-0.5 bg-red-500 text-white text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold"></span>
+              </a>
               <a href="#favorites" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 relative" title="المفضلة">
                 <i data-lucide="heart" class="w-4 h-4"></i>
                 ${favCount > 0 ? `<span class="absolute top-0.5 left-0.5 bg-red-500 text-white text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold">${favCount > 9 ? '9+' : favCount}</span>` : ''}
@@ -1679,13 +1733,17 @@ const App = {
   // ====== NOTIFICATIONS PAGE ======
   render_notifications() {
     if (!Auth.currentUser) return this.render_login();
+    const unreadCount = Auth.getUnreadCount();
     return `<section class="py-6 md:py-8"><div class="max-w-2xl mx-auto px-3">
       <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
         <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
         <i data-lucide="chevron-left" class="w-3 h-3"></i>
         <span class="text-gray-700 font-medium">الإشعارات</span>
       </div>
-      <h2 class="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2"><i data-lucide="bell" class="w-6 h-6 text-yellow-500"></i>الإشعارات</h2>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2"><i data-lucide="bell" class="w-6 h-6 text-yellow-500"></i>الإشعارات${unreadCount > 0 ? ` <span class="text-sm font-normal text-gray-400">(${unreadCount} غير مقروء)</span>` : ''}</h2>
+        ${unreadCount > 0 ? `<button onclick="App._markAllRead()" class="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"><i data-lucide="check-check" class="w-3.5 h-3.5"></i>标记全部已读</button>` : ''}
+      </div>
       <div id="notifsList" class="space-y-2">
         <div class="text-center py-8 text-gray-400"><div class="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-2"></div>جاري التحميل...</div>
       </div>
