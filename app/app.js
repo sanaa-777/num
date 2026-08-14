@@ -1621,7 +1621,7 @@ const App = {
         </div>
 
         <!-- Title -->
-        <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-5 flex items-center gap-2">
+        <h2 class="text-xl md:text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
           <i data-lucide="trending-up" class="w-6 h-6" style="color:${sectionColor}"></i>
           أسعار اليوم
         </h2>
@@ -1641,13 +1641,15 @@ const App = {
           `).join('')}
         </div>
 
-        <!-- Pricing Card -->
+        ${items.length ? `
+        <!-- Pricing Table -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <!-- Card Header -->
+          <!-- Table Header -->
           <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full" style="background:${sectionColor}"></span>
               <h3 class="text-sm font-bold text-gray-800">${catInfo?.name || 'الأسعار'}</h3>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">${items.length} عنصر</span>
             </div>
             <span class="text-[10px] text-gray-400 flex items-center gap-1">
               <i data-lucide="clock" class="w-3 h-3"></i>
@@ -1655,48 +1657,56 @@ const App = {
             </span>
           </div>
 
-          ${items.length ? `
-          <!-- Column Headers -->
-          <div class="grid grid-cols-[1fr_1fr_1fr] px-4 py-2.5 border-b border-gray-100 bg-gray-50/80">
-            <div class="text-[11px] font-bold text-gray-500 text-right">${cols.col1}</div>
-            <div class="text-[11px] font-bold text-gray-500 text-center">${cols.col2}</div>
-            <div class="text-[11px] font-bold text-gray-500 text-left">${cols.col3}</div>
+          <!-- Responsive Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="bg-gray-50/80">
+                  <th class="text-[11px] font-bold text-gray-500 text-right px-4 py-2.5">${cols.col1}</th>
+                  <th class="text-[11px] font-bold text-gray-500 text-center px-4 py-2.5">${cols.col2}</th>
+                  <th class="text-[11px] font-bold text-gray-500 text-center px-4 py-2.5">${cols.col3}</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50">
+                ${items.map((item, i) => `
+                  <tr class="hover:bg-gray-50/50 transition-colors">
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-2.5">
+                        ${getItemIcon(item)}
+                        <div>
+                          <div class="text-[13px] font-bold text-gray-900">${App.h(item.name || item.currencyName || '')}</div>
+                          ${item.unit ? `<div class="text-[10px] text-gray-400">${App.h(item.unit)}</div>` : ''}
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                      <span class="text-[13px] font-bold text-gray-900 tabular-nums">${App.h(item.buyPrice || '-')}</span>
+                      ${item.currencyCode ? `<div class="text-[9px] text-gray-400">${App.h(item.currencyCode)}</div>` : ''}
+                    </td>
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-1.5 justify-center">
+                        <span class="text-[13px] font-bold text-gray-900 tabular-nums">${App.h(item.sellPrice || '-')}</span>
+                        ${priceChange(item)}
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
-
-          <!-- Rows -->
-          <div class="divide-y divide-gray-50">
-            ${items.map((item, i) => `
-              <div class="grid grid-cols-[1fr_1fr_1fr] items-center px-4 py-3.5 hover:bg-gray-50/50 transition-colors">
-                <!-- Name + Icon -->
-                <div class="flex items-center gap-2.5 min-w-0">
-                  ${getItemIcon(item)}
-                  <div class="min-w-0">
-                    <div class="text-[13px] font-bold text-gray-900 truncate">${item.name || item.currencyName || ''}</div>
-                    ${item.unit ? `<div class="text-[10px] text-gray-400 mt-0.5">${item.unit}</div>` : ''}
-                  </div>
-                </div>
-                <!-- Buy Price -->
-                <div class="text-center">
-                  <span class="text-[13px] font-bold text-gray-900 tabular-nums">${item.buyPrice || '-'}</span>
-                  ${item.currencyCode ? `<div class="text-[9px] text-gray-400 mt-0.5">${item.currencyCode}</div>` : ''}
-                </div>
-                <!-- Sell Price + Change -->
-                <div class="text-left flex items-center gap-1.5 justify-end">
-                  <span class="text-[13px] font-bold text-gray-900 tabular-nums">${item.sellPrice || '-'}</span>
-                  ${priceChange(item)}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-          ` : `
-          <!-- Empty State -->
+        </div>
+        ` : `
+        <!-- Empty State -->
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
           <div class="text-center py-16">
             <div class="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-3">
               <i data-lucide="trending-up" class="w-8 h-8 text-gray-300"></i>
             </div>
-            <p class="text-sm text-gray-400">لا توجد أسعار في هذا القسم</p>
+            <p class="text-sm text-gray-400 mb-1">لا توجد أسعار في هذا القسم</p>
+            <p class="text-[11px] text-gray-300">يتم تحديث الأسعار من قبل الإدارة</p>
           </div>
-          `}
+        </div>
+        `}
         </div>
       </div>
     </section>`;
