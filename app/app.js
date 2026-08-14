@@ -107,6 +107,7 @@ const App = {
     const previousView = this.currentView;
     this.currentView = view;
     if (view === 'place' && params[0]) this.showPlace(params[0]);
+    else if (view === 'editplace' && params[0]) this.showEditPlace(params[0]);
     else if (view === 'offer' && params[0]) this.showItemDetail(params[0], 'offer');
     else if (view === 'job' && params[0]) this.showItemDetail(params[0], 'job');
     else if (view === 'event' && params[0]) this.showItemDetail(params[0], 'event');
@@ -1403,6 +1404,7 @@ const App = {
             </div>
             <div class="flex flex-col gap-1.5 shrink-0">
               ${status === 'approved' ? `<a href="#place/${p.id}" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center" title="عرض"><i data-lucide="eye" class="w-4 h-4"></i></a>` : ''}
+              ${(status === 'approved' || status === 'rejected') ? `<a href="#editplace/${p.id}" class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center" title="تعديل"><i data-lucide="pencil" class="w-4 h-4"></i></a>` : ''}
               ${status === 'rejected' ? `<button onclick="App.deletePlaceConfirm('${p.id}')" class="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center" title="حذف"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
             </div>
           </div>
@@ -2148,6 +2150,276 @@ const App = {
       this.showToast(ErrorTracker.getInlineMessage(error), 'error');
     }
   },
+
+  // ====== EDIT PLACE (with review) ======
+  _editingPlaceId: null,
+  _editingPlaceImages: [],
+
+  async showEditPlace(placeId) {
+    if (!Auth.currentUser) { location.hash = 'login'; return; }
+    // Load the place
+    const place = await Data.getPlace(placeId);
+    if (!place || place.owner !== Auth.currentUser.id) {
+      this.showToast('ليس لديك صلاحية تعديل هذا المكان', 'error');
+      location.hash = 'myplaces'; return;
+    }
+    // Check for existing pending edit
+    const existingEdits = await Data.getMyPlaceEdits(Auth.currentUser.id);
+    const pendingEdit = existingEdits.find(e => e.placeId === placeId && e.status === 'pending');
+    if (pendingEdit) {
+      this.showToast('يوجد طلب تعديل معلق بالفعل. انتظر موافقة الأدمن أولاً.', 'warning', 4000);
+      location.hash = 'myplaces'; return;
+    }
+    this._editingPlaceId = placeId;
+    this._editingPlaceImages = [...(place.images || [])];
+    this.currentView = 'editplace';
+    this._renderEditPlaceForm(place);
+  },
+
+  _renderEditPlaceForm(place) {
+    const app = document.getElementById('app');
+    const cat = Data.categories.find(c => c.id === place.category);
+    const sub = place.subcategory ? Data.getSubCategory(place.subcategory) : null;
+    const workDays = place.workDays || ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+    const allDays = ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
+
+    app.innerHTML = `<div class="min-h-screen bg-gray-50">${this.renderHeader(Auth.currentUser)}
+    <section class="py-6 md:py-8"><div class="max-w-2xl mx-auto px-3">
+      <div class="flex items-center gap-2 text-xs text-gray-500 mb-4">
+        <a href="#myplaces" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="arrow-right" class="w-3 h-3"></i>مواقعي</a>
+        <i data-lucide="chevron-left" class="w-3 h-3"></i>
+        <span class="text-gray-700 font-medium">تعديل: ${App.h(place.name)}</span>
+      </div>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+        <p class="text-amber-800 text-xs flex items-center gap-2"><i data-lucide="info" class="w-4 h-4 shrink-0"></i><span>بعد الحفظ، سيتم إرسال التعديل للمراجعة. <strong>النسخة الحالية ستبقى مرئية</strong> للمستخدمين حتى موافقة الأدمن.</span></p>
+      </div>
+      <div class="bg-white rounded-xl p-4 md:p-6 border border-gray-100">
+        <div class="space-y-3">
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">اسم المكان *</label><input type="text" id="editPlaceName" value="${App.h(place.name)}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الرئيسي *</label><div class="custom-select-wrapper"><select id="editPlaceCategory" onchange="App.updateEditSubs()" style="position:absolute;opacity:0;pointer-events:none;">${Data.categories.map(c => `<option value="${c.id}" ${c.id === place.category ? 'selected' : ''}>${c.name}</option>`).join('')}</select></div></div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الفرعي</label><div class="custom-select-wrapper"><select id="editPlaceSubCategory" style="position:absolute;opacity:0;pointer-events:none;">${cat ? cat.subs.map(s => `<option value="${s.id}" ${s.id === place.subcategory ? 'selected' : ''}>${s.name}</option>`).join('') : ''}</select></div></div>
+          </div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">المدينة *</label><div class="custom-select-wrapper"><select id="editPlaceCity" style="position:absolute;opacity:0;pointer-events:none;">${Data.cities.map(c => `<option value="${c.id}" ${c.id === place.city ? 'selected' : ''}>${c.name}</option>`).join('')}</select></div></div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">الوصف</label><textarea id="editPlaceDesc" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm" rows="3">${App.h(place.description || '')}</textarea></div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">العنوان</label><input type="text" id="editPlaceAddress" value="${App.h(place.address || '')}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">رقم الهاتف</label><input type="tel" id="editPlacePhone" value="${App.h(place.phone || '')}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">رقم واتساب</label><input type="tel" id="editPlaceWhatsapp" value="${App.h(place.whatsapp || '')}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+          </div>
+          <div><label class="block text-xs font-medium text-gray-700 mb-1">البريد الإلكتروني</label><input type="email" id="editPlaceEmail" value="${App.h(place.email || '')}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+          <div class="border-t border-gray-100 pt-3">
+            <label class="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i>ساعات العمل</label>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label class="block text-[10px] text-gray-500 mb-1">وقت الفتح</label><input type="time" id="editPlaceOpenTime" value="${place.openTime || ''}" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+              <div><label class="block text-[10px] text-gray-500 mb-1">وقت الإغلاق</label><input type="time" id="editPlaceCloseTime" value="${place.closeTime || ''}" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+            </div>
+            <div class="mt-2">
+              <label class="block text-[10px] text-gray-500 mb-1">أيام العمل</label>
+              <div class="flex flex-wrap gap-1.5">
+                ${allDays.map(day => `
+                  <label class="flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" value="${day}" class="edit-work-day-cb w-3.5 h-3.5 rounded border-gray-300 text-blue-600" ${workDays.includes(day) ? 'checked' : ''}>
+                    <span class="text-[10px] text-gray-600">${day}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="border-t border-gray-100 pt-3">
+            <label class="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1"><i data-lucide="link" class="w-3.5 h-3.5 text-gray-500"></i>روابط التواصل</label>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0"><svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div>
+                <input type="url" id="editPlaceFacebook" value="${App.h(place.facebook || '')}" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="رابط صفحة فيسبوك">
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-pink-50 flex items-center justify-center shrink-0"><svg class="w-4 h-4 text-pink-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></div>
+                <input type="url" id="editPlaceInstagram" value="${App.h(place.instagram || '')}" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="رابط حساب انستجرام">
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center shrink-0"><svg class="w-4 h-4 text-sky-600" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.96 6.504-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></div>
+                <input type="url" id="editPlaceTelegram" value="${App.h(place.telegram || '')}" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="رابط حساب تلجرام">
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0"><i data-lucide="globe" class="w-4 h-4 text-green-600"></i></div>
+                <input type="url" id="editPlaceWebsite" value="${App.h(place.website || '')}" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm" placeholder="رابط الموقع الإلكتروني">
+              </div>
+            </div>
+          </div>
+          <!-- Map -->
+          <div class="border-t border-gray-100 pt-3">
+            <label class="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-gray-500"></i>الموقع على الخريطة</label>
+            <div style="position:relative;width:100%;height:220px;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+              <div id="editPlaceMap" style="position:absolute;top:0;left:0;right:0;bottom:0;z-index:1;"></div>
+              <input type="hidden" id="editPlaceLat" value="${place.lat || ''}">
+              <input type="hidden" id="editPlaceLng" value="${place.lng || ''}">
+            </div>
+            <p class="text-[10px] text-gray-400 mt-1">انقر على الخريطة لتحديث الموقع</p>
+          </div>
+          <div class="border-t border-gray-100 pt-3">
+            <label class="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1"><i data-lucide="image" class="w-3.5 h-3.5 text-gray-500"></i>صور المكان <span class="text-gray-400 font-normal">(حتى 5 صور)</span></label>
+            <div id="editPlaceImagePreview" class="flex flex-wrap gap-2"></div>
+            <div id="editImageControls" class="mt-2">
+              <label class="inline-flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors">
+                <i data-lucide="upload" class="w-4 h-4 text-gray-500"></i>
+                <span class="text-xs text-gray-600">إضافة صور جديدة</span>
+                <input type="file" accept="image/*" multiple onchange="App.handleEditImageUpload(this.files)" class="hidden">
+              </label>
+            </div>
+          </div>
+          <div class="flex gap-3 pt-3">
+            <button onclick="App.submitPlaceEdit()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"><i data-lucide="send" class="w-4 h-4"></i>إرسال التعديل للمراجعة</button>
+            <a href="#myplaces" class="px-4 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium">إلغاء</a>
+          </div>
+        </div>
+      </div>
+    </div></section>${this.renderFooter()}${this.renderBottomNav(Auth.currentUser)}</div>`;
+    this.initIcons();
+    this.initAllCustomSelects();
+    this._updateEditImagePreview();
+    setTimeout(() => { if (typeof L !== 'undefined' && place.lat && place.lng) this._initEditMap(place); }, 500);
+  },
+
+  updateEditSubs() {
+    const catId = document.getElementById('editPlaceCategory')?.value;
+    const sub = document.getElementById('editPlaceSubCategory');
+    if (!sub) return;
+    const cat = Data.categories.find(c => c.id === catId);
+    sub.innerHTML = '<option value="">اختر القسم الفرعي</option>' + (cat ? cat.subs.map(s => `<option value="${s.id}">${s.name}</option>`).join('') : '');
+    // Update custom dropdown
+    const wrapper = sub.closest('.custom-select-wrapper');
+    if (wrapper) { wrapper.innerHTML = ''; wrapper.appendChild(sub); this.initAllCustomSelects(); }
+  },
+
+  _initEditMap(place) {
+    if (this._editMap) { try { this._editMap.remove(); } catch(e) {} this._editMap = null; }
+    const mapEl = document.getElementById('editPlaceMap');
+    if (!mapEl || typeof L === 'undefined') return;
+    try {
+      this._editMap = L.map('editPlaceMap', { zoomControl: true, scrollWheelZoom: true, attributionControl: false }).setView([parseFloat(place.lat) || 15.3694, parseFloat(place.lng) || 44.191], place.lat ? 15 : 7);
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(this._editMap);
+      if (place.lat && place.lng) {
+        this._editMarker = L.marker([parseFloat(place.lat), parseFloat(place.lng)], { draggable: true }).addTo(this._editMap);
+        this._editMarker.on('dragend', (e) => { const pos = e.target.getLatLng(); document.getElementById('editPlaceLat').value = pos.lat.toFixed(6); document.getElementById('editPlaceLng').value = pos.lng.toFixed(6); });
+      }
+      this._editMap.on('click', (e) => {
+        document.getElementById('editPlaceLat').value = e.latlng.lat.toFixed(6);
+        document.getElementById('editPlaceLng').value = e.latlng.lng.toFixed(6);
+        if (this._editMarker) this._editMarker.setLatLng([e.latlng.lat, e.latlng.lng]);
+        else { this._editMarker = L.marker([e.latlng.lat, e.latlng.lng], { draggable: true }).addTo(this._editMap); }
+      });
+      setTimeout(() => this._editMap.invalidateSize(), 300);
+    } catch(e) { console.error('Edit map error:', e); }
+  },
+
+  handleEditImageUpload(files) {
+    if (!files || files.length === 0) return;
+    if (this._editingPlaceImages.length + files.length > 5) { this.showToast('الحد الأقصى 5 صور', 'warning'); return; }
+    for (const file of files) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          if (w > 800) { h = (800 / w) * h; w = 800; }
+          if (h > 800) { w = (800 / h) * w; h = 800; }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          this._editingPlaceImages.push(canvas.toDataURL('image/jpeg', 0.75));
+          this._updateEditImagePreview();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  },
+
+  removeEditImage(index) {
+    this._editingPlaceImages.splice(index, 1);
+    this._updateEditImagePreview();
+  },
+
+  _updateEditImagePreview() {
+    const preview = document.getElementById('editPlaceImagePreview');
+    if (!preview) return;
+    let html = '';
+    this._editingPlaceImages.forEach((img, i) => {
+      const isDataUrl = img.startsWith('data:');
+      html += `<div class="relative group">
+        <img src="${img}" class="w-20 h-20 object-cover rounded-xl border-2 border-gray-200" loading="lazy">
+        <button onclick="App.removeEditImage(${i})" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"><i data-lucide="x" class="w-3 h-3"></i></button>
+        <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 rounded-b-xl">${i+1}/5</div>
+      </div>`;
+    });
+    preview.innerHTML = html;
+    this.initIcons();
+  },
+
+  async submitPlaceEdit() {
+    if (!this._editingPlaceId) return;
+    const name = document.getElementById('editPlaceName')?.value?.trim();
+    const category = document.getElementById('editPlaceCategory')?.value;
+    const city = document.getElementById('editPlaceCity')?.value;
+    if (!name || !category || !city) { this.showToast('يرجى ملء الحقول المطلوبة (الاسم، القسم، المدينة)', 'warning'); return; }
+
+    const workDays = Array.from(document.querySelectorAll('.edit-work-day-cb:checked')).map(cb => cb.value);
+
+    try {
+      // Upload any new images (data URLs)
+      let finalImages = [];
+      for (const img of this._editingPlaceImages) {
+        if (img.startsWith('data:')) {
+          // New image — upload to Cloudinary
+          if (ImageStorage.isConfigured()) {
+            try {
+              const blob = await fetch(img).then(r => r.blob());
+              const result = await ImageStorage.upload(blob, 'places/' + Auth.currentUser.id);
+              finalImages.push(result.url);
+            } catch (e) {
+              this.showToast('فشل رفع صورة: ' + e.message, 'error');
+            }
+          } else {
+            this.showToast('⚠️ رفع الصور غير مُفعّل', 'warning');
+          }
+        } else {
+          // Existing Cloudinary URL — keep it
+          finalImages.push(img);
+        }
+      }
+
+      const proposedData = {
+        name, category,
+        subcategory: document.getElementById('editPlaceSubCategory')?.value || '',
+        city,
+        description: document.getElementById('editPlaceDesc')?.value || '',
+        address: document.getElementById('editPlaceAddress')?.value || '',
+        phone: document.getElementById('editPlacePhone')?.value || '',
+        whatsapp: document.getElementById('editPlaceWhatsapp')?.value || '',
+        email: document.getElementById('editPlaceEmail')?.value || '',
+        facebook: document.getElementById('editPlaceFacebook')?.value || '',
+        instagram: document.getElementById('editPlaceInstagram')?.value || '',
+        telegram: document.getElementById('editPlaceTelegram')?.value || '',
+        website: document.getElementById('editPlaceWebsite')?.value || '',
+        openTime: document.getElementById('editPlaceOpenTime')?.value || '',
+        closeTime: document.getElementById('editPlaceCloseTime')?.value || '',
+        workDays,
+        images: finalImages,
+        lat: document.getElementById('editPlaceLat')?.value || '',
+        lng: document.getElementById('editPlaceLng')?.value || ''
+      };
+
+      await Data.submitPlaceEdit(this._editingPlaceId, proposedData);
+      this.showToast('✅ تم إرسال التعديل للمراجعة. النسخة الحالية ستبقى مرئية حتى موافقة الأدمن.', 'success', 5000);
+      this._editingPlaceId = null;
+      this._editingPlaceImages = [];
+      setTimeout(() => { location.hash = 'myplaces'; }, 1500);
+    } catch (error) {
+      this.showToast(error.message || 'فشل إرسال التعديل', 'error');
+    }
+  },
+
   async toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } await Data.toggleFavorite(Auth.currentUser.id, pid); await Data.preloadAll(); this.render(); },
   setRating(s) { document.querySelectorAll('[data-star]').forEach(b => { const v = parseInt(b.dataset.star); b.className = v <= s ? 'text-yellow-500' : 'text-gray-300'; b.querySelector('i')?.classList.toggle('fill-yellow-500', v <= s); }); this._selectedRating = s; },
   async submitReview(pid) { if (!this._selectedRating) { this.showToast('اختر تقييم أولاً', 'warning'); return; } const c = document.getElementById('reviewComment').value; if (!c) { this.showToast('اكتب تعليقك أولاً', 'warning'); return; } try { await Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, Auth.currentUser.avatar || '', this._selectedRating, c); this._selectedRating = 0; await Data.preloadAll(); this.showToast('تم إضافة مراجعتك بنجاح', 'success'); setTimeout(() => this.showPlace(pid), 1000); } catch (error) { ErrorTracker.capture(error, { operation: 'app.review.submit', source: 'place_detail_review_form' }); this.showToast(ErrorTracker.getInlineMessage(error), 'error'); } },

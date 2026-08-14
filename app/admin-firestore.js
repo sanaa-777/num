@@ -373,5 +373,131 @@ const Admin = {
       ]);
       this._unreadCount = snap.size;
     } catch(e) { this._unreadCount = 0; }
+  },
+
+  // ====== Place Edits (Edit-with-Review) ======
+  async getPendingPlaceEdits() {
+    try {
+      const snap = await db.collection('place_edits')
+        .where('status', '==', 'pending')
+        .get();
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+      console.error('getPendingPlaceEdits error:', e);
+      return [];
+    }
+  },
+
+  async getAllPlaceEdits() {
+    try {
+      const snap = await db.collection('place_edits').get();
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+      console.error('getAllPlaceEdits error:', e);
+      return [];
+    }
+  },
+
+  async approvePlaceEdit(editId, adminNote) {
+    try {
+      const editRef = db.collection('place_edits').doc(editId);
+      const editDoc = await editRef.get();
+      if (!editDoc.exists) return false;
+      const edit = editDoc.data();
+      if (edit.status !== 'pending') return false;
+
+      // Apply proposed data to the original place
+      const placeRef = db.collection('places').doc(edit.placeId);
+      const placeDoc = await placeRef.get();
+      if (!placeDoc.exists) return false;
+
+      const proposed = edit.proposedData;
+      await placeRef.update({
+        name: proposed.name || '',
+        category: proposed.category || '',
+        subcategory: proposed.subcategory || '',
+        city: proposed.city || '',
+        description: proposed.description || '',
+        address: proposed.address || '',
+        phone: proposed.phone || '',
+        whatsapp: proposed.whatsapp || '',
+        email: proposed.email || '',
+        facebook: proposed.facebook || '',
+        instagram: proposed.instagram || '',
+        telegram: proposed.telegram || '',
+        website: proposed.website || '',
+        openTime: proposed.openTime || '',
+        closeTime: proposed.closeTime || '',
+        workDays: proposed.workDays || [],
+        images: proposed.images || [],
+        lat: proposed.lat || '',
+        lng: proposed.lng || '',
+        adminNote: adminNote || '',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      // Mark edit as approved
+      await editRef.update({
+        status: 'approved',
+        adminNote: adminNote || '',
+        reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      Data._invalidateCache();
+      await this.addNotification('approve_edit', `تمت الموافقة على تعديل: ${edit.placeName || edit.placeId}`);
+
+      // Notify the owner
+      if (edit.owner) {
+        try {
+          await db.collection('notifications').add({
+            userId: edit.owner,
+            type: 'admin',
+            message: `✅ تمت الموافقة على تعديل نشاطك "${edit.placeName || ''}". التغييرات أصبحت مرئية الآن.${adminNote ? ' ملاحظة: ' + adminNote : ''}`,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (e) { console.error('Notify owner error:', e); }
+      }
+      return true;
+    } catch (e) {
+      console.error('approvePlaceEdit error:', e);
+      return false;
+    }
+  },
+
+  async rejectPlaceEdit(editId, adminNote) {
+    try {
+      const editRef = db.collection('place_edits').doc(editId);
+      const editDoc = await editRef.get();
+      if (!editDoc.exists) return false;
+      const edit = editDoc.data();
+
+      await editRef.update({
+        status: 'rejected',
+        adminNote: adminNote || '',
+        reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      await this.addNotification('reject_edit', `تم رفض تعديل: ${edit.placeName || edit.placeId}`);
+
+      // Notify the owner
+      if (edit.owner) {
+        try {
+          await db.collection('notifications').add({
+            userId: edit.owner,
+            type: 'admin',
+            message: `❌ تم رفض تعديل نشاطك "${edit.placeName || ''}".${adminNote ? ' السبب: ' + adminNote : ''}`,
+            read: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+        } catch (e) { console.error('Notify owner error:', e); }
+      }
+      return true;
+    } catch (e) {
+      console.error('rejectPlaceEdit error:', e);
+      return false;
+    }
   }
 };

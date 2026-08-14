@@ -11,5 +11,20 @@
   "devDependencies": {
     "tailwindcss": "^3.4.17"
   },
-  "dependencies": {}
+  "description": "مستودع منظم لملفات تطبيق **دليل اليمن** المستخرجة من ملف APK المتوفر.",
+  "main": "deploy-direct.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sanaa-777/num.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sanaa-777/num/issues"
+  },
+  "homepage": "https://github.com/sanaa-777/num#readme"
 }

@@ -88,6 +88,18 @@ service cloud.firestore {
       allow delete: if request.auth != null;
     }
 
+    match /place_edits/{editId} {
+      // Users can read their own edits, admin can read all
+      allow read: if request.auth != null && (request.auth.uid == resource.data.owner || isAdmin());
+      // Users can create edits for their own places
+      allow create: if request.auth != null
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.status == 'pending';
+      // Users can update their own pending edits; admin can update all
+      allow update: if request.auth != null && (request.auth.uid == resource.data.owner || isAdmin());
+      allow delete: if isAdmin();
+    }
+
     match /error_logs/{logId} {
       // Require authentication to prevent abuse
       allow create: if request.auth != null;

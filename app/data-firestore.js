@@ -857,6 +857,103 @@ const Data = {
     this._myPlacesCache = [];
   },
 
+  // ====== Place Edits (Edit-with-Review System) ======
+  _myEditsCache: [],
+  _myEditsListener: null,
+
+  async submitPlaceEdit(placeId, proposedData) {
+    if (!Auth.currentUser) throw new Error('غير مسجل الدخول');
+    // Verify ownership
+    const place = await this.getPlace(placeId);
+    if (!place || place.owner !== Auth.currentUser.id) throw new Error('ليس لديك صلاحية تعديل هذا المكان');
+    // Check if there's already a pending edit
+    const existing = await db.collection('place_edits')
+      .where('placeId', '==', placeId)
+      .where('status', '==', 'pending')
+      .get();
+    if (!existing.empty) throw new Error('يوجد طلب تعديل معلق بالفعل لهذا المكان. انتظر موافقة أو رفض الأدمن أولاً.');
+    // Create edit document
+    const editData = {
+      placeId: placeId,
+      owner: Auth.currentUser.id,
+      ownerName: Auth.currentUser.name || '',
+      status: 'pending',
+      proposedData: proposedData,
+      currentData: {
+        name: place.name || '',
+        category: place.category || '',
+        subcategory: place.subcategory || '',
+        city: place.city || '',
+        description: place.description || '',
+        address: place.address || '',
+        phone: place.phone || '',
+        whatsapp: place.whatsapp || '',
+        email: place.email || '',
+        facebook: place.facebook || '',
+        instagram: place.instagram || '',
+        telegram: place.telegram || '',
+        website: place.website || '',
+        openTime: place.openTime || '',
+        closeTime: place.closeTime || '',
+        workDays: place.workDays || [],
+        images: place.images || [],
+        lat: place.lat || '',
+        lng: place.lng || ''
+      },
+      placeName: place.name || '',
+      adminNote: '',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    const docRef = await db.collection('place_edits').add(editData);
+    // Notify admin
+    await Admin.notifyNewPlace('تعديل: ' + place.name, Auth.currentUser.name);
+    return { id: docRef.id, ...editData };
+  },
+
+  async getMyPlaceEdits(userId) {
+    if (!userId) return [];
+    try {
+      const snap = await db.collection('place_edits')
+        .where('owner', '==', userId)
+        .orderBy('createdAt', 'desc')
+        .get();
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+      // Fallback without orderBy if index missing
+      try {
+        const snap = await db.collection('place_edits')
+          .where('owner', '==', userId)
+          .get();
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e2) {
+        console.error('getMyPlaceEdits error:', e2);
+        return [];
+      }
+    }
+  },
+
+  async getPlaceEdit(editId) {
+    try {
+      const doc = await db.collection('place_edits').doc(editId).get();
+      if (!doc.exists) return null;
+      return { id: doc.id, ...doc.data() };
+    } catch (e) {
+      console.error('getPlaceEdit error:', e);
+      return null;
+    }
+  },
+
+  async cancelPlaceEdit(editId) {
+    try {
+      await db.collection('place_edits').doc(editId).delete();
+      return true;
+    } catch (e) {
+      console.error('cancelPlaceEdit error:', e);
+      return false;
+    }
+  },
+
   // ====== نسخ متزامنة للتوافق مع app.js ======
   _usersCache: [],
   _reviewsCache: [],

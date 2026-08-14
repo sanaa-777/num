@@ -331,7 +331,9 @@
           db.collection('offers').orderBy('createdAt','desc').get().then(function(s) { return s.docs.map(function(d) { return {id:d.id, ...d.data()}; }); }).catch(function(){ return []; }),
           db.collection('jobs').orderBy('createdAt','desc').get().then(function(s) { return s.docs.map(function(d) { return {id:d.id, ...d.data()}; }); }).catch(function(){ return []; }),
           db.collection('events').orderBy('createdAt','desc').get().then(function(s) { return s.docs.map(function(d) { return {id:d.id, ...d.data()}; }); }).catch(function(){ return []; }),
-          db.collection('pricing').orderBy('sortOrder','asc').get().then(function(s) { return s.docs.map(function(d) { return {id:d.id, ...d.data()}; }); }).catch(function(){ return []; })
+          db.collection('pricing').orderBy('sortOrder','asc').get().then(function(s) { return s.docs.map(function(d) { return {id:d.id, ...d.data()}; }); }).catch(function(){ return []; }),
+          // NEW: Pending Place Edits
+          Admin.getPendingPlaceEdits()
         ]);
         var stats = results[0];
         var users = results[1];
@@ -343,6 +345,7 @@
         var jobs = results[7];
         var events = results[8];
         var pricing = results[9];
+        var pendingEdits = results[10] || [];
         await Admin.markNotificationsRead();
 
         // Store data for tab renderers
@@ -355,6 +358,7 @@
         this._stats = stats;
         this._ads = ads;
         this._notifs = notifs;
+        this._pendingEdits = pendingEdits;
         this._unreadCount = unreadCount;
 
         app.innerHTML =
@@ -675,6 +679,8 @@
 
         return '<div class="space-y-4">' +
           formHtml +
+          // Pending Edits Section
+          (self._pendingEdits && self._pendingEdits.length > 0 ? self.renderPendingEdits() : '') +
           '<div class="bg-white rounded-xl border border-gray-100 p-4">' +
             '<div class="flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">' +
               '<div class="flex flex-wrap gap-2">' +
@@ -732,6 +738,182 @@
 
       filterButton: function(id, label, count) {
         return '<button onclick="AdminPanel.placeFilter=\'' + id + '\';AdminPanel.render()" class="px-3 py-2 rounded-lg text-xs font-medium ' + (this.placeFilter === id ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200') + '">' + label + ' (' + count + ')</button>';
+      },
+
+      // ====== Pending Place Edits ======
+      _pendingEdits: [],
+      _viewingEdit: null,
+
+      renderPendingEdits: function() {
+        var self = this;
+        var edits = this._pendingEdits || [];
+        if (edits.length === 0) return '';
+
+        // If viewing a specific edit, show the comparison view
+        if (self._viewingEdit) {
+          return self.renderEditComparison(self._viewingEdit);
+        }
+
+        return '<div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">' +
+          '<h3 class="text-sm font-bold text-amber-800 mb-3 flex items-center gap-2"><i data-lucide="edit-3" class="w-4 h-4"></i>طلبات تعديل معلقة (' + edits.length + ')</h3>' +
+          '<div class="space-y-2">' +
+            edits.map(function(edit) {
+              var proposed = edit.proposedData || {};
+              var current = edit.currentData || {};
+              var nameChanged = proposed.name !== current.name;
+              var catChanged = proposed.category !== current.category;
+              var cityChanged = proposed.city !== current.city;
+              var changes = [];
+              if (nameChanged) changes.push('الاسم');
+              if (catChanged) changes.push('القسم');
+              if (cityChanged) changes.push('المدينة');
+              if ((proposed.description || '') !== (current.description || '')) changes.push('الوصف');
+              if ((proposed.phone || '') !== (current.phone || '')) changes.push('الهاتف');
+              if ((proposed.images || []).length !== (current.images || []).length) changes.push('الصور');
+              if (proposed.openTime !== current.openTime || proposed.closeTime !== current.closeTime) changes.push('ساعات العمل');
+              return '<div class="bg-white rounded-lg p-3 border border-amber-200 flex items-center gap-3">' +
+                '<div class="flex-1">' +
+                  '<div class="font-medium text-sm">' + AdminPanel._escHtml(edit.placeName || 'نشاط') + '</div>' +
+                  '<div class="text-[10px] text-gray-500">بواسطة: ' + AdminPanel._escHtml(edit.ownerName || edit.owner || '') + '</div>' +
+                  '<div class="text-[10px] text-amber-700 mt-1">التغييرات: ' + (changes.length > 0 ? changes.join('، ') : 'غير محدد') + '</div>' +
+                '</div>' +
+                '<div class="flex gap-1.5">' +
+                  '<button onclick="AdminPanel._viewingEdit=\'' + edit.id + '\';AdminPanel.render()" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-medium hover:bg-blue-700 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i>مراجعة</button>' +
+                '</div>' +
+              '</div>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+      },
+
+      renderEditComparison: function(editId) {
+        var self = this;
+        var edit = (this._pendingEdits || []).find(function(e) { return e.id === editId; });
+        if (!edit) { self._viewingEdit = null; return ''; }
+        var proposed = edit.proposedData || {};
+        var current = edit.currentData || {};
+
+        var fields = [
+          { key: 'name', label: 'الاسم' },
+          { key: 'description', label: 'الوصف' },
+          { key: 'address', label: 'العنوان' },
+          { key: 'phone', label: 'الهاتف' },
+          { key: 'whatsapp', label: 'واتساب' },
+          { key: 'email', label: 'البريد' },
+          { key: 'openTime', label: 'وقت الفتح' },
+          { key: 'closeTime', label: 'وقت الإغلاق' },
+          { key: 'facebook', label: 'فيسبوك' },
+          { key: 'instagram', label: 'انستجرام' },
+          { key: 'telegram', label: 'تليجرام' },
+          { key: 'website', label: 'الموقع' }
+        ];
+
+        function getCategoryName(id) {
+          var cat = Data.categories.find(function(c) { return c.id === id; });
+          return cat ? cat.name : id || '-';
+        }
+        function getCityName(id) {
+          var city = Data.cities.find(function(c) { return c.id === id; });
+          return city ? city.name : id || '-';
+        }
+
+        var rows = fields.map(function(f) {
+          var curVal = current[f.key] || '';
+          var newVal = proposed[f.key] || '';
+          var changed = curVal !== newVal;
+          return '<tr class="' + (changed ? 'bg-yellow-50' : '') + '">' +
+            '<td class="px-3 py-2 font-medium text-gray-600">' + f.label + '</td>' +
+            '<td class="px-3 py-2 text-gray-500">' + AdminPanel._escHtml(curVal || '-') + '</td>' +
+            '<td class="px-3 py-2 ' + (changed ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + AdminPanel._escHtml(newVal || '-') + (changed ? ' <span class="text-[9px] text-amber-600">✦</span>' : '') + '</td>' +
+          '</tr>';
+        }).join('');
+
+        // Category & city rows
+        var catCur = getCategoryName(current.category);
+        var catNew = getCategoryName(proposed.category);
+        var cityCur = getCityName(current.city);
+        var cityNew = getCityName(proposed.city);
+        rows = '<tr class="' + (catCur !== catNew ? 'bg-yellow-50' : '') + '"><td class="px-3 py-2 font-medium text-gray-600">القسم</td><td class="px-3 py-2 text-gray-500">' + AdminPanel._escHtml(catCur) + '</td><td class="px-3 py-2 ' + (catCur !== catNew ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + AdminPanel._escHtml(catNew) + (catCur !== catNew ? ' <span class="text-[9px] text-amber-600">✦</span>' : '') + '</td></tr>' +
+          '<tr class="' + (cityCur !== cityNew ? 'bg-yellow-50' : '') + '"><td class="px-3 py-2 font-medium text-gray-600">المدينة</td><td class="px-3 py-2 text-gray-500">' + AdminPanel._escHtml(cityCur) + '</td><td class="px-3 py-2 ' + (cityCur !== cityNew ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + AdminPanel._escHtml(cityNew) + (cityCur !== cityNew ? ' <span class="text-[9px] text-amber-600">✦</span>' : '') + '</td></tr>' +
+          rows;
+
+        // Images comparison
+        var curImages = current.images || [];
+        var newImages = proposed.images || [];
+        var imagesRow = '<tr><td class="px-3 py-2 font-medium text-gray-600">الصور</td><td class="px-3 py-2 text-gray-500">' + curImages.length + ' صورة</td><td class="px-3 py-2 ' + (curImages.length !== newImages.length ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + newImages.length + ' صورة' + (curImages.length !== newImages.length ? ' <span class="text-[9px] text-amber-600">✦</span>' : '') + '</td></tr>';
+
+        return '<div class="bg-white rounded-xl border border-amber-300 p-5 mb-4 shadow-sm">' +
+          '<div class="flex items-center justify-between mb-4">' +
+            '<div>' +
+              '<h3 class="text-sm font-bold flex items-center gap-2"><i data-lucide="edit-3" class="w-4 h-4 text-amber-600"></i>مراجعة تعديل: ' + AdminPanel._escHtml(edit.placeName || '') + '</h3>' +
+              '<p class="text-[10px] text-gray-500 mt-1">بواسطة: ' + AdminPanel._escHtml(edit.ownerName || edit.owner || '') + '</p>' +
+            '</div>' +
+            '<button onclick="AdminPanel._viewingEdit=null;AdminPanel.render()" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"><i data-lucide="x" class="w-4 h-4"></i></button>' +
+          '</div>' +
+          '<!-- Current vs Proposed images -->' +
+          '<div class="grid grid-cols-2 gap-4 mb-4">' +
+            '<div>' +
+              '<p class="text-[10px] font-medium text-gray-500 mb-2">النسخة الحالية</p>' +
+              '<div class="flex flex-wrap gap-2">' +
+                (curImages.length > 0 ? curImages.map(function(img) { return '<img src="' + img + '" class="w-16 h-16 rounded-lg object-cover border border-gray-200" onerror="this.style.display=\'none\'">'; }).join('') : '<span class="text-[10px] text-gray-400">لا توجد صور</span>') +
+              '</div>' +
+            '</div>' +
+            '<div>' +
+              '<p class="text-[10px] font-medium text-amber-700 mb-2">النسخة المقترحة</p>' +
+              '<div class="flex flex-wrap gap-2">' +
+                (newImages.length > 0 ? newImages.map(function(img) { return '<img src="' + img + '" class="w-16 h-16 rounded-lg object-cover border border-amber-300" onerror="this.style.display=\'none\'">'; }).join('') : '<span class="text-[10px] text-gray-400">لا توجد صور</span>') +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<!-- Field comparison table -->' +
+          '<div class="overflow-x-auto mb-4"><table class="w-full text-xs">' +
+            '<thead class="bg-gray-50"><tr>' +
+              '<th class="px-3 py-2 text-right font-medium text-gray-500 w-24">الحقل</th>' +
+              '<th class="px-3 py-2 text-right font-medium text-gray-500">الحالي</th>' +
+              '<th class="px-3 py-2 text-right font-medium text-amber-700">المقترح ✦</th>' +
+            '</tr></thead>' +
+            '<tbody class="divide-y divide-gray-100">' +
+              imagesRow + rows +
+            '</tbody>' +
+          '</table></div>' +
+          '<!-- Admin note and actions -->' +
+          '<div class="border-t border-gray-100 pt-4">' +
+            '<label class="field-label mb-2">ملاحظة الأدمن (تظهر للمالك)</label>' +
+            '<textarea id="editReviewNote_' + editId + '" class="field-input mb-3" rows="2" placeholder="اكتب ملاحظة للمالك (اختياري)..."></textarea>' +
+            '<div class="flex gap-3">' +
+              '<button onclick="AdminPanel.approveEdit(\'' + editId + '\')" class="px-5 py-2.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5"></i>موافقة ونشر التعديل</button>' +
+              '<button onclick="AdminPanel.rejectEdit(\'' + editId + '\')" class="px-5 py-2.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="x" class="w-3.5 h-3.5"></i>رفض التعديل</button>' +
+              '<button onclick="AdminPanel._viewingEdit=null;AdminPanel.render()" class="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">رجوع</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      },
+
+      approveEdit: async function(editId) {
+        var note = (document.getElementById('editReviewNote_' + editId) || {}).value || '';
+        var ok = await Admin.approvePlaceEdit(editId, note);
+        if (ok) {
+          this._viewingEdit = null;
+          this._pendingEdits = (this._pendingEdits || []).filter(function(e) { return e.id !== editId; });
+          this.toast('تمت الموافقة على التعديل ونشره');
+          this.render();
+        } else {
+          this.toast('فشلت الموافقة', true);
+        }
+      },
+
+      rejectEdit: async function(editId) {
+        var note = (document.getElementById('editReviewNote_' + editId) || {}).value || '';
+        if (!note) { this.toast('يرجى كتابة سبب الرفض', true); return; }
+        var ok = await Admin.rejectPlaceEdit(editId, note);
+        if (ok) {
+          this._viewingEdit = null;
+          this._pendingEdits = (this._pendingEdits || []).filter(function(e) { return e.id !== editId; });
+          this.toast('تم رفض التعديل');
+          this.render();
+        } else {
+          this.toast('فشل الرفض', true);
+        }
       },
 
       renderAdsTab: function(ads) {
