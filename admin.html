@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png">
   <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png">
-  <link rel="stylesheet" href="app/tailwind.css?v=20260813062500">
+  <link rel="stylesheet" href="app/tailwind.css?v=20260815065000">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.js"></script>
   <style>
@@ -70,21 +70,21 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <!-- Error Tracker -->
-  <script src="app/error-tracker.js?v=20260813062500"></script>
+  <script src="app/error-tracker.js?v=20260815065000"></script>
 
   <!-- Firebase Config -->
-  <script src="app/firebase-config.js?v=20260813062500"></script>
+  <script src="app/firebase-config.js?v=20260815065000"></script>
 
   <!-- App Modules -->
-  <script src="app/image-storage.js?v=20260813062500"></script>
-  <script src="app/data-firestore.js?v=20260813062500"></script>
-  <script src="app/auth-firestore.js?v=20260813062500"></script>
-  <script src="app/admin-firestore.js?v=20260813062500"></script>
-  <script src="app/ads-firestore.js?v=20260813062500"></script>
-  <script src="app/offers-firestore.js?v=20260813062500"></script>
-  <script src="app/jobs-firestore.js?v=20260813062500"></script>
-  <script src="app/events-firestore.js?v=20260813062500"></script>
-  <script src="app/pricing-firestore.js?v=20260813062500"></script>
+  <script src="app/image-storage.js?v=20260815065000"></script>
+  <script src="app/data-firestore.js?v=20260815065000"></script>
+  <script src="app/auth-firestore.js?v=20260815065000"></script>
+  <script src="app/admin-firestore.js?v=20260815065000"></script>
+  <script src="app/ads-firestore.js?v=20260815065000"></script>
+  <script src="app/offers-firestore.js?v=20260815065000"></script>
+  <script src="app/jobs-firestore.js?v=20260815065000"></script>
+  <script src="app/events-firestore.js?v=20260815065000"></script>
+  <script src="app/pricing-firestore.js?v=20260815065000"></script>
 
   <script>
     // =============================================
@@ -205,7 +205,7 @@
             '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;">' +
             '<div style="text-align:center;padding:32px;">' +
             '<h2 style="color:#dc2626;margin-bottom:16px;">خطأ في تحميل لوحة التحكم</h2>' +
-            '<p style="color:#6b7280;margin-bottom:16px;">' + (e.message || 'تعذر جلب البيانات') + '</p>' +
+            '<p style="color:#6b7280;margin-bottom:16px;">' + AdminPanel._escHtml(e.message || 'تعذر جلب البيانات') + '</p>' +
             '<button onclick="location.reload()" style="background:#dc2626;color:#fff;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;">إعادة المحاولة</button>' +
             '</div></div>';
         }
@@ -439,8 +439,8 @@
                   '<button onclick="AdminPanel.render()" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-xs font-medium hover:bg-gray-200 flex items-center gap-1.5"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>تحديث</button>' +
                   '<a href="index.html" class="text-gray-500 hover:text-gray-700 flex items-center gap-1 text-xs"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>زيارة الموقع</a>' +
                   '<div class="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-lg">' +
-                    '<img src="' + (Auth.currentUser.avatar || '') + '" class="w-6 h-6 rounded-full" alt="">' +
-                    '<span class="text-xs font-medium">' + (Auth.currentUser.name || 'Admin') + '</span>' +
+                    '<img src="' + AdminPanel._escHtml(Auth.currentUser.avatar || '') + '" class="w-6 h-6 rounded-full" alt="">' +
+                    '<span class="text-xs font-medium">' + AdminPanel._escHtml(Auth.currentUser.name || 'Admin') + '</span>' +
                   '</div>' +
                   '<div class="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1.5 rounded-lg" title="Cloudinary إعدادات رفع الصور">' +
                     (ImageStorage.isConfigured()
@@ -537,7 +537,7 @@
             '<div class="space-y-2">' +
               recentUsers.map(function(u) {
                 return '<div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 text-xs">' +
-                  '<img src="' + (u.avatar || '') + '" class="w-7 h-7 rounded-full" alt="">' +
+                  '<img src="' + AdminPanel._escHtml(u.avatar || '') + '" class="w-7 h-7 rounded-full" alt="">' +
                   '<div class="flex-1"><div class="font-medium">' + AdminPanel._escHtml(u.name || 'بدون اسم') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml(u.email || '') + '</div></div>' +
                   '<span class="text-[10px] px-2 py-0.5 rounded ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : u.suspended ? 'bg-red-100 text-red-700' : u.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700') + '">' + (u.role === 'admin' ? 'أدمن' : u.suspended ? 'موقوف' : u.verified ? 'موثّق' : 'معلّق') + '</span>' +
                 '</div>';
@@ -666,7 +666,7 @@
               '<div class="md:col-span-2"><label class="field-label">الوصف</label><textarea id="editPlaceDesc" class="field-input" rows="3">' + AdminPanel._escHtml(ep.description || '') + '</textarea></div>' +
               '<div class="md:col-span-2"><label class="field-label">ملاحظة الأدمن</label><textarea id="editPlaceNote" class="field-input" rows="2">' + AdminPanel._escHtml(ep.adminNote || '') + '</textarea></div>' +
               '<div><label class="field-label">الصورة الحالية</label>' +
-                ((ep.image || (ep.images && ep.images[0])) ? '<img src="' + (ep.image || ep.images[0]) + '" class="w-20 h-20 rounded-lg object-cover mt-1">' : '<p class="text-gray-400 text-xs mt-1">لا توجد صورة</p>') +
+                ((ep.image || (ep.images && ep.images[0])) ? '<img src="' + AdminPanel._escHtml(ep.image || ep.images[0]) + '" class="w-20 h-20 rounded-lg object-cover mt-1">' : '<p class="text-gray-400 text-xs mt-1">لا توجد صورة</p>') +
               '</div>' +
               '<div><label class="field-label">صورة جديدة (اختياري)</label><input type="file" id="editPlaceImageFile" accept="image/*" class="text-xs mt-1"></div>' +
             '</div>' +
@@ -715,7 +715,7 @@
                   : '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 mr-1">نشط</span>';
                 return '<tr class="hover:bg-gray-50 align-top">' +
                   '<td class="px-3 py-3"><div class="flex items-center gap-2">' +
-                    ((p.image || (p.images && p.images[0])) ? '<img src="' + (p.image || p.images[0]) + '" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.style.display=\'none\'">' : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>') +
+                    ((p.image || (p.images && p.images[0])) ? '<img src="' + AdminPanel._escHtml(p.image || p.images[0]) + '" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.style.display=\'none\'">' : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>') +
                     '<div><div class="font-medium">' + AdminPanel._escHtml(p.name || 'نشاط بدون اسم') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml(p.phone || '') + ' • ' + AdminPanel._escHtml(p.address || '') + '</div>' +
                     (p.images && p.images.length > 1 ? '<span class="text-[9px] text-blue-500">' + p.images.length + ' صور</span>' : '') +
                     '</div></div></td>' +
@@ -855,13 +855,13 @@
             '<div>' +
               '<p class="text-[10px] font-medium text-gray-500 mb-2">النسخة الحالية</p>' +
               '<div class="flex flex-wrap gap-2">' +
-                (curImages.length > 0 ? curImages.map(function(img) { return '<img src="' + img + '" class="w-16 h-16 rounded-lg object-cover border border-gray-200" onerror="this.style.display=\'none\'">'; }).join('') : '<span class="text-[10px] text-gray-400">لا توجد صور</span>') +
+                (curImages.length > 0 ? curImages.map(function(img) { return '<img src="' + AdminPanel._escHtml(img) + '" class="w-16 h-16 rounded-lg object-cover border border-gray-200" onerror="this.style.display=\'none\'">'; }).join('') : '<span class="text-[10px] text-gray-400">لا توجد صور</span>') +
               '</div>' +
             '</div>' +
             '<div>' +
               '<p class="text-[10px] font-medium text-amber-700 mb-2">النسخة المقترحة</p>' +
               '<div class="flex flex-wrap gap-2">' +
-                (newImages.length > 0 ? newImages.map(function(img) { return '<img src="' + img + '" class="w-16 h-16 rounded-lg object-cover border border-amber-300" onerror="this.style.display=\'none\'">'; }).join('') : '<span class="text-[10px] text-gray-400">لا توجد صور</span>') +
+                (newImages.length > 0 ? newImages.map(function(img) { return '<img src="' + AdminPanel._escHtml(img) + '" class="w-16 h-16 rounded-lg object-cover border border-amber-300" onerror="this.style.display=\'none\'">'; }).join('') : '<span class="text-[10px] text-gray-400">لا توجد صور</span>') +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -922,7 +922,7 @@
           '<div class="space-y-2">' +
             (ads.length > 0 ? ads.map(function(ad) {
               return '<div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">' +
-                '<div class="flex-1"><div class="font-medium text-sm">' + (ad.title || 'بدون عنوان') + '</div><div class="text-[10px] text-gray-400">' + (ad.position || '') + ' • ' + (ad.views || 0) + ' مشاهدة</div></div>' +
+                '<div class="flex-1"><div class="font-medium text-sm">' + AdminPanel._escHtml(ad.title || 'بدون عنوان') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml(ad.position || '') + ' • ' + (ad.views || 0) + ' مشاهدة</div></div>' +
                 '<span class="px-2 py-0.5 rounded text-[10px] ' + (ad.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700') + '">' + (ad.isActive ? 'نشط' : 'معطل') + '</span>' +
               '</div>';
             }).join('') : '<p class="text-gray-400 text-sm text-center py-4">لا توجد إعلانات</p>') +
@@ -946,7 +946,7 @@
               '<button onclick="AdminPanel.editingItem={_type:\'offer\'};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة عرض</button>' +
             '</div>' +
             this.renderDataTable(offers, 'offer', [
-              { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + (item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
+              { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + AdminPanel._escHtml(item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
               { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
               { label: 'الوكيل', render: function(item) { return AdminPanel._escHtml(item.agentName || '-'); } },
               { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
@@ -991,7 +991,7 @@
               '<button onclick="AdminPanel.editingItem={_type:\'job\'};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة وظيفة</button>' +
             '</div>' +
             this.renderDataTable(jobs, 'job', [
-              { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + (item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
+              { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + AdminPanel._escHtml(item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
               { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
               { label: 'الشركة', render: function(item) { return AdminPanel._escHtml(item.companyName || '-'); } },
               { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
@@ -1036,7 +1036,7 @@
               '<button onclick="AdminPanel.editingItem={_type:\'event\'};AdminPanel.render()" class="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i>إضافة فعالية</button>' +
             '</div>' +
             this.renderDataTable(events, 'event', [
-              { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + (item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
+              { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + AdminPanel._escHtml(item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
               { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
               { label: 'جهة التنظيم', render: function(item) { return AdminPanel._escHtml(item.organizer || '-'); } },
               { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
@@ -1175,7 +1175,7 @@
             '<label class="field-label">الصورة</label>' +
             '<div class="flex items-center gap-3">' +
               '<input type="file" id="itemImageFile" accept="image/*" onchange="AdminPanel.previewImage(this)" class="text-xs">' +
-              '<img id="itemImagePreview" class="img-preview" style="display:' + ((item.image || item.imageUrl) ? 'block' : 'none') + ';" src="' + (item.image || item.imageUrl || '') + '">' +
+              '<img id="itemImagePreview" class="img-preview" style="display:' + ((item.image || item.imageUrl) ? 'block' : 'none') + ';" src="' + AdminPanel._escHtml(item.image || item.imageUrl || '') + '">' +
             '</div>' +
           '</div>' : '';
 
