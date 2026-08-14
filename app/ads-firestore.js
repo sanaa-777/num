@@ -187,27 +187,28 @@ const Ads = {
     if (!ad || !ad.images || ad.images.length === 0) return '';
     const hasMultiple = ad.images.length > 1;
     const sliderId = 'slider_' + ad.id;
+    // Aspect ratio based on ad size
+    const aspectMap = { banner: '728/90', leaderboard: '728/60', square: '1/1', rectangle: '300/250' };
+    const aspect = aspectMap[ad.size] || '16/9';
     const clickHandler = ad.linkUrl ? `onclick="Ads.recordClick('${ad.id}');window.open('${ad.linkUrl.replace(/'/g, "\\'")}','${ad.linkTarget || '_blank'}')"` : '';
-    return `
-    <div class="ad-container ${containerClass} relative overflow-hidden rounded-xl bg-white border border-gray-100 ${ad.linkUrl ? 'cursor-pointer' : ''}" ${clickHandler} data-ad-id="${ad.id}">
-      ${hasMultiple ? `
-        <div id="${sliderId}" class="ad-slider relative" style="aspect-ratio:${ad.size === 'banner' ? '728/90' : ad.size === 'leaderboard' ? '728/60' : ad.size === 'square' ? '1/1' : ad.size === 'rectangle' ? '300/250' : '16/9'}">
-          ${ad.images.map((img, i) => `
-            <img src="${img}" alt="${ad.title || 'إعلان'}" loading="lazy"
-                 class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${i === 0 ? 'opacity-100' : 'opacity-0'}"
-                 data-slide="${i}">
-          `).join('')}
-          <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-            ${ad.images.map((_, i) => `<button onclick="event.stopPropagation();Ads.goToSlide('${sliderId}',${i})" class="w-2 h-2 rounded-full bg-white/60 hover:bg-white transition-colors" data-dot="${i}"></button>`).join('')}
-          </div>
-          <button onclick="event.stopPropagation();Ads.prevSlide('${sliderId}')" class="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-          <button onclick="event.stopPropagation();Ads.nextSlide('${sliderId}')" class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+    
+    let imagesHtml = '';
+    if (hasMultiple) {
+      imagesHtml = `<div id="${sliderId}" class="ad-slider" style="aspect-ratio:${aspect}">
+        ${ad.images.map((img, i) => `<img src="${img}" alt="" loading="${i === 0 ? 'eager' : 'lazy'}" fetchpriority="${i === 0 ? 'high' : 'low'}" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${i === 0 ? 'opacity-100' : 'opacity-0'}" data-slide="${i}">`).join('')}
+        <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+          ${ad.images.map((_, i) => `<button onclick="event.stopPropagation();Ads.goToSlide('${sliderId}',${i})" class="w-2 h-2 rounded-full ${i===0?'bg-white':'bg-white/60'}" data-dot="${i}"></button>`).join('')}
         </div>
-      ` : `
-        <img src="${ad.images[0]}" alt="${ad.title || 'إعلان'}" loading="lazy"
-             class="w-full object-cover" style="aspect-ratio:${ad.size === 'banner' ? '728/90' : ad.size === 'leaderboard' ? '728/60' : ad.size === 'square' ? '1/1' : ad.size === 'rectangle' ? '300/250' : '16/9'}">
-      `}
-      ${ad.title ? `<div class="absolute top-2 right-2 bg-black/50 text-white text-[9px] px-2 py-0.5 rounded">إعلان</div>` : ''}
+        <button onclick="event.stopPropagation();Ads.prevSlide('${sliderId}')" class="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+        <button onclick="event.stopPropagation();Ads.nextSlide('${sliderId}')" class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+      </div>`;
+    } else {
+      imagesHtml = `<img src="${ad.images[0]}" alt="" loading="eager" fetchpriority="high" class="w-full object-cover" style="aspect-ratio:${aspect}">`;
+    }
+
+    return `<div class="ad-container ${containerClass}" ${clickHandler} data-ad-id="${ad.id}">
+      ${imagesHtml}
+      <div class="ad-badge">إعلان</div>
     </div>`;
   },
 

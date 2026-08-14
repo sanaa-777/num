@@ -1153,6 +1153,58 @@ section {
 }
 
 /* =============================================
+   Ad System - Responsive & Fast
+   ============================================= */
+.ad-container {
+  margin: 8px 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #f1f5f9;
+  transition: box-shadow 0.2s;
+}
+.ad-container:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.ad-container img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+.ad-slider {
+  position: relative;
+  overflow: hidden;
+}
+.ad-slider img {
+  transition: opacity 0.4s ease;
+}
+/* Ad badge */
+.ad-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+/* Responsive ad sizes */
+@media (max-width: 640px) {
+  .ad-container { margin: 6px 0; border-radius: 8px; }
+  .ad-container .ad-slider { aspect-ratio: 16/9 !important; }
+}
+@media (min-width: 641px) and (max-width: 1023px) {
+  .ad-container { margin: 8px 0; }
+}
+/* Fast image loading */
+.ad-container img[loading="lazy"] {
+  content-visibility: auto;
+}
+
+/* =============================================
    Bottom Navigation (Mobile)
    ============================================= */
 .safe-area-top {
