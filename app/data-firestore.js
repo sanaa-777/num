@@ -334,9 +334,9 @@ const Data = {
   defaultPlaces: [
     { id: 'p_1', name: 'مستشفى الثورة', category: 'cat_1', subcategory: 'sub_1_1', city: 'city_1', description: 'مستشفى حكومي كبير. طوارئ 24 ساعة.', phone: '777111222', address: 'شارع الستين، صنعاء', verified: true, featured: true, isActive: true, status: 'approved', views: 8900, reviews: 156, rating: 4.2, owner: 'system' },
     { id: 'p_2', name: 'مطعم البركة', category: 'cat_2', subcategory: 'sub_2_1', city: 'city_1', description: 'مطعم يمني تقليدي. مندي، مظبي، حنيذ.', phone: '777222333', address: 'شارع الزبيري، صنعاء', verified: true, featured: true, isActive: true, status: 'approved', views: 12500, reviews: 312, rating: 4.8, owner: 'system' },
-    { id: 'p_3', name: 'فندق القصر', category: 'cat_3', subcategory: 'sub_3_1', city: 'city_2', description: 'فندق 4 نجوم. إطلالة بحرية.', phone: '777333444', address: 'كريتر، عدن', verified: true, featured: true, isActive: true, status: 'approved', views: 7600, reviews: 189, rating: 4.6, owner: 'system' },
+    { id: 'p_3', name: 'فندق القصر', category: 'cat_14', subcategory: 'sub_14_1', city: 'city_2', description: 'فندق 4 نجوم. إطلالة بحرية.', phone: '777333444', address: 'كريتر، عدن', verified: true, featured: true, isActive: true, status: 'approved', views: 7600, reviews: 189, rating: 4.6, owner: 'system' },
     { id: 'p_4', name: 'صيدلية الحياة', category: 'cat_1', subcategory: 'sub_1_3', city: 'city_1', description: 'صيدلية شاملة 24 ساعة.', phone: '777444555', address: 'شارع الستين، صنعاء', verified: true, featured: false, isActive: true, status: 'approved', views: 5400, reviews: 98, rating: 4.7, owner: 'system' },
-    { id: 'p_5', name: 'مجمع التسوق الحديث', category: 'cat_5', subcategory: 'sub_5_2', city: 'city_1', description: 'أكبر مجمع تجاري في صنعاء.', phone: '777555666', address: 'شارع الربات، صنعاء', verified: true, featured: true, isActive: true, status: 'approved', views: 18000, reviews: 420, rating: 4.5, owner: 'system' },
+    { id: 'p_5', name: 'مجمع التسوق الحديث', category: 'cat_3', subcategory: 'sub_3_2', city: 'city_1', description: 'أكبر مجمع تجاري في صنعاء.', phone: '777555666', address: 'شارع الربات، صنعاء', verified: true, featured: true, isActive: true, status: 'approved', views: 18000, reviews: 420, rating: 4.5, owner: 'system' },
   ],
 
   // ====== المدن ======
