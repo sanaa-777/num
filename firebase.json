@@ -1,306 +1,56 @@
 {
-  "hosting": [
-    {
-      "target": "default",
-      "public": ".",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**",
-        "**/apk-contents/**",
-        "**/dist/**",
-        "**/docs/**",
-        "**/web-app/**",
-        "**/*.md"
-      ],
-      "rewrites": [
-        {
-          "source": "/place/:id",
-          "destination": "/share.html"
-        },
-        {
-          "source": "/offer/:id",
-          "destination": "/share.html"
-        },
-        {
-          "source": "/job/:id",
-          "destination": "/share.html"
-        },
-        {
-          "source": "/event/:id",
-          "destination": "/share.html"
-        },
-        {
-          "source": "**",
-          "destination": "/index.html"
-        }
-      ],
-      "headers": [
-        {
-          "source": "**/*.js",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "public, max-age=31536000, immutable"
-            },
-            {
-              "key": "Content-Type",
-              "value": "application/javascript; charset=utf-8"
-            }
-          ]
-        },
-        {
-          "source": "**/*.css",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "public, max-age=31536000, immutable"
-            }
-          ]
-        },
-        {
-          "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "public, max-age=31536000, immutable"
-            }
-          ]
-        },
-        {
-          "source": "/",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/index.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/admin.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/about.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/privacy.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/manifest.json",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/sw.js",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/app/build-meta.js",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/firebase-messaging-sw.js",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "target": "dalil-yemen-deel",
-      "public": ".",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**",
-        "**/apk-contents/**",
-        "**/dist/**",
-        "**/docs/**",
-        "**/web-app/**",
-        "**/*.md"
-      ],
-      "rewrites": [
-        {
-          "source": "/place/:id",
-          "destination": "/share.html"
-        },
-        {
-          "source": "/offer/:id",
-          "destination": "/share.html"
-        },
-        {
-          "source": "/job/:id",
-          "destination": "/share.html"
-        },
-        {
-          "source": "/event/:id",
-          "destination": "/share.html"
-        },
-        {
-          "source": "**",
-          "destination": "/index.html"
-        }
-      ],
-      "headers": [
-        {
-          "source": "**/*.js",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "public, max-age=31536000, immutable"
-            },
-            {
-              "key": "Content-Type",
-              "value": "application/javascript; charset=utf-8"
-            }
-          ]
-        },
-        {
-          "source": "**/*.css",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "public, max-age=31536000, immutable"
-            }
-          ]
-        },
-        {
-          "source": "**/*.@(jpg|jpeg|gif|png|svg|webp|ico)",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "public, max-age=31536000, immutable"
-            }
-          ]
-        },
-        {
-          "source": "/",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/index.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/admin.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/about.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/privacy.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/manifest.json",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/sw.js",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/app/build-meta.js",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-store, max-age=0"
-            }
-          ]
-        },
-        {
-          "source": "/firebase-messaging-sw.js",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache"
-            }
-          ]
-        }
-      ]
-    }
-  ],
+  "hosting": {
+    "site": "dalil-yemen-deel",
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "**/apk-contents/**",
+      "**/dist/**",
+      "**/scripts/**",
+      "**/.git/**",
+      "tailwind.config.cjs",
+      "tailwind.input.css",
+      "deploy.js",
+      "README.md",
+      "AUDIT-REPORT.md",
+      "DEVELOPMENT_PLAN.md",
+      "FIREBASE_SETUP.md",
+      "PROJECT_BRIEF.md",
+      "firestore.rules"
+    ],
+    "rewrites": [
+      { "source": "/place/**", "destination": "/index.html" },
+      { "source": "/offer/**", "destination": "/index.html" },
+      { "source": "/job/**", "destination": "/index.html" },
+      { "source": "/event/**", "destination": "/index.html" },
+      { "source": "/category/**", "destination": "/index.html" },
+      { "source": "/subcategory/**", "destination": "/index.html" }
+    ],
+    "headers": [
+      {
+        "source": "**/*.html",
+        "headers": [
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        ]
+      },
+      {
+        "source": "/assets/**",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        ]
+      },
+      {
+        "source": "/app/*.js",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      }
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

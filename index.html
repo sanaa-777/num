@@ -40,12 +40,12 @@
   <meta name="twitter:image:alt" content="الدليل اليمني التجاري">
 
   <!-- PWA -->
-  <link rel="manifest" href="manifest.json?v=20260815065000">
-  <script src="app/build-meta.js?v=20260815065000"></script>
-  <script src="app/version-manager.js?v=20260815065000"></script>
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/favicon-32x32.png?v=20260815065000">
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png?v=20260815065000">
-  <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png?v=20260815065000">
+  <link rel="manifest" href="manifest.json?v=20260814234437">
+  <script src="app/build-meta.js?v=20260814234437"></script>
+  <script src="app/version-manager.js?v=20260814234437"></script>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/favicon-32x32.png?v=20260814234437">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png?v=20260814234437">
+  <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png?v=20260814234437">
   <link rel="canonical" href="https://dalil-yemen-deel.web.app/">
 
   <!-- Structured Data -->
@@ -74,8 +74,8 @@
   }
   </script>
 
-  <link rel="stylesheet" href="app/styles.css?v=20260815065000">
-  <link rel="stylesheet" href="app/tailwind.css?v=20260815065000">
+  <link rel="stylesheet" href="app/styles.css?v=20260814234437">
+  <link rel="stylesheet" href="app/tailwind.css?v=20260814234437">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
@@ -104,7 +104,19 @@
   </style>
 </head>
 <body class="bg-gray-50 dark:bg-dark-950 text-gray-900 dark:text-gray-100">
-  <div id="app"></div>
+  <div id="app">
+    <!-- Loading skeleton shown until JS hydrates -->
+    <div id="initial-loader" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f9fafb;font-family:'Noto Kufi Arabic',sans-serif;">
+      <div style="width:120px;height:40px;background:linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;margin-bottom:24px;"></div>
+      <div style="width:280px;height:48px;background:linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:12px;margin-bottom:12px;"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:400px;">
+        <div style="height:80px;background:linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:12px;"></div>
+        <div style="height:80px;background:linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:12px;"></div>
+        <div style="height:80px;background:linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:12px;"></div>
+      </div>
+      <style>@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}</style>
+    </div>
+  </div>
 
   <!-- Firebase SDK (Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" defer></script>
@@ -113,29 +125,29 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js" defer></script>
 
   <!-- Error Tracker -->
-  <script src="app/error-tracker.js?v=20260815065000" defer></script>
+  <script src="app/error-tracker.js?v=20260814234437" defer></script>
 
   <!-- Firebase Config -->
-  <script src="app/firebase-config.js?v=20260815065000" defer></script>
+  <script src="app/firebase-config.js?v=20260814234437" defer></script>
 
   <!-- App Modules (Firestore-based) -->
-  <script src="app/image-storage.js?v=20260815065000" defer></script>
-  <script src="app/data-firestore.js?v=20260815065000" defer></script>
-  <script src="app/auth-firestore.js?v=20260815065000" defer></script>
-  <script src="app/admin-firestore.js?v=20260815065000" defer></script>
-  <script src="app/ads-firestore.js?v=20260815065000" defer></script>
-  <script src="app/offers-firestore.js?v=20260815065000" defer></script>
-  <script src="app/jobs-firestore.js?v=20260815065000" defer></script>
-  <script src="app/events-firestore.js?v=20260815065000" defer></script>
-  <script src="app/pricing-firestore.js?v=20260815065000" defer></script>
-  <script src="app/app.js?v=20260815065000" defer></script>
+  <script src="app/image-storage.js?v=20260814234437" defer></script>
+  <script src="app/data-firestore.js?v=20260814234437" defer></script>
+  <script src="app/auth-firestore.js?v=20260814234437" defer></script>
+  <script src="app/admin-firestore.js?v=20260814234437" defer></script>
+  <script src="app/ads-firestore.js?v=20260814234437" defer></script>
+  <script src="app/offers-firestore.js?v=20260814234437" defer></script>
+  <script src="app/jobs-firestore.js?v=20260814234437" defer></script>
+  <script src="app/events-firestore.js?v=20260814234437" defer></script>
+  <script src="app/pricing-firestore.js?v=20260814234437" defer></script>
+  <script src="app/app.js?v=20260814234437" defer></script>
 
   <!-- PWA Service Worker -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         const buildVersion = (window.__APP_BUILD__ && window.__APP_BUILD__.version) || 'dev';
-        navigator.serviceWorker.register(`/sw.js?v=20260815065000${encodeURIComponent(buildVersion)}`, { updateViaCache: 'none' })
+        navigator.serviceWorker.register(`/sw.js?v=20260814234437${encodeURIComponent(buildVersion)}`, { updateViaCache: 'none' })
           .then((reg) => reg.update().then(() => console.log('SW registered:', reg.scope)))
           .catch((err) => console.log('SW registration failed:', err));
       });

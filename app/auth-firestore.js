@@ -408,8 +408,18 @@ const Auth = {
       const user = auth.currentUser;
       if (!user) return;
 
+      // Defense-in-depth: strip protected fields client-side
+      // (Firestore rules also enforce this, but don't send them at all)
+      var protectedFields = ['role', 'verified', 'suspended', 'createdAt'];
+      var safeData = {};
+      for (var key in data) {
+        if (data.hasOwnProperty(key) && protectedFields.indexOf(key) === -1) {
+          safeData[key] = data[key];
+        }
+      }
+
       await db.collection('users').doc(user.uid).update({
-        ...data,
+        ...safeData,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 

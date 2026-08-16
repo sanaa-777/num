@@ -141,36 +141,50 @@
     // Admin Panel Controller
     // =============================================
     var AdminController = {
-      // Admin login rate limiting (separate from Auth rate limiter)
-      _adminAttempts: 0,
-      _adminLockedUntil: 0,
+      // Admin login rate limiting — uses sessionStorage to survive page refresh
+      // (Auth.login() also has Firestore-backed rate limiting as a second layer)
       _ADMIN_MAX_ATTEMPTS: 5,
       _ADMIN_LOCKOUT_MS: 60000,
+      _STORAGE_KEY: 'dy_admin_rate_limit',
+
+      _getRateLimitState: function() {
+        try {
+          var state = JSON.parse(sessionStorage.getItem(this._STORAGE_KEY) || '{}');
+          return state || {};
+        } catch(e) { return {}; }
+      },
+
+      _saveRateLimitState: function(state) {
+        try { sessionStorage.setItem(this._STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+      },
 
       _checkAdminRateLimit: function() {
         var now = Date.now();
-        if (this._adminLockedUntil && now < this._adminLockedUntil) {
-          var remaining = Math.ceil((this._adminLockedUntil - now) / 1000);
+        var state = this._getRateLimitState();
+        if (state.lockedUntil && now < state.lockedUntil) {
+          var remaining = Math.ceil((state.lockedUntil - now) / 1000);
           return { allowed: false, message: 'تم إيقاف الدخول مؤقتاً. حاول بعد ' + remaining + ' ثانية' };
         }
-        if (this._adminLockedUntil && now >= this._adminLockedUntil) {
-          this._adminAttempts = 0;
-          this._adminLockedUntil = 0;
+        if (state.lockedUntil && now >= state.lockedUntil) {
+          sessionStorage.removeItem(this._STORAGE_KEY);
         }
         return { allowed: true };
       },
 
       _recordAdminFailure: function() {
-        this._adminAttempts++;
-        if (this._adminAttempts >= this._ADMIN_MAX_ATTEMPTS) {
-          var multiplier = Math.pow(2, Math.floor(this._adminAttempts / this._ADMIN_MAX_ATTEMPTS) - 1);
-          this._adminLockedUntil = Date.now() + (this._ADMIN_LOCKOUT_MS * multiplier);
+        var state = this._getRateLimitState();
+        var now = Date.now();
+        var attempts = (state.attempts || 0) + 1;
+        var lockedUntil = null;
+        if (attempts >= this._ADMIN_MAX_ATTEMPTS) {
+          var multiplier = Math.pow(2, Math.floor(attempts / this._ADMIN_MAX_ATTEMPTS) - 1);
+          lockedUntil = now + (this._ADMIN_LOCKOUT_MS * multiplier);
         }
+        this._saveRateLimitState({ attempts: attempts, lockedUntil: lockedUntil });
       },
 
       _clearAdminAttempts: function() {
-        this._adminAttempts = 0;
-        this._adminLockedUntil = 0;
+        sessionStorage.removeItem(this._STORAGE_KEY);
       },
 
       init: async function() {
@@ -633,7 +647,7 @@
             '<tbody class="divide-y divide-gray-100">' +
               filtered.map(function(u) {
                 return '<tr class="hover:bg-gray-50">' +
-                  '<td class="px-3 py-3"><div class="flex items-center gap-2"><img src="' + (u.avatar || '') + '" class="w-8 h-8 rounded-full" alt=""><div><div class="font-medium">' + AdminPanel._escHtml(u.name || 'بدون اسم') + '</div></div></div></td>' +
+                  '<td class="px-3 py-3"><div class="flex items-center gap-2"><img src="' + AdminPanel._escHtml(u.avatar || '') + '" class="w-8 h-8 rounded-full" alt=""><div><div class="font-medium">' + AdminPanel._escHtml(u.name || 'بدون اسم') + '</div></div></div></td>' +
                   '<td class="px-3 py-3 text-gray-600">' + AdminPanel._escHtml(u.email || '') + '</td>' +
                   '<td class="px-3 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-medium ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700') + '">' + (u.role === 'admin' ? 'أدمن' : 'مستخدم') + '</span></td>' +
                   '<td class="px-3 py-3">' + (u.suspended ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">موقوف</span>' : u.verified ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">موثّق</span>' : u.active ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">مفعّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-700">معلّق</span>') + '</td>' +
@@ -993,7 +1007,7 @@
       renderAdForm: function(ad) {
         var isNew = ad._isNew;
         var posOptions = Ads.positions.map(function(p) {
-          return '<option value="' + p.id + '"' + (ad.position === p.id ? ' selected' : '') + '>' + p.name + '</option>';
+          return '<option value="' + p.id + '"' + (ad.position === p.id ? ' selected' : '') + '>' + AdminPanel._escHtml(p.name) + '</option>';
         }).join('');
         var sizeOptions = Ads.sizes.map(function(s) {
           return '<option value="' + s.id + '"' + (ad.size === s.id ? ' selected' : '') + '>' + s.name + '</option>';

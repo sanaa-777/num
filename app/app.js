@@ -18,6 +18,23 @@ const App = {
   // For use inside template literals: App.h(place.description)
   h(str) { return this._escHtml(str); },
 
+  // ====== WhatsApp Number Sanitizer ======
+  // Ensures the number works with wa.me links.
+  // Strips leading +, spaces, dashes, and redundant 967 prefix.
+  _sanitizeWhatsApp(num) {
+    if (!num) return '';
+    var cleaned = String(num).replace(/[^0-9]/g, ''); // digits only
+    // Strip leading 967 if present (Yemen country code)
+    if (cleaned.startsWith('967') && cleaned.length > 9) {
+      cleaned = cleaned.substring(3);
+    }
+    // Strip leading 0
+    if (cleaned.startsWith('0')) {
+      cleaned = cleaned.substring(1);
+    }
+    return '967' + cleaned;
+  },
+
   async init() {
     // Path-to-hash redirect: /place/ID → /#place/ID
     var _p = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
@@ -30,6 +47,9 @@ const App = {
 
     if (this._initialized) return;
     this._initialized = true;
+    // Remove loading skeleton if present
+    var _sk = document.getElementById('initial-loader');
+    if (_sk) _sk.remove();
     try {
       this.initDarkMode();
       this.initLang();
@@ -823,7 +843,7 @@ const App = {
           </div>
         </div>
         <div class="mb-3 text-gray-500 text-xs flex items-center gap-1"><i data-lucide="filter" class="w-3 h-3"></i>${results.length} نتيجة</div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${results.length ? results.map(p => this.renderPlaceCard(p)).join('') : '<div class="col-span-4 text-center py-12 text-gray-400"><i data-lucide="search-x" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i><br>لا توجد نتائج</div>'}</div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${results.length ? results.map(p => this.renderPlaceCard(p)).join('') : '<div class="col-span-4 text-center py-12 text-gray-400"><i data-lucide="search-x" class="w-16 h-16 mx-auto mb-3 text-gray-300"></i><p class="text-sm mb-1">لا توجد نتائج</p><p class="text-xs text-gray-300 mb-4">جرّب كلمات بحث مختلفة أو تصفح الأقسام</p><a href="#home" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"><i data-lucide="home" class="w-4 h-4"></i>العودة للرئيسية</a></div>'}</div>
       </div>
     </section>`;
   },
@@ -917,7 +937,7 @@ const App = {
           <div class="h-40 md:h-56 relative" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
             ${place.images && place.images.length > 0 ? `
               <div id="placeGallery" class="relative w-full h-full">
-                <img src="${place.images[0]}" alt="${place.name}" class="w-full h-full object-cover" id="placeGalleryImg" onerror="this.style.display='none'">
+                <img src="${place.images[0]}" alt="${App.h(place.name)}" class="w-full h-full object-cover" id="placeGalleryImg" onerror="this.style.display='none'">
                 ${place.images.length > 1 ? `
                   <button onclick="App.galleryPrev()" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors z-10"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
                   <button onclick="App.galleryNext()" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors z-10"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
@@ -956,7 +976,7 @@ const App = {
             <!-- Action Buttons -->
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 px-1">
               ${place.phone ? `<a href="tel:${place.phone}" class="bg-green-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="phone" class="w-4 h-4"></i>اتصال</a>` : ''}
-              ${place.whatsapp ? `<a href="https://wa.me/967${place.whatsapp}" target="_blank" class="bg-green-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="message-circle" class="w-4 h-4"></i>واتساب</a>` : ''}
+              ${place.whatsapp ? `<a href="https://wa.me/${App._sanitizeWhatsApp(place.whatsapp)}" target="_blank" class="bg-green-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="message-circle" class="w-4 h-4"></i>واتساب</a>` : ''}
               ${place.email ? `<a href="mailto:${place.email}" class="bg-blue-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-blue-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="mail" class="w-4 h-4"></i>إيميل</a>` : ''}
               ${place.address ? `<button onclick="window.open('https://maps.google.com/?q=${encodeURIComponent(place.address)}','_blank')" class="bg-gray-100 text-gray-700 py-2.5 rounded-lg text-center font-semibold hover:bg-gray-200 text-xs flex items-center justify-center gap-1.5"><i data-lucide="map" class="w-4 h-4"></i>خريطة</button>` : ''}
               <button onclick="App.sharePlace('${place.id}')" class="bg-blue-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-blue-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="share-2" class="w-4 h-4"></i>مشاركة</button>
@@ -1038,7 +1058,7 @@ const App = {
           try {
             const map = L.map('placeDetailMap', { attributionControl: false }).setView([parseFloat(place.lat), parseFloat(place.lng)], 15);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
-            L.marker([parseFloat(place.lat), parseFloat(place.lng)]).addTo(map).bindPopup(place.name);
+            L.marker([parseFloat(place.lat), parseFloat(place.lng)]).addTo(map).bindPopup(App.h(place.name));
             setTimeout(() => map.invalidateSize(), 300);
           } catch (e) { console.error('Detail map error:', e); }
         }
@@ -1274,6 +1294,8 @@ const App = {
           <div class="space-y-3">
             <div><label class="block text-xs font-medium text-gray-700 mb-1">البريد الإلكتروني</label><input type="email" id="loginEmail" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" placeholder="example@gmail.com"></div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">كلمة المرور</label><input type="password" id="loginPassword" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" placeholder="••••••••"></div>
+            <div class="text-left -mt-1"><button onclick="App.doResetPassword()" class="text-xs text-blue-600 hover:text-blue-700">نسيت كلمة المرور؟</button></div>
+            <div id="resetSuccess" class="hidden bg-green-50 text-green-600 p-2.5 rounded-lg text-xs flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i><span></span></div>
             <button onclick="App.doLogin()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700 text-sm flex items-center justify-center gap-2"><i data-lucide="log-in" class="w-4 h-4"></i>دخول</button>
             <div class="relative my-3"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div><div class="relative flex justify-center"><span class="bg-white px-3 text-xs text-gray-400">أو</span></div></div>
             <button id="googleLoginBtn" onclick="App.doGoogleLogin()" class="w-full bg-white border-2 border-gray-200 text-gray-700 py-2.5 rounded-lg font-bold hover:bg-gray-50 flex items-center justify-center gap-2 text-sm">
@@ -1452,7 +1474,7 @@ const App = {
     const favs = Data.getFavoritesSync(Auth.currentUser.id);
     return `<section class="py-6 md:py-8"><div class="max-w-7xl mx-auto px-3">
       <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><i data-lucide="heart" class="w-5 h-5 text-red-500"></i>المفضلة (${favs.length})</h3>
-      ${favs.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${favs.map(p => this.renderPlaceCard(p)).join('')}</div>` : '<div class="text-center py-8 text-gray-400 text-sm"><i data-lucide="heart" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i><br>لا توجد مفضلة</div>'}
+      ${favs.length ? `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">${favs.map(p => this.renderPlaceCard(p)).join('')}</div>` : '<div class="text-center py-12 text-gray-400"><i data-lucide="heart" class="w-16 h-16 mx-auto mb-3 text-gray-300"></i><p class="text-sm mb-1">لا توجد مفضلة بعد</p><p class="text-xs text-gray-300 mb-4">أضف أماكنك المفضلة بالضغط على ♥ في أي مكان</p><a href="#home" class="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"><i data-lucide="home" class="w-4 h-4"></i>تصفح الأماكن</a></div>'}
     </div></section>`;
   },
 
@@ -1749,7 +1771,7 @@ const App = {
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
               ${item.phone ? `<a href="tel:${item.phone}" class="bg-green-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="phone" class="w-4 h-4"></i>اتصال</a>` : ''}
-              ${item.whatsapp ? `<a href="https://wa.me/967${item.whatsapp}" target="_blank" class="bg-green-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="message-circle" class="w-4 h-4"></i>واتساب</a>` : ''}
+              ${item.whatsapp ? `<a href="https://wa.me/${App._sanitizeWhatsApp(item.whatsapp)}" target="_blank" class="bg-green-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="message-circle" class="w-4 h-4"></i>واتساب</a>` : ''}
               <button onclick="App.shareItem('${item.id}','${type}')" class="bg-blue-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-blue-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="share-2" class="w-4 h-4"></i>مشاركة</button>
             </div>
             ${(item.facebook || item.instagram || item.telegram || item.website) ? `
@@ -1819,7 +1841,7 @@ const App = {
       </div>
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2"><i data-lucide="bell" class="w-6 h-6 text-yellow-500"></i>الإشعارات${unreadCount > 0 ? ` <span class="text-sm font-normal text-gray-400">(${unreadCount} غير مقروء)</span>` : ''}</h2>
-        ${unreadCount > 0 ? `<button onclick="App._markAllRead()" class="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"><i data-lucide="check-check" class="w-3.5 h-3.5"></i>标记全部已读</button>` : ''}
+        ${unreadCount > 0 ? `<button onclick="App._markAllRead()" class="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"><i data-lucide="check-check" class="w-3.5 h-3.5"></i>تحديد الكل كمقروء</button>` : ''}
       </div>
       <div id="notifsList" class="space-y-2">
         <div class="text-center py-8 text-gray-400"><div class="w-8 h-8 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-2"></div>جاري التحميل...</div>
@@ -1948,6 +1970,32 @@ const App = {
     } catch (e) {
       err.querySelector('span').textContent = ErrorTracker.getInlineMessage(e);
       err.classList.remove('hidden');
+      this.initIcons();
+    }
+  },
+  async doResetPassword() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const err = document.getElementById('loginError');
+    const success = document.getElementById('resetSuccess');
+    if (!email) {
+      err.querySelector('span').textContent = 'أدخل بريدك الإلكتروني أولاً';
+      err.classList.remove('hidden');
+      if (success) success.classList.add('hidden');
+      this.initIcons();
+      return;
+    }
+    try {
+      await Auth.resetPassword(email);
+      err.classList.add('hidden');
+      if (success) {
+        success.querySelector('span').textContent = 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني';
+        success.classList.remove('hidden');
+      }
+      this.initIcons();
+    } catch (e) {
+      err.querySelector('span').textContent = ErrorTracker.getInlineMessage(e);
+      err.classList.remove('hidden');
+      if (success) success.classList.add('hidden');
       this.initIcons();
     }
   },

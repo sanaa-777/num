@@ -2,156 +2,183 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow delete: if false;
+    // ============ Helper Functions ============
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    match /places/{placeId} {
-      allow read: if isPublicPlace(resource.data)
-        || isOwner(resource.data.owner)
-        || isAdmin();
-
-      allow create: if request.auth != null
-        && request.resource.data.owner == request.auth.uid
-        && request.resource.data.verified == false
-        && request.resource.data.featured == false
-        && request.resource.data.isActive == true
-        && request.resource.data.status == 'pending'
-        && request.resource.data.views == 0
-        && request.resource.data.reviews == 0
-        && request.resource.data.rating == 0;
-
-      allow update: if isAdmin() || (request.auth != null
-        && request.auth.uid == resource.data.owner
-        && request.resource.data.owner == resource.data.owner
-        && request.resource.data.verified == resource.data.verified
-        && request.resource.data.featured == resource.data.featured
-        && request.resource.data.status == resource.data.status
-        && request.resource.data.isActive == resource.data.isActive
-        && request.resource.data.views == resource.data.views
-        && request.resource.data.reviews == resource.data.reviews
-        && request.resource.data.rating == resource.data.rating);
-
-      allow delete: if isAdmin();
-    }
-
-    match /reviews/{reviewId} {
-      allow read: if true;
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.rating is int
-        && request.resource.data.rating >= 1
-        && request.resource.data.rating <= 5
-        && request.resource.data.comment is string
-        && request.resource.data.comment.size() <= 1000;
-      allow update: if request.auth != null
-        && request.auth.uid == resource.data.userId
-        && request.resource.data.userId == resource.data.userId
-        && request.resource.data.placeId == resource.data.placeId
-        && request.resource.data.rating is int
-        && request.resource.data.rating >= 1
-        && request.resource.data.rating <= 5
-        && request.resource.data.comment is string
-        && request.resource.data.comment.size() <= 1000;
-      allow delete: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
-    }
-
-    match /favorites/{favId} {
-      allow read: if request.auth != null;
-      allow create, update: if request.auth != null
-        && favId.matches(request.auth.uid + '_.*')
-        && request.resource.data.userId == request.auth.uid;
-      allow delete: if request.auth != null && favId.matches(request.auth.uid + '_.*');
-    }
-
-    match /notifications/{notifId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
-    }
-
-    match /admin_notifications/{notifId} {
-      allow read: if isAdmin();
-      allow create: if request.auth != null;
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    match /login_attempts/{email} {
-      // Rate limiting: allow authenticated users to read/write their own attempts
-      // Also allow unauthenticated reads for pre-login check
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if request.auth != null;
-    }
-
-    match /place_edits/{editId} {
-      // Users can read their own edits, admin can read all
-      allow read: if request.auth != null && (request.auth.uid == resource.data.owner || isAdmin());
-      // Users can create edits for their own places
-      allow create: if request.auth != null
-        && request.resource.data.owner == request.auth.uid
-        && request.resource.data.status == 'pending';
-      // Users can update their own pending edits; admin can update all
-      allow update: if request.auth != null && (request.auth.uid == resource.data.owner || isAdmin());
-      allow delete: if isAdmin();
-    }
-
-    match /error_logs/{logId} {
-      // Require authentication to prevent abuse
-      allow create: if request.auth != null;
-      allow read, update, delete: if isAdmin();
-    }
-
-    match /ads/{adId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /offers/{offerId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /jobs/{jobId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /events/{eventId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /pricing/{pricingId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    match /categories/{catId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /cities/{cityId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    function isPublicPlace(place) {
-      return place.isActive == true && place.status == 'approved';
-    }
-
-    function isOwner(ownerId) {
-      return request.auth != null && request.auth.uid == ownerId;
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
     function isAdmin() {
-      return request.auth != null &&
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isPlaceOwner(placeId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/places/$(placeId)) &&
+        get(/databases/$(database)/documents/places/$(placeId)).data.owner == request.auth.uid;
+    }
+
+    // ============ Users ============
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (for displaying names/avatars)
+      allow read: if isAuthenticated();
+      // Users can only create their own profile (role defaults to 'user' in code)
+      allow create: if isOwner(userId) &&
+        (!request.resource.data.keys().hasAny(['role']) ||
+         request.resource.data.role == 'user');
+      // Users can update their own profile BUT cannot change role, verified, or suspended
+      // Admins can update any user
+      allow update: if isAdmin() || (
+        isOwner(userId) &&
+        (!request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role', 'verified', 'suspended']))
+      );
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+
+    // ============ Places ============
+    match /places/{placeId} {
+      // Anyone can read active approved places (public directory)
+      allow read: if true;
+      // Authenticated users can create places (become pending)
+      allow create: if isAuthenticated() &&
+        request.resource.data.owner == request.auth.uid &&
+        request.resource.data.status == 'pending';
+      // Owners can update their own places (limited fields)
+      // Admins can update any place (full access including status changes)
+      allow update: if isAdmin() || (
+        isPlaceOwner(placeId) &&
+        // Owners cannot change status, verified, featured, isActive
+        (!request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['status', 'verified', 'featured', 'isActive', 'owner']))
+      );
+      // Only admins can delete places
+      allow delete: if isAdmin();
+    }
+
+    // ============ Reviews ============
+    match /reviews/{reviewId} {
+      // Anyone can read reviews
+      allow read: if true;
+      // Authenticated users can create reviews
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      // Owners can update/delete their own reviews
+      allow update, delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    // ============ Favorites ============
+    match /favorites/{favId} {
+      // Only the owner can read their favorites
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can create/delete their own favorites
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // ============ Notifications ============
+    match /notifications/{notifId} {
+      // Only the target user can read their notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // System/admin can create notifications for any user
+      allow create: if isAuthenticated();
+      // Users can mark their own notifications as read
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Users can delete their own notifications
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // ============ Admin Notifications ============
+    match /admin_notifications/{notifId} {
+      // Only admins can read admin notifications
+      allow read: if isAdmin();
+      // Any authenticated user can create (e.g., new place notifications)
+      allow create: if isAuthenticated();
+      // Only admins can update (mark as read) or delete
+      allow update, delete: if isAdmin();
+    }
+
+    // ============ Offers ============
+    match /offers/{offerId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // ============ Jobs ============
+    match /jobs/{jobId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // ============ Events ============
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    // ============ Pricing ============
+    match /pricing/{pricingId} {
+      // Anyone can read pricing (public data)
+      allow read: if true;
+      // Only admins can create/update/delete pricing
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ============ Ads ============
+    match /ads/{adId} {
+      // Anyone can read ads (for display)
+      allow read: if true;
+      // Only admins can manage ads
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ============ Place Edits (Edit-with-Review) ============
+    match /place_edits/{editId} {
+      // Owners can read their own edits, admins can read all
+      allow read: if isAuthenticated() &&
+        (resource.data.owner == request.auth.uid || isAdmin());
+      // Place owners can submit edits
+      allow create: if isAuthenticated() &&
+        request.resource.data.owner == request.auth.uid;
+      // Only admins can update (approve/reject) edits
+      allow update: if isAdmin();
+      // Owners can cancel (delete) their pending edits
+      allow delete: if isAuthenticated() &&
+        resource.data.owner == request.auth.uid &&
+        resource.data.status == 'pending';
+    }
+
+    // ============ Login Attempts (Rate Limiting) ============
+    match /login_attempts/{email} {
+      // Authenticated users can read rate limit data (for checking lockout)
+      allow read: if true;
+      // Only authenticated users can write rate limit data (after failed login attempts)
+      allow create, update: if isAuthenticated();
+      // Only admins can delete rate limit records (to clear lockouts)
+      allow delete: if isAdmin();
+    }
+
+    // ============ Error Logs ============
+    match /error_logs/{logId} {
+      // Anyone can create error logs (client-side logging)
+      allow create: if true;
+      // Only admins can read error logs
+      allow read: if isAdmin();
+      // Only admins can delete error logs
+      allow delete: if isAdmin();
+      // No updates to error logs
+      allow update: if false;
     }
   }
 }
