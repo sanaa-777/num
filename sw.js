@@ -20,6 +20,7 @@ const APP_SHELL = [
   `/app/auth-firestore.js?v=${BUILD_VERSION}`,
   `/app/admin-firestore.js?v=${BUILD_VERSION}`,
   `/app/ads-firestore.js?v=${BUILD_VERSION}`,
+  `/app/lucide-local.js?v=${BUILD_VERSION}`,
   `/app/app.js?v=${BUILD_VERSION}`
 ];
 
