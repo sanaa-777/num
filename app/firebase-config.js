@@ -12,8 +12,10 @@ var firebaseConfig = {
   measurementId: "G-12LQHJMSP6"
 };
 
-// Firebase SDK scripts are loaded synchronously (no defer) in <head>,
-// so `firebase` global is guaranteed to exist when this script runs.
+// Declare globals FIRST — before any try/catch
+var auth = null;
+var db = null;
+var messaging = null;
 
 try {
   // تهيئة Firebase (مرة واحدة فقط)
@@ -21,10 +23,10 @@ try {
     firebase.initializeApp(firebaseConfig);
   }
 
-  // الخدمات (var for global access)
-  var auth = firebase.auth();
-  var db = firebase.firestore();
-  var messaging = null;
+  // تعيين الخدمات
+  auth = firebase.auth();
+  db = firebase.firestore();
+
   try {
     if (typeof firebase.messaging === 'function') {
       messaging = firebase.messaging();
