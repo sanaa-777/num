@@ -14,7 +14,6 @@ const APP_SHELL = [
   `/app/build-meta.js`,
   `/app/version-manager.js?v=${BUILD_VERSION}`,
   `/app/error-tracker.js?v=${BUILD_VERSION}`,
-  `/app/firebase-config.js?v=${BUILD_VERSION}`,
   `/app/data-firestore.js?v=${BUILD_VERSION}`,
   `/app/image-storage.js?v=${BUILD_VERSION}`,
   `/app/auth-firestore.js?v=${BUILD_VERSION}`,
@@ -108,8 +107,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Always fetch these from network
-  if (url.pathname === '/sw.js' || url.pathname === '/app/build-meta.js' || url.pathname === '/manifest.json') {
+  // Always fetch these from network (never cache)
+  if (url.pathname === '/sw.js' || url.pathname === '/app/build-meta.js' ||
+      url.pathname === '/manifest.json' || url.pathname === '/app/firebase-config.js') {
     event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
   }
@@ -118,7 +118,6 @@ self.addEventListener('fetch', (event) => {
   if (isNavigationRequest(event.request)) {
     event.respondWith(
       networkFirst(event.request, OFFLINE_FALLBACK).catch(() => {
-        // Return cached index.html as fallback (SPA handles routing via hash)
         return caches.match(OFFLINE_FALLBACK);
       })
     );
@@ -143,5 +142,5 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data || '/'));
+  event.waitUntil(clients.openWindow(event.data || '/'));
 });
