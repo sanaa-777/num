@@ -1123,7 +1123,7 @@ section {
 /* Fix custom dropdown on mobile */
 @media (max-width: 640px) {
   .custom-select-options {
-    max-height: 200px;
+    max-height: 70vh;
     position: fixed;
     bottom: 0;
     left: 0;
