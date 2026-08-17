@@ -12,7 +12,7 @@ const Data = {
   // ====== التصنيفات المهنية (24 قسم، 214 فرع) ======
   categories: [
     { id: 'cat_1', name: 'الصحة والطب', icon: 'heart-pulse', color: '#10b981', subs: [
-      { id: 'sub_1_1', name: 'مستشفيات', icon: 'hospital' },
+      { id: 'sub_1_1', name: 'مراكز طبية', icon: 'hospital' },
       { id: 'sub_1_1a', name: 'مستشفيات حكومية', icon: 'hospital' },
       { id: 'sub_1_1b', name: 'مستشفيات خاصة', icon: 'hospital' },
       { id: 'sub_1_2', name: 'عيادات طبية', icon: 'stethoscope' },
