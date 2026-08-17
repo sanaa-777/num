@@ -359,7 +359,7 @@ const Data = {
       if (!snapshot.empty) {
         // Check if existing categories have the correct structure
         const firstDoc = snapshot.docs[0].data();
-        if (firstDoc.subs && Array.isArray(firstDoc.subs) && firstDoc.subs.length > 0 && firstDoc.subs[0].id) {
+        if (firstDoc.subs && Array.isArray(firstDoc.subs) && firstDoc.subs.length > 0 && firstDoc.subs[0].id && firstDoc.subIds) {
           return false; // Already seeded with correct structure
         }
         // Old structure detected — need admin to reseed
@@ -386,6 +386,7 @@ const Data = {
           color: cat.color,
           active: true,
           subs: cat.subs.map(s => ({ id: s.id, name: s.name, icon: s.icon, active: true })),
+          subIds: cat.subs.map(s => s.id),
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
       }
