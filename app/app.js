@@ -1244,10 +1244,19 @@ const App = {
     const subWrapper = sub.closest('.custom-select-wrapper');
     if (subWrapper) {
       const options = subWrapper.querySelector('.custom-select-options');
+      const trigger = subWrapper.querySelector('.custom-select-trigger');
       if (options) {
         options.innerHTML = '<div class="custom-select-option" data-value="">اختر القسم الفرعي</div>' + 
           (cat ? cat.subs.filter(s => s.active !== false).map(s => `<div class="custom-select-option" data-value="${s.id}">${s.name}</div>`).join('') : '');
         App.initCustomSelectOptions(subWrapper, sub);
+      }
+      // Update trigger text to match reset state
+      if (trigger) {
+        var triggerSpan = trigger.querySelector('span');
+        if (triggerSpan) {
+          triggerSpan.textContent = 'اختر القسم الفرعي';
+          triggerSpan.className = 'placeholder';
+        }
       }
     }
   },

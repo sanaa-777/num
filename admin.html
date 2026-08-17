@@ -1864,13 +1864,16 @@
             if (errEl) { errEl.textContent = 'اسم النشاط مطلوب'; errEl.style.display = 'block'; }
             return;
           }
-          // Handle image upload
+          // Handle image upload — preserve existing images, append new one
           var fileInput = document.getElementById('editPlaceImageFile');
           if (fileInput && fileInput.files && fileInput.files[0]) {
             try {
               var imageUrl = await this.uploadImage(fileInput.files[0], 'places');
-              data.image = imageUrl;
-              data.images = [imageUrl];
+              var existingImages = (self.editingPlace && self.editingPlace.images) ? self.editingPlace.images.slice() : [];
+              existingImages.push(imageUrl);
+              if (existingImages.length > 5) existingImages = existingImages.slice(-5);
+              data.images = existingImages;
+              data.image = existingImages[0];
             } catch (uploadErr) {
               if (errEl) { errEl.textContent = 'فشل رفع الصورة: ' + uploadErr.message; errEl.style.display = 'block'; }
               return;
