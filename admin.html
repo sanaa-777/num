@@ -261,6 +261,8 @@
         document.getElementById('admin-app').style.display = 'block';
 
         try {
+          // Ensure admin user document exists in Firestore
+          await Admin.initDefaultAdmin();
           Data._invalidateCache();
           await AdminPanel.render();
         } catch (e) {

@@ -13,7 +13,25 @@ const Admin = {
   async initDefaultAdmin() {
     try {
       if (!Auth.currentUser) return;
-      if (Auth.currentUser.role === 'admin') return;
+      // Check if user document exists and has admin role
+      const userDoc = await db.collection('users').doc(Auth.currentUser.id).get();
+      if (userDoc.exists && userDoc.data().role === 'admin') return; // Already admin
+      // Check if this is the default admin email
+      if (Auth.currentUser.email === 'admin@yemendirectory.net') {
+        // Ensure admin user document exists with role: 'admin'
+        await db.collection('users').doc(Auth.currentUser.id).set({
+          name: Auth.currentUser.name || 'مدير النظام',
+          email: 'admin@yemendirectory.net',
+          role: 'admin',
+          verified: true,
+          suspended: false,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        // Update local cache
+        Auth.currentUser.role = 'admin';
+        Auth.currentUser.verified = true;
+        console.log('Admin user document ensured in Firestore');
+      }
     } catch (e) {
       console.log('initDefaultAdmin skipped:', e.message);
     }
