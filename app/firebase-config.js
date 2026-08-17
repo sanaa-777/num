@@ -3,7 +3,7 @@
 // =============================================
 
 var firebaseConfig = {
-  apiKey: "AIzaSy…VdG4",
+  apiKey: "AIzaSyBAGdUGSb1tAVNA_PC6LbNM_jTG6P6VdG4",
   authDomain: "deel-39f2e.firebaseapp.com",
   projectId: "deel-39f2e",
   storageBucket: "deel-39f2e.firebasestorage.app",
