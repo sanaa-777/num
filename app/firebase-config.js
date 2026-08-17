@@ -12,62 +12,56 @@ var firebaseConfig = {
   measurementId: "G-12LQHJMSP6"
 };
 
-// Declare globals FIRST — before any try/catch
 var auth = null;
 var db = null;
 var messaging = null;
 
-try {
-  // تهيئة Firebase (مرة واحدة فقط)
-  if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-  }
-
-  // تعيين الخدمات
-  auth = firebase.auth();
-  db = firebase.firestore();
-
+function _initFirebase() {
   try {
-    if (typeof firebase.messaging === 'function') {
-      messaging = firebase.messaging();
-    }
-  } catch (e) { /* messaging not supported */ }
-
-  // إعداد Auth persistence
-  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(err) {
-    console.warn('LOCAL persistence failed, trying NONE:', err.code || err.message);
-    auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function(err2) {
-      console.warn('Persistence setup failed:', err2.code || err2.message);
+    if (typeof firebase === 'undefined' || !firebase) return false;
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    try { if (typeof firebase.messaging === 'function') messaging = firebase.messaging(); } catch(e) {}
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function() {
+      auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function() {});
     });
-  });
-
-  // استخدام لغة الجهاز
-  try { auth.useDeviceLanguage(); } catch (e) { /* ignore */ }
-
-  // إعدادات Firestore
-  try {
-    db.settings({
-      cacheSizeBytes: 20 * 1024 * 1024,
-      ignoreUndefinedProperties: true,
-      merge: true
-    });
-  } catch (e) { /* settings already applied */ }
-
-  // تمكين الـ Offline Persistence
-  db.enablePersistence({ synchronizeTabs: true }).catch(function(err) {
-    if (err.code === 'failed-precondition') {
-      console.log('Multiple tabs open - persistence disabled');
-    } else if (err.code === 'unimplemented') {
-      console.log('Browser does not support persistence');
-    }
-  });
-
-  if (window.ErrorTracker) {
-    ErrorTracker.attachFirestore(db, firebase);
+    try { auth.useDeviceLanguage(); } catch(e) {}
+    try { db.settings({ cacheSizeBytes: 20*1024*1024, ignoreUndefinedProperties: true, merge: true }); } catch(e) {}
+    db.enablePersistence({ synchronizeTabs: true }).catch(function() {});
+    if (window.ErrorTracker) ErrorTracker.attachFirestore(db, firebase);
+    console.log('Firebase initialized successfully');
+    return true;
+  } catch(e) {
+    console.error('Firebase init error:', e);
+    return false;
   }
+}
 
-  console.log('Firebase initialized successfully');
-
-} catch (err) {
-  console.error('Firebase init error:', err);
+// Try immediate init
+if (!_initFirebase()) {
+  // Firebase SDK not loaded — load it dynamically
+  console.warn('Firebase SDK not loaded, loading dynamically...');
+  var _fbScripts = [
+    'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js',
+    'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js',
+    'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js'
+  ];
+  var _fbIdx = 0;
+  function _loadNextScript() {
+    if (_fbIdx >= _fbScripts.length) {
+      // All scripts loaded, try init again
+      if (!_initFirebase()) {
+        console.error('Firebase failed to initialize even after dynamic load');
+      }
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = _fbScripts[_fbIdx];
+    s.onload = function() { _fbIdx++; _loadNextScript(); };
+    s.onerror = function() { console.error('Failed to load: ' + _fbScripts[_fbIdx]); _fbIdx++; _loadNextScript(); };
+    document.head.appendChild(s);
+  }
+  _loadNextScript();
 }
