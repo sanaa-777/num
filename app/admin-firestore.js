@@ -17,8 +17,8 @@ const Admin = {
       const userRef = db.collection('users').doc(Auth.currentUser.id);
       const userDoc = await userRef.get();
       if (userDoc.exists && userDoc.data().role === 'admin') return; // Already admin
-      // Create or update admin document (Firestore rule allows admin email to set own role)
-      await userRef.set({
+      // Create or update admin document
+      const adminData = {
         name: Auth.currentUser.name || 'مدير النظام',
         email: 'admin@yemendirectory.net',
         phone: '',
@@ -26,9 +26,19 @@ const Admin = {
         role: 'admin',
         verified: true,
         suspended: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      };
+      try {
+        // Try set with merge (works for both create and update)
+        await userRef.set({
+          ...adminData,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      } catch (setErr) {
+        // If set fails (doc exists with different role), try update
+        console.log('set failed, trying update:', setErr.message);
+        await userRef.update(adminData);
+      }
       Auth.currentUser.role = 'admin';
       Auth.currentUser.verified = true;
       console.log('Admin role ensured in Firestore');

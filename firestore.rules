@@ -28,7 +28,12 @@ service cloud.firestore {
       // Anyone authenticated can read user profiles (for displaying names/avatars)
       allow read: if isAuthenticated();
       // Users can create their own profile
-      allow create: if isOwner(userId);
+      // Admin bootstrap: admin@yemendirectory.net can create with role: 'admin'
+      allow create: if isOwner(userId) && (
+        !request.resource.data.keys().hasAny(['role']) ||
+        request.resource.data.role == 'user' ||
+        request.auth.token.email == 'admin@yemendirectory.net'
+      );
       // Users can update their own profile BUT cannot change role, verified, or suspended
       // EXCEPT: the designated admin email can set its own role to 'admin' (bootstrap)
       allow update: if isAdmin() || (
