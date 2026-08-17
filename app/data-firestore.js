@@ -326,6 +326,15 @@ const Data = {
       { id: 'sub_24_4', name: 'خدمات حكومية', icon: 'building-2' },
       { id: 'sub_24_5', name: 'مراكز خدمة المواطنين', icon: 'users' },
     ]},
+    { id: 'cat_25', name: 'تجارة الجملة', icon: 'boxes', color: '#0891b2', subs: [
+      { id: 'sub_25_1', name: 'جملة إلكترونيات', icon: 'smartphone' },
+      { id: 'sub_25_2', name: 'جملة معدات طبية', icon: 'package' },
+      { id: 'sub_25_3', name: 'جملة جلديات', icon: 'briefcase' },
+      { id: 'sub_25_4', name: 'جملة مواد غذائية', icon: 'shopping-cart' },
+      { id: 'sub_25_5', name: 'جملة منظفات', icon: 'sparkles' },
+      { id: 'sub_25_6', name: 'جملة إكسسوارات', icon: 'gem' },
+      { id: 'sub_25_7', name: 'جملة ملابس', icon: 'shirt' },
+    ]},
   ],
 
   resolveCategory(catId) {
