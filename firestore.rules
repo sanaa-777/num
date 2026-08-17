@@ -61,7 +61,7 @@ service cloud.firestore {
       function validCategoryAndSub(catId, subId) {
         return exists(/databases/$(database)/documents/categories/$(catId)) &&
           get(/databases/$(database)/documents/categories/$(catId)).data.active != false &&
-          subId in get(/databases/$(database)/documents/categories/$(catId)).data.subs.map(s, s.id);
+          get(/databases/$(database)/documents/categories/$(catId)).data.subs.any(s, s.id == subId && s.active != false);
       }
 
       // Authenticated users can create places (become pending)
@@ -69,6 +69,10 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
         request.resource.data.owner == request.auth.uid &&
         request.resource.data.status == 'pending' &&
+        request.resource.data.category is string &&
+        request.resource.data.category.size() > 0 &&
+        request.resource.data.subcategory is string &&
+        request.resource.data.subcategory.size() > 0 &&
         validCategoryAndSub(request.resource.data.category, request.resource.data.subcategory);
 
       // Owners can update their own places (limited fields)

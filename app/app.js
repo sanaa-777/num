@@ -2205,10 +2205,10 @@ const App = {
   // ====== FORM VALIDATION ======
   validatePlaceForm() {
     let isValid = true;
-    const required = ['placeName', 'placeCategory', 'placeCity'];
+    const required = ['placeName', 'placeCategory', 'placeSubCategory', 'placeCity'];
     
     // Reset all borders
-    document.querySelectorAll('#placeName, #placeCategory, #placeCity').forEach(el => {
+    document.querySelectorAll('#placeName, #placeCategory, #placeSubCategory, #placeCity').forEach(el => {
       el.style.borderColor = '#e5e7eb';
     });
     document.querySelectorAll('.custom-select-trigger').forEach(el => {
