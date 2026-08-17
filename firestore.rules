@@ -143,6 +143,14 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // ============ Categories (Taxonomy) ============
+    match /categories/{catId} {
+      // Anyone can read categories (public taxonomy)
+      allow read: if true;
+      // Only admins can create/update/delete categories
+      allow create, update, delete: if isAdmin();
+    }
+
     // ============ Place Edits (Edit-with-Review) ============
     match /place_edits/{editId} {
       // Owners can read their own edits, admins can read all

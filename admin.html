@@ -1365,65 +1365,106 @@
         return html;
       },
 
+      _showCatToast: function(msg, type) {
+        var colors = { success: '#059669', error: '#dc2626', info: '#2563eb' };
+        var toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;background:' + (colors[type] || colors.info) + ';color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-family:"Noto Kufi Arabic",sans-serif;box-shadow:0 8px 24px rgba(0,0,0,0.2);transition:opacity 0.3s;';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(function() { toast.style.opacity = '0'; setTimeout(function() { toast.remove(); }, 300); }, 3000);
+      },
+
       toggleCategory: async function(catId) {
         var cat = Data.categories.find(function(c) { return c.id === catId; });
-        if (!cat) return;
+        if (!cat) { this._showCatToast('القسم غير موجود', 'error'); return; }
         var newActive = cat.active === false ? true : false;
         if (!newActive) {
           var usage = await Data.checkCategoryUsage(catId);
           if (usage > 0) {
-            alert('هذا القسم يحتوي على ' + usage + ' نشاط. سيتم إخفاؤه من الواجهة لكن لن يُحذف.');
+            if (!confirm('هذا القسم يحتوي على ' + usage + ' نشاط. سيتم إخفاؤه من الواجهة لكن لن يُحذف. متابعة؟')) return;
           }
         }
-        var ok = await Data.updateCategory(catId, { active: newActive });
-        if (ok) {
-          cat.active = newActive;
-          this.render();
+        try {
+          var ok = await Data.updateCategory(catId, { active: newActive });
+          if (ok) {
+            cat.active = newActive;
+            this._showCatToast(newActive ? 'تم تفعيل القسم: ' + cat.name : 'تم إخفاء القسم: ' + cat.name, 'success');
+            this.render();
+          } else {
+            this._showCatToast('فشل تحديث القسم. تحقق من صلاحيات الأدمن.', 'error');
+          }
+        } catch (e) {
+          console.error('toggleCategory error:', e);
+          this._showCatToast('خطأ: ' + (e.message || 'فشل الاتصال'), 'error');
         }
       },
 
       editCategoryName: async function(catId) {
         var cat = Data.categories.find(function(c) { return c.id === catId; });
-        if (!cat) return;
+        if (!cat) { this._showCatToast('القسم غير موجود', 'error'); return; }
         var newName = prompt('اسم القسم الجديد:', cat.name);
-        if (!newName || newName === cat.name) return;
-        var ok = await Data.updateCategory(catId, { name: newName });
-        if (ok) {
-          cat.name = newName;
-          this.render();
+        if (!newName || newName.trim() === cat.name) return;
+        try {
+          var ok = await Data.updateCategory(catId, { name: newName.trim() });
+          if (ok) {
+            cat.name = newName.trim();
+            this._showCatToast('تم تحديث اسم القسم إلى: ' + newName.trim(), 'success');
+            this.render();
+          } else {
+            this._showCatToast('فشل تحديث الاسم. تحقق من صلاحيات الأدمن.', 'error');
+          }
+        } catch (e) {
+          console.error('editCategoryName error:', e);
+          this._showCatToast('خطأ: ' + (e.message || 'فشل الاتصال'), 'error');
         }
       },
 
       toggleSubcategory: async function(catId, subId) {
         var cat = Data.categories.find(function(c) { return c.id === catId; });
-        if (!cat) return;
+        if (!cat) { this._showCatToast('القسم غير موجود', 'error'); return; }
         var sub = cat.subs.find(function(s) { return s.id === subId; });
-        if (!sub) return;
+        if (!sub) { this._showCatToast('الفرع غير موجود', 'error'); return; }
         var newActive = sub.active === false ? true : false;
         if (!newActive) {
           var usage = await Data.checkCategoryUsage(catId, subId);
           if (usage > 0) {
-            alert('هذا الفرع يحتوي على ' + usage + ' نشاط. سيتم إخفاؤه لكن لن يُحذف.');
+            if (!confirm('هذا الفرع يحتوي على ' + usage + ' نشاط. سيتم إخفاؤه لكن لن يُحذف. متابعة؟')) return;
           }
         }
-        var ok = await Data.updateSubcategory(catId, subId, { active: newActive });
-        if (ok) {
-          sub.active = newActive;
-          this.render();
+        try {
+          var ok = await Data.updateSubcategory(catId, subId, { active: newActive });
+          if (ok) {
+            sub.active = newActive;
+            this._showCatToast(newActive ? 'تم تفعيل الفرع: ' + sub.name : 'تم إخفاء الفرع: ' + sub.name, 'success');
+            this.render();
+          } else {
+            this._showCatToast('فشل تحديث الفرع. تحقق من صلاحيات الأدمن.', 'error');
+          }
+        } catch (e) {
+          console.error('toggleSubcategory error:', e);
+          this._showCatToast('خطأ: ' + (e.message || 'فشل الاتصال'), 'error');
         }
       },
 
       editSubcategoryName: async function(catId, subId) {
         var cat = Data.categories.find(function(c) { return c.id === catId; });
-        if (!cat) return;
+        if (!cat) { this._showCatToast('القسم غير موجود', 'error'); return; }
         var sub = cat.subs.find(function(s) { return s.id === subId; });
-        if (!sub) return;
+        if (!sub) { this._showCatToast('الفرع غير موجود', 'error'); return; }
         var newName = prompt('اسم الفرع الجديد:', sub.name);
-        if (!newName || newName === sub.name) return;
-        var ok = await Data.updateSubcategory(catId, subId, { name: newName });
-        if (ok) {
-          sub.name = newName;
-          this.render();
+        if (!newName || newName.trim() === sub.name) return;
+        try {
+          var ok = await Data.updateSubcategory(catId, subId, { name: newName.trim() });
+          if (ok) {
+            sub.name = newName.trim();
+            this._showCatToast('تم تحديث اسم الفرع إلى: ' + newName.trim(), 'success');
+            this.render();
+          } else {
+            this._showCatToast('فشل تحديث الاسم. تحقق من صلاحيات الأدمن.', 'error');
+          }
+        } catch (e) {
+          console.error('editSubcategoryName error:', e);
+          this._showCatToast('خطأ: ' + (e.message || 'فشل الاتصال'), 'error');
         }
       },
 
