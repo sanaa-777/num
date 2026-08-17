@@ -3,7 +3,7 @@
 // =============================================
 
 var firebaseConfig = {
-  apiKey: "AIzaSyBAGdUGSb1tAVNA_PC6LbNM_jTG6P6VdG4",
+  apiKey: "AIzaSy…VdG4",
   authDomain: "deel-39f2e.firebaseapp.com",
   projectId: "deel-39f2e",
   storageBucket: "deel-39f2e.firebasestorage.app",
@@ -16,52 +16,42 @@ var auth = null;
 var db = null;
 var messaging = null;
 
-function _initFirebase() {
-  try {
-    if (typeof firebase === 'undefined' || !firebase) return false;
-    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db = firebase.firestore();
-    try { if (typeof firebase.messaging === 'function') messaging = firebase.messaging(); } catch(e) {}
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function() {
-      auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function() {});
-    });
-    try { auth.useDeviceLanguage(); } catch(e) {}
-    try { db.settings({ cacheSizeBytes: 20*1024*1024, ignoreUndefinedProperties: true, merge: true }); } catch(e) {}
-    db.enablePersistence({ synchronizeTabs: true }).catch(function() {});
-    if (window.ErrorTracker) ErrorTracker.attachFirestore(db, firebase);
-    console.log('Firebase initialized successfully');
-    return true;
-  } catch(e) {
-    console.error('Firebase init error:', e);
-    return false;
+try {
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
   }
-}
 
-// Try immediate init
-if (!_initFirebase()) {
-  // Firebase SDK not loaded — load it dynamically
-  console.warn('Firebase SDK not loaded, loading dynamically...');
-  var _fbScripts = [
-    'app/firebase-sdk/firebase-app-compat.js',
-    'app/firebase-sdk/firebase-auth-compat.js',
-    'app/firebase-sdk/firebase-firestore-compat.js',
-    'app/firebase-sdk/firebase-messaging-compat.js'
-  ];
-  var _fbIdx = 0;
-  function _loadNextScript() {
-    if (_fbIdx >= _fbScripts.length) {
-      // All scripts loaded, try init again
-      if (!_initFirebase()) {
-        console.error('Firebase failed to initialize even after dynamic load');
-      }
-      return;
+  auth = firebase.auth();
+  db = firebase.firestore();
+
+  try {
+    if (typeof firebase.messaging === 'function') {
+      messaging = firebase.messaging();
     }
-    var s = document.createElement('script');
-    s.src = _fbScripts[_fbIdx];
-    s.onload = function() { _fbIdx++; _loadNextScript(); };
-    s.onerror = function() { console.error('Failed to load: ' + _fbScripts[_fbIdx]); _fbIdx++; _loadNextScript(); };
-    document.head.appendChild(s);
+  } catch (e) {}
+
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function() {
+    auth.setPersistence(firebase.auth.Auth.Persistence.NONE).catch(function() {});
+  });
+
+  try { auth.useDeviceLanguage(); } catch (e) {}
+
+  try {
+    db.settings({
+      cacheSizeBytes: 20 * 1024 * 1024,
+      ignoreUndefinedProperties: true,
+      merge: true
+    });
+  } catch (e) {}
+
+  db.enablePersistence({ synchronizeTabs: true }).catch(function() {});
+
+  if (window.ErrorTracker) {
+    ErrorTracker.attachFirestore(db, firebase);
   }
-  _loadNextScript();
+
+  console.log('Firebase initialized successfully');
+
+} catch (err) {
+  console.error('Firebase init error:', err);
 }
