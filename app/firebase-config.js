@@ -43,10 +43,10 @@ if (!_initFirebase()) {
   // Firebase SDK not loaded — load it dynamically
   console.warn('Firebase SDK not loaded, loading dynamically...');
   var _fbScripts = [
-    'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js',
-    'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js',
-    'https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js'
+    'app/firebase-sdk/firebase-app-compat.js',
+    'app/firebase-sdk/firebase-auth-compat.js',
+    'app/firebase-sdk/firebase-firestore-compat.js',
+    'app/firebase-sdk/firebase-messaging-compat.js'
   ];
   var _fbIdx = 0;
   function _loadNextScript() {
