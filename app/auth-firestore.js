@@ -156,25 +156,6 @@ const Auth = {
       if (this._authListenerAttached) { resolve(this.currentUser); return; }
       this._authListenerAttached = true;
 
-      // If auth is not ready yet, wait for it (firebase-config.js retries)
-      if (!auth) {
-        console.warn('Auth not ready, waiting for Firebase...');
-        var waitCount = 0;
-        var waitInterval = setInterval(() => {
-          waitCount++;
-          if (auth) {
-            clearInterval(waitInterval);
-            this._authListenerAttached = false;
-            this.init().then(resolve);
-          } else if (waitCount >= 10) {
-            clearInterval(waitInterval);
-            console.warn('Firebase not available after 10s, continuing without auth');
-            resolve(null);
-          }
-        }, 1000);
-        return;
-      }
-
       // Timeout: إذا لم يستجب Firebase خلال 8 ثوانٍ
       const timeout = setTimeout(() => {
         console.warn('Auth init timeout - continuing without auth');
@@ -268,7 +249,6 @@ const Auth = {
 
   // ====== تسجيل حساب جديد ======
   async signup(name, email, password, phone) {
-    if (!auth || !db) throw new Error('Firebase غير مُحمّل. تحقق من اتصالك بالإنترنت وأعد تحميل الصفحة.');
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
@@ -317,7 +297,6 @@ const Auth = {
 
   // ====== تسجيل الدخول ======
   async login(email, password) {
-    if (!auth) throw new Error('Firebase غير مُحمّل. تحقق من اتصالك بالإنترنت وأعد تحميل الصفحة.');
     // Check rate limit (both memory + Firestore)
     const rateCheck = await this._checkRateLimit(email);
     if (!rateCheck.allowed) {
@@ -369,9 +348,6 @@ const Auth = {
 
   // ====== تسجيل الدخول بـ Google ======
   async loginWithGoogle() {
-    if (!auth || typeof firebase === 'undefined') {
-      throw new Error('Firebase غير مُحمّل. تحقق من اتصالك بالإنترنت وأعد تحميل الصفحة.');
-    }
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
