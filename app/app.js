@@ -1187,7 +1187,7 @@ const App = {
       const options = subWrapper.querySelector('.custom-select-options');
       if (options) {
         options.innerHTML = '<div class="custom-select-option" data-value="">اختر القسم الفرعي</div>' + 
-          (cat ? cat.subs.map(s => `<div class="custom-select-option" data-value="${s.id}">${s.name}</div>`).join('') : '');
+          (cat ? cat.subs.filter(s => s.active !== false).map(s => `<div class="custom-select-option" data-value="${s.id}">${s.name}</div>`).join('') : '');
         App.initCustomSelectOptions(subWrapper, sub);
       }
     }

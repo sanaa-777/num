@@ -56,17 +56,33 @@ service cloud.firestore {
     match /places/{placeId} {
       // Anyone can read active approved places (public directory)
       allow read: if true;
+
+      // Helper: validate that category exists, is active, and subcategory belongs to it
+      function validCategoryAndSub(catId, subId) {
+        return exists(/databases/$(database)/documents/categories/$(catId)) &&
+          get(/databases/$(database)/documents/categories/$(catId)).data.active != false &&
+          subId in get(/databases/$(database)/documents/categories/$(catId)).data.subs.map(s, s.id);
+      }
+
       // Authenticated users can create places (become pending)
+      // Category and subcategory must be valid and the sub must belong to the category
       allow create: if isAuthenticated() &&
         request.resource.data.owner == request.auth.uid &&
-        request.resource.data.status == 'pending';
+        request.resource.data.status == 'pending' &&
+        validCategoryAndSub(request.resource.data.category, request.resource.data.subcategory);
+
       // Owners can update their own places (limited fields)
       // Admins can update any place (full access including status changes)
       allow update: if isAdmin() || (
         isPlaceOwner(placeId) &&
         // Owners cannot change status, verified, featured, isActive
         (!request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['status', 'verified', 'featured', 'isActive', 'owner']))
+          .hasAny(['status', 'verified', 'featured', 'isActive', 'owner'])) &&
+        // If category or subcategory changed, validate the pair
+        (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['category', 'subcategory']) ||
+          validCategoryAndSub(request.resource.data.category, request.resource.data.subcategory)
+        )
       );
       // Only admins can delete places
       allow delete: if isAdmin();
@@ -98,8 +114,12 @@ service cloud.firestore {
     match /notifications/{notifId} {
       // Only the target user can read their notifications
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      // System/admin can create notifications for any user
-      allow create: if isAuthenticated();
+      // Users can create notifications only for themselves
+      // Admins can create notifications for any user (via isAdmin bypass)
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
       // Users can mark their own notifications as read
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
       // Users can delete their own notifications
@@ -179,9 +199,9 @@ service cloud.firestore {
 
     // ============ Login Attempts (Rate Limiting) ============
     match /login_attempts/{email} {
-      // Authenticated users can read rate limit data (for checking lockout)
-      allow read: if true;
-      // Only authenticated users can write rate limit data (after failed login attempts)
+      // Only authenticated users can read rate limit data
+      allow read: if isAuthenticated();
+      // Only authenticated users can write rate limit data
       allow create, update: if isAuthenticated();
       // Only admins can delete rate limit records (to clear lockouts)
       allow delete: if isAdmin();
@@ -189,8 +209,8 @@ service cloud.firestore {
 
     // ============ Error Logs ============
     match /error_logs/{logId} {
-      // Anyone can create error logs (client-side logging)
-      allow create: if true;
+      // Only authenticated users can create error logs
+      allow create: if isAuthenticated();
       // Only admins can read error logs
       allow read: if isAdmin();
       // Only admins can delete error logs

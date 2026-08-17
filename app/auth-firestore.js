@@ -630,15 +630,14 @@ const Auth = {
 
   async _notifyAdmin(type, message) {
     try {
-      const adminsSnap = await db.collection('users').where('role', '==', 'admin').get();
-      for (const adminDoc of adminsSnap.docs) {
-        await db.collection('notifications').add({
-          userId: adminDoc.id,
-          type, message,
-          read: false,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      }
+      // Write to admin_notifications (not notifications) because
+      // regular users cannot create notifications for other users.
+      // admin_notifications allows any authenticated user to create.
+      await db.collection('admin_notifications').add({
+        type, message,
+        read: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
     } catch (e) {
       console.error('_notifyAdmin error:', e);
     }

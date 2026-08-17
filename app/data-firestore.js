@@ -9,7 +9,7 @@ const IBS = (name, color, cls = 'icon-md') => `<div class="cat-icon-sm" style="b
 
 const Data = {
   // ====== التصنيفات (ثابتة - لا تتغير) ======
-  // ====== التصنيفات المهنية (24 قسم، 214 فرع) ======
+  // ====== التصنيفات المهنية (25 قسم، 274 فرع) ======
   categories: [
     { id: 'cat_1', name: 'الصحة والطب', icon: 'heart-pulse', color: '#10b981', subs: [
       { id: 'sub_1_1', name: 'مراكز طبية', icon: 'hospital' },
