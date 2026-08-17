@@ -18,26 +18,27 @@ const Admin = {
       const userDoc = await userRef.get();
       if (userDoc.exists && userDoc.data().role === 'admin') return; // Already admin
       // Create or update admin document
-      const adminData = {
-        name: Auth.currentUser.name || 'مدير النظام',
-        email: 'admin@yemendirectory.net',
-        phone: '',
-        avatar: Auth.currentUser.avatar || '',
-        role: 'admin',
-        verified: true,
-        suspended: false,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      try {
-        // Try set with merge (works for both create and update)
+      if (!userDoc.exists) {
+        // Document doesn't exist — CREATE with role: 'admin'
         await userRef.set({
-          ...adminData,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-      } catch (setErr) {
-        // If set fails (doc exists with different role), try update
-        console.log('set failed, trying update:', setErr.message);
-        await userRef.update(adminData);
+          name: Auth.currentUser.name || 'مدير النظام',
+          email: 'admin@yemendirectory.net',
+          phone: '',
+          avatar: Auth.currentUser.avatar || '',
+          role: 'admin',
+          verified: true,
+          suspended: false,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } else {
+        // Document exists — UPDATE only admin fields (matches Firestore rule)
+        await userRef.update({
+          role: 'admin',
+          verified: true,
+          suspended: false,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
       }
       Auth.currentUser.role = 'admin';
       Auth.currentUser.verified = true;
