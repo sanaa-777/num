@@ -193,9 +193,12 @@ const Ads = {
     const clickHandler = ad.linkUrl ? `onclick="Ads.recordClick('${ad.id}');window.open('${ad.linkUrl.replace(/'/g, "\\'")}','${ad.linkTarget || '_blank'}')"` : '';
     
     let imagesHtml = '';
+    const _imgErr = 'onerror="this.onerror=null;this.style.display=\'none\';var fb=this.parentElement.querySelector(\'.ad-fb\');if(fb)fb.style.display=\'flex\'"';
+    const _fbDiv = '<div class="ad-fb" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:linear-gradient(135deg,#eff6ff,#dbeafe);color:#93c5fd;font-size:11px;flex-direction:column;gap:4px;border-radius:8px"><svg xmlns=\'http://www.w3.org/2000/svg\' width=\'28\' height=\'28\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'1.5\'><rect x=\'3\' y=\'3\' width=\'18\' height=\'18\' rx=\'2\'/><circle cx=\'8.5\' cy=\'8.5\' r=\'1.5\'/><path d=\'m21 15-5-5L5 21\'/></svg></div>';
     if (hasMultiple) {
-      imagesHtml = `<div id="${sliderId}" class="ad-slider" style="aspect-ratio:${aspect}">
-        ${ad.images.map((img, i) => `<img src="${img}" alt="" loading="${i === 0 ? 'eager' : 'lazy'}" fetchpriority="${i === 0 ? 'high' : 'low'}" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${i === 0 ? 'opacity-100' : 'opacity-0'}" data-slide="${i}">`).join('')}
+      imagesHtml = `<div id="${sliderId}" class="ad-slider" style="position:relative;aspect-ratio:${aspect}">
+        ${ad.images.map((img, i) => `<img src="${img}" alt="" loading="${i === 0 ? 'eager' : 'lazy'}" fetchpriority="${i === 0 ? 'high' : 'low'}" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${i === 0 ? 'opacity-100' : 'opacity-0'}" data-slide="${i}" ${_imgErr}>`).join('')}
+        ${_fbDiv}
         <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
           ${ad.images.map((_, i) => `<button onclick="event.stopPropagation();Ads.goToSlide('${sliderId}',${i})" class="w-2 h-2 rounded-full ${i===0?'bg-white':'bg-white/60'}" data-dot="${i}"></button>`).join('')}
         </div>
@@ -203,7 +206,7 @@ const Ads = {
         <button onclick="event.stopPropagation();Ads.nextSlide('${sliderId}')" class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
       </div>`;
     } else {
-      imagesHtml = `<img src="${ad.images[0]}" alt="" loading="eager" fetchpriority="high" class="w-full object-cover" style="aspect-ratio:${aspect}">`;
+      imagesHtml = `<div style="position:relative"><img src="${ad.images[0]}" alt="" loading="eager" fetchpriority="high" class="w-full object-cover" style="aspect-ratio:${aspect}" ${_imgErr}>${_fbDiv}</div>`;
     }
 
     return `<div class="ad-container ${containerClass}" ${clickHandler} data-ad-id="${ad.id}">

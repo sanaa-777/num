@@ -1378,3 +1378,42 @@ section {
 .leaflet-tile-loaded ~ #placeMapLoading {
   display: none !important;
 }
+
+/* =============================================
+   Lucide Icon Fallback
+   ============================================= */
+i[data-lucide] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1em;
+  min-height: 1em;
+  vertical-align: middle;
+}
+
+.cat-icon, .cat-icon-sm {
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.cat-icon svg, .cat-icon-sm svg {
+  display: block;
+}
+
+.bottom-nav-icon {
+  display: block;
+  flex-shrink: 0;
+}
+
+.bottom-nav-item svg, .bottom-nav-item-add svg {
+  display: block;
+}
+
+/* Ad slider must be relative for absolute-positioned images */
+.ad-slider {
+  position: relative !important;
+}
+
+.ad-fb {
+  border-radius: 8px;
+}

@@ -76,9 +76,12 @@ const App = {
       
       // Load remaining data in background
       Admin.initDefaultAdmin().catch(() => {});
+      // Preload ads EARLY so renderPosition() has data on first render
+      Ads.getAll().catch(() => {});
       Data.preloadAll().then(() => {
         Admin.refreshUnreadCount().catch(() => {});
         return Promise.all([
+          Ads.getAll().catch(() => {}),
           Offers.getAll().catch(() => {}),
           Jobs.getAll().catch(() => {}),
           Events.getAll().catch(() => {}),
@@ -97,6 +100,17 @@ const App = {
       }).catch(e => {
         console.warn('Background data load:', e.message);
       });
+
+      // Delayed re-render: ensures ads and other late-loaded data appear
+      setTimeout(() => {
+        const curHash = location.hash.slice(1) || 'home';
+        const curView = curHash.split('/')[0];
+        const isDetail = ['place', 'offer', 'job', 'event'].includes(curView);
+        if (!isDetail && Ads._cache && Ads._cache.length > 0) {
+          this.render();
+          this.handleRoute();
+        }
+      }, 3000);
 
       // إخفاء الاقتراحات عند النقر خارجها
       document.addEventListener('click', (e) => {
@@ -291,14 +305,59 @@ const App = {
     }
   },
 
-  initIcons(container) { 
+  initIcons(container, _retryCount) { 
+    _retryCount = _retryCount || 0;
     try { 
+      if (typeof lucide === 'undefined' || !lucide.createIcons) {
+        // Lucide not loaded yet — retry up to 5 times with increasing delay
+        if (_retryCount < 5) {
+          var delay = 300 * (_retryCount + 1);
+          setTimeout(function() { App.initIcons(container, _retryCount + 1); }, delay);
+        } else {
+          console.warn('Lucide library failed to load after retries. Showing fallback icons.');
+          App._applyIconFallback(container);
+        }
+        return;
+      }
       if (container) {
         lucide.createIcons({ nodes: container.querySelectorAll('[data-lucide]') });
-      } else {
+      } else { 
         lucide.createIcons(); 
       }
-    } catch(e) { /* icons are non-critical */ }
+      // Verify icons were actually created — retry if unprocessed icons remain
+      var unprocessed = document.querySelectorAll('i[data-lucide]');
+      if (unprocessed.length > 0 && _retryCount < 3) {
+        setTimeout(function() { App.initIcons(container, _retryCount + 1); }, 500);
+      }
+    } catch(e) { 
+      console.warn('initIcons error (attempt ' + (_retryCount + 1) + '):', e.message);
+      if (_retryCount < 3) {
+        setTimeout(function() { App.initIcons(container, _retryCount + 1); }, 500);
+      } else {
+        App._applyIconFallback(container);
+      }
+    }
+  },
+
+  // Fallback: convert data-lucide attributes to simple placeholder icons
+  _applyIconFallback: function(container) {
+    var els = container 
+      ? container.querySelectorAll('i[data-lucide]') 
+      : document.querySelectorAll('i[data-lucide]');
+    els.forEach(function(el) {
+      if (el.tagName === 'SVG') return; // already processed by Lucide
+      var w = el.className.match(/w-(\d+)/);
+      var size = w ? (parseInt(w[1]) * 4) + 'px' : '20px';
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', size);
+      svg.setAttribute('height', size);
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('fill', 'none');
+      svg.setAttribute('stroke', 'currentColor');
+      svg.setAttribute('stroke-width', '2');
+      svg.innerHTML = '<circle cx="12" cy="12" r="10" opacity="0.15"/><circle cx="12" cy="12" r="3" opacity="0.25"/>';
+      el.parentNode.replaceChild(svg, el);
+    });
   },
 
   // Mobile Search Toggle
