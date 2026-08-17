@@ -330,6 +330,142 @@ const Data = {
     return this.categories.find(c => c.id === catId) || null;
   },
 
+  // ====== Firestore Category Management ======
+  _categoriesLoaded: false,
+  _hardcodedCategories: null,
+
+  // Save hardcoded categories as backup
+  _backupCategories() {
+    if (!this._hardcodedCategories) {
+      this._hardcodedCategories = JSON.parse(JSON.stringify(this.categories));
+    }
+  },
+
+  // Seed categories to Firestore (one-time)
+  async seedCategories() {
+    try {
+      const snapshot = await db.collection('categories').limit(1).get();
+      if (!snapshot.empty) return false; // Already seeded
+      this._backupCategories();
+      const batch = db.batch();
+      for (const cat of this._hardcodedCategories) {
+        const ref = db.collection('categories').doc(cat.id);
+        batch.set(ref, {
+          id: cat.id,
+          name: cat.name,
+          icon: cat.icon,
+          color: cat.color,
+          active: true,
+          subs: cat.subs.map(s => ({ id: s.id, name: s.name, icon: s.icon, active: true })),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+      await batch.commit();
+      console.log('Categories seeded to Firestore');
+      return true;
+    } catch (e) {
+      console.error('seedCategories error:', e);
+      return false;
+    }
+  },
+
+  // Load categories from Firestore
+  async loadCategories() {
+    if (this._categoriesLoaded) return this.categories;
+    try {
+      this._backupCategories();
+      const snapshot = await db.collection('categories').orderBy('id').get();
+      if (snapshot.empty) {
+        // Not seeded yet — seed from hardcoded
+        await this.seedCategories();
+        return this.categories;
+      }
+      const firestoreCats = snapshot.docs.map(d => {
+        const data = d.data();
+        return {
+          id: data.id || d.id,
+          name: data.name,
+          icon: data.icon,
+          color: data.color,
+          active: data.active !== false,
+          subs: (data.subs || []).map(s => ({
+            id: s.id,
+            name: s.name,
+            icon: s.icon,
+            active: s.active !== false
+          }))
+        };
+      });
+      if (firestoreCats.length > 0) {
+        this.categories = firestoreCats;
+      }
+      this._categoriesLoaded = true;
+      return this.categories;
+    } catch (e) {
+      console.error('loadCategories error:', e);
+      this._backupCategories();
+      return this.categories;
+    }
+  },
+
+  // Get only active categories (for public site)
+  getActiveCategories() {
+    return this.categories
+      .filter(c => c.active !== false)
+      .map(c => ({
+        ...c,
+        subs: (c.subs || []).filter(s => s.active !== false)
+      }));
+  },
+
+  // Admin: Update category
+  async updateCategory(catId, data) {
+    try {
+      await db.collection('categories').doc(catId).update({
+        ...data,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      // Update local cache
+      const idx = this.categories.findIndex(c => c.id === catId);
+      if (idx !== -1) Object.assign(this.categories[idx], data);
+      return true;
+    } catch (e) {
+      console.error('updateCategory error:', e);
+      return false;
+    }
+  },
+
+  // Admin: Update subcategory
+  async updateSubcategory(catId, subId, data) {
+    try {
+      const cat = this.categories.find(c => c.id === catId);
+      if (!cat) return false;
+      const subIdx = cat.subs.findIndex(s => s.id === subId);
+      if (subIdx === -1) return false;
+      Object.assign(cat.subs[subIdx], data);
+      await db.collection('categories').doc(catId).update({
+        subs: cat.subs,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      return true;
+    } catch (e) {
+      console.error('updateSubcategory error:', e);
+      return false;
+    }
+  },
+
+  // Admin: Check if category/subcategory is in use
+  async checkCategoryUsage(catId, subId) {
+    try {
+      let query = db.collection('places').where('category', '==', catId);
+      if (subId) query = query.where('subcategory', '==', subId);
+      const snapshot = await query.limit(1).get();
+      return snapshot.size;
+    } catch (e) {
+      return 0;
+    }
+  },
+
   // ====== بيانات افتراضية (fallback) ======
   defaultPlaces: [
     { id: 'p_1', name: 'مستشفى الثورة', category: 'cat_1', subcategory: 'sub_1_1', city: 'city_1', description: 'مستشفى حكومي كبير. طوارئ 24 ساعة.', phone: '777111222', address: 'شارع الستين، صنعاء', verified: true, featured: true, isActive: true, status: 'approved', views: 8900, reviews: 156, rating: 4.2, owner: 'system' },
@@ -1067,6 +1203,13 @@ const Data = {
 
   // تحميل مسبق لجميع البيانات
   async preloadAll() {
+    // تحميل التصنيفات من Firestore
+    try {
+      await Promise.race([
+        this.loadCategories(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      ]);
+    } catch(e) { console.log('Categories load skipped:', e.message); }
     // تحميل الأماكن مع timeout
     try {
       await Promise.race([

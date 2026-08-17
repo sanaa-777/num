@@ -322,7 +322,8 @@
           'offers': 'العروض',
           'jobs': 'الوظائف',
           'events': 'الفعاليات',
-          'pricing': 'التسعيرات'
+          'pricing': 'التسعيرات',
+          'categories': 'الأقسام'
         };
         return tabs[tabId] || tabId;
       },
@@ -384,6 +385,8 @@
 
       render: async function() {
         var app = document.getElementById('admin-app');
+        // Load categories from Firestore first
+        try { await Data.loadCategories(); } catch(e) { console.log('Categories load error:', e); }
         var results = await Promise.all([
           Admin.getStats(),
           Admin.getAllUsers(),
@@ -448,7 +451,8 @@
                   {id:'offers',name:'العروض',icon:'tag'},
                   {id:'jobs',name:'الوظائف',icon:'briefcase'},
                   {id:'events',name:'الفعاليات',icon:'calendar'},
-                  {id:'pricing',name:'التسعيرات',icon:'trending-up'}
+                  {id:'pricing',name:'التسعيرات',icon:'trending-up'},
+                  {id:'categories',name:'الأقسام',icon:'grid-3x3'}
                 ].map(function(t) {
                   return '<button class="admin-nav-item' + (AdminPanel.currentTab === t.id ? ' active' : '') + '" onclick="AdminPanel.navigateToTab(\'' + t.id + '\')">' +
                     '<i data-lucide="' + t.icon + '" class="w-4 h-4"></i>' +
@@ -490,6 +494,7 @@
                 (this.currentTab === 'jobs' ? this.renderJobsTab(jobs) : '') +
                 (this.currentTab === 'events' ? this.renderEventsTab(events) : '') +
                 (this.currentTab === 'pricing' ? this.renderPricingTab(pricing) : '') +
+                (this.currentTab === 'categories' ? this.renderCategoriesTab() : '') +
               '</main>' +
             '</div>' +
           '</div>';
@@ -1307,6 +1312,119 @@
               '</tbody></table></div></div>' +
           '</div>' +
         '</div>';
+      },
+
+      // ====== Categories Management Tab ======
+      renderCategoriesTab: function() {
+        var cats = Data.categories;
+        var self = this;
+        var html = '<div class="space-y-4">';
+        html += '<div class="flex items-center justify-between mb-4">';
+        html += '<div><h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="grid-3x3" class="w-5 h-5 text-blue-600"></i>إدارة الأقسام</h3>';
+        html += '<p class="text-xs text-gray-500 mt-1">' + cats.length + ' قسم رئيسي • إدارة العرض والتعديل</p></div>';
+        html += '</div>';
+
+        cats.forEach(function(cat) {
+          var isActive = cat.active !== false;
+          var activeSubs = (cat.subs || []).filter(function(s) { return s.active !== false; });
+          var totalSubs = (cat.subs || []).length;
+          html += '<div class="bg-white rounded-xl border border-gray-100 overflow-hidden" style="opacity:' + (isActive ? '1' : '0.5') + '">';
+          // Category header
+          html += '<div class="flex items-center justify-between p-4 border-b border-gray-50">';
+          html += '<div class="flex items-center gap-3">';
+          html += '<div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:' + (cat.color || '#3b82f6') + '15"><i data-lucide="' + (cat.icon || 'folder') + '" class="w-5 h-5" style="color:' + (cat.color || '#3b82f6') + '"></i></div>';
+          html += '<div>';
+          html += '<div class="font-bold text-sm">' + self._escHtml(cat.name) + '</div>';
+          html += '<div class="text-[10px] text-gray-400">' + cat.id + ' • ' + activeSubs.length + '/' + totalSubs + ' فرع نشط</div>';
+          html += '</div></div>';
+          html += '<div class="flex items-center gap-2">';
+          // Toggle category
+          html += '<button onclick="AdminPanel.toggleCategory(\'' + cat.id + '\')" class="px-3 py-1.5 rounded-lg text-xs font-medium ' + (isActive ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-gray-100 text-gray-500 hover:bg-gray-200') + '">' + (isActive ? 'نشط' : 'معطّل') + '</button>';
+          // Edit category name
+          html += '<button onclick="AdminPanel.editCategoryName(\'' + cat.id + '\')" class="p-2 rounded-lg hover:bg-blue-50 text-blue-600" title="تعديل"><i data-lucide="pencil" class="w-4 h-4"></i></button>';
+          html += '</div></div>';
+          // Subcategories
+          html += '<div class="p-3">';
+          html += '<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">';
+          (cat.subs || []).forEach(function(sub) {
+            var subActive = sub.active !== false;
+            html += '<div class="flex items-center justify-between p-2 rounded-lg border ' + (subActive ? 'border-gray-100 bg-white' : 'border-red-100 bg-red-50') + '" style="opacity:' + (subActive ? '1' : '0.6') + '">';
+            html += '<div class="flex items-center gap-2 min-w-0">';
+            html += '<i data-lucide="' + (sub.icon || 'circle') + '" class="w-3.5 h-3.5 text-gray-400 shrink-0"></i>';
+            html += '<span class="text-xs truncate">' + self._escHtml(sub.name) + '</span>';
+            html += '</div>';
+            html += '<div class="flex items-center gap-1 shrink-0">';
+            html += '<button onclick="AdminPanel.toggleSubcategory(\'' + cat.id + '\',\'' + sub.id + '\')" class="w-6 h-6 rounded flex items-center justify-center ' + (subActive ? 'text-green-600 hover:bg-green-50' : 'text-gray-400 hover:bg-gray-100') + '" title="' + (subActive ? 'تعطيل' : 'تفعيل') + '"><i data-lucide="' + (subActive ? 'eye' : 'eye-off') + '" class="w-3.5 h-3.5"></i></button>';
+            html += '<button onclick="AdminPanel.editSubcategoryName(\'' + cat.id + '\',\'' + sub.id + '\')" class="w-6 h-6 rounded flex items-center justify-center text-blue-600 hover:bg-blue-50" title="تعديل"><i data-lucide="pencil" class="w-3 h-3"></i></button>';
+            html += '</div></div>';
+          });
+          html += '</div></div>';
+          html += '</div>';
+        });
+        html += '</div>';
+        return html;
+      },
+
+      toggleCategory: async function(catId) {
+        var cat = Data.categories.find(function(c) { return c.id === catId; });
+        if (!cat) return;
+        var newActive = cat.active === false ? true : false;
+        if (!newActive) {
+          var usage = await Data.checkCategoryUsage(catId);
+          if (usage > 0) {
+            alert('هذا القسم يحتوي على ' + usage + ' نشاط. سيتم إخفاؤه من الواجهة لكن لن يُحذف.');
+          }
+        }
+        var ok = await Data.updateCategory(catId, { active: newActive });
+        if (ok) {
+          cat.active = newActive;
+          this.render();
+        }
+      },
+
+      editCategoryName: async function(catId) {
+        var cat = Data.categories.find(function(c) { return c.id === catId; });
+        if (!cat) return;
+        var newName = prompt('اسم القسم الجديد:', cat.name);
+        if (!newName || newName === cat.name) return;
+        var ok = await Data.updateCategory(catId, { name: newName });
+        if (ok) {
+          cat.name = newName;
+          this.render();
+        }
+      },
+
+      toggleSubcategory: async function(catId, subId) {
+        var cat = Data.categories.find(function(c) { return c.id === catId; });
+        if (!cat) return;
+        var sub = cat.subs.find(function(s) { return s.id === subId; });
+        if (!sub) return;
+        var newActive = sub.active === false ? true : false;
+        if (!newActive) {
+          var usage = await Data.checkCategoryUsage(catId, subId);
+          if (usage > 0) {
+            alert('هذا الفرع يحتوي على ' + usage + ' نشاط. سيتم إخفاؤه لكن لن يُحذف.');
+          }
+        }
+        var ok = await Data.updateSubcategory(catId, subId, { active: newActive });
+        if (ok) {
+          sub.active = newActive;
+          this.render();
+        }
+      },
+
+      editSubcategoryName: async function(catId, subId) {
+        var cat = Data.categories.find(function(c) { return c.id === catId; });
+        if (!cat) return;
+        var sub = cat.subs.find(function(s) { return s.id === subId; });
+        if (!sub) return;
+        var newName = prompt('اسم الفرع الجديد:', sub.name);
+        if (!newName || newName === sub.name) return;
+        var ok = await Data.updateSubcategory(catId, subId, { name: newName });
+        if (ok) {
+          sub.name = newName;
+          this.render();
+        }
       },
 
       renderPricingForm: function(item, categories) {

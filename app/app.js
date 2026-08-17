@@ -643,7 +643,7 @@ const App = {
       <div class="max-w-7xl mx-auto px-3">
         <h3 class="text-sm md:text-lg font-bold text-gray-900 mb-2 md:mb-4 flex items-center gap-2"><i data-lucide="grid-3x3" class="w-4 h-4 md:w-5 md:h-5 text-blue-600"></i>الأقسام الرئيسية</h3>
         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-1.5 md:gap-3">
-          ${Data.categories.map(c => {
+          ${Data.getActiveCategories().map(c => {
             const count = places.filter(p => p.category === c.id).length;
             return `<a href="#category/${c.id}" class="bg-white rounded-xl p-2 md:p-3 text-center hover:shadow-md transition-all cursor-pointer border border-gray-100 active-scale">
               <div class="flex justify-center mb-1.5">${IB(c.icon, c.color, 'icon-lg')}</div>
@@ -836,7 +836,7 @@ const App = {
               <div id="searchSuggestions" class="search-suggestions hidden"></div>
             </div>
             <div class="flex flex-col sm:flex-row gap-2">
-              <div class="flex-1 custom-select-wrapper"><select id="searchCat" style="position:absolute;opacity:0;pointer-events:none;"><option value="">جميع الأقسام</option>${Data.categories.map(c => `<option value="${c.id}" ${this.selectedCategory===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
+              <div class="flex-1 custom-select-wrapper"><select id="searchCat" style="position:absolute;opacity:0;pointer-events:none;"><option value="">جميع الأقسام</option>${Data.getActiveCategories().map(c => `<option value="${c.id}" ${this.selectedCategory===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
               <div class="flex-1 custom-select-wrapper"><select id="searchCity" style="position:absolute;opacity:0;pointer-events:none;"><option value="">جميع المدن</option>${Data.cities.map(c => `<option value="${c.id}" ${this.selectedCity===c.id?'selected':''}>${c.name}</option>`).join('')}</select></div>
               <button onclick="App.doSearch()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold text-xs flex items-center gap-1"><i data-lucide="search" class="w-3.5 h-3.5"></i></button>
             </div>
@@ -1077,7 +1077,7 @@ const App = {
           <div class="space-y-3">
             <div><label class="block text-xs font-medium text-gray-700 mb-1">اسم المكان *</label><input type="text" id="placeName" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm" placeholder="مثال: مطعم البركة"></div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الرئيسي *</label><div class="custom-select-wrapper"><select id="placeCategory" onchange="App.updateSubs()" style="position:absolute;opacity:0;pointer-events:none;"><option value="">اختر القسم</option>${Data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div></div>
+              <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الرئيسي *</label><div class="custom-select-wrapper"><select id="placeCategory" onchange="App.updateSubs()" style="position:absolute;opacity:0;pointer-events:none;"><option value="">اختر القسم</option>${Data.getActiveCategories().map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div></div>
               <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الفرعي *</label><div class="custom-select-wrapper"><select id="placeSubCategory" style="position:absolute;opacity:0;pointer-events:none;"><option value="">اختر القسم الفرعي</option></select></div></div>
             </div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">المدينة *</label><div class="custom-select-wrapper"><select id="placeCity" style="position:absolute;opacity:0;pointer-events:none;"><option value="">اختر المدينة</option>${Data.cities.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div></div>
@@ -1179,8 +1179,8 @@ const App = {
   updateSubs() {
     const catId = document.getElementById('placeCategory').value;
     const sub = document.getElementById('placeSubCategory');
-    const cat = Data.categories.find(c => c.id === catId);
-    sub.innerHTML = '<option value="">اختر القسم الفرعي</option>' + (cat ? cat.subs.map(s => `<option value="${s.id}">${s.name}</option>`).join('') : '');
+    const cat = Data.getActiveCategories().find(c => c.id === catId);
+    sub.innerHTML = '<option value="">اختر القسم الفرعي</option>' + (cat ? cat.subs.filter(s => s.active !== false).map(s => `<option value="${s.id}">${s.name}</option>`).join('') : '');
     // Update custom dropdown if exists
     const subWrapper = sub.closest('.custom-select-wrapper');
     if (subWrapper) {
@@ -2284,7 +2284,7 @@ const App = {
         <div class="space-y-3">
           <div><label class="block text-xs font-medium text-gray-700 mb-1">اسم المكان *</label><input type="text" id="editPlaceName" value="${App.h(place.name)}" class="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الرئيسي *</label><div class="custom-select-wrapper"><select id="editPlaceCategory" onchange="App.updateEditSubs()" style="position:absolute;opacity:0;pointer-events:none;">${Data.categories.map(c => `<option value="${c.id}" ${c.id === place.category ? 'selected' : ''}>${c.name}</option>`).join('')}</select></div></div>
+            <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الرئيسي *</label><div class="custom-select-wrapper"><select id="editPlaceCategory" onchange="App.updateEditSubs()" style="position:absolute;opacity:0;pointer-events:none;">${Data.getActiveCategories().map(c => `<option value="${c.id}" ${c.id === place.category ? 'selected' : ''}>${c.name}</option>`).join('')}</select></div></div>
             <div><label class="block text-xs font-medium text-gray-700 mb-1">القسم الفرعي</label><div class="custom-select-wrapper"><select id="editPlaceSubCategory" style="position:absolute;opacity:0;pointer-events:none;">${cat ? cat.subs.map(s => `<option value="${s.id}" ${s.id === place.subcategory ? 'selected' : ''}>${s.name}</option>`).join('') : ''}</select></div></div>
           </div>
           <div><label class="block text-xs font-medium text-gray-700 mb-1">المدينة *</label><div class="custom-select-wrapper"><select id="editPlaceCity" style="position:absolute;opacity:0;pointer-events:none;">${Data.cities.map(c => `<option value="${c.id}" ${c.id === place.city ? 'selected' : ''}>${c.name}</option>`).join('')}</select></div></div>
@@ -2372,8 +2372,8 @@ const App = {
     const catId = document.getElementById('editPlaceCategory')?.value;
     const sub = document.getElementById('editPlaceSubCategory');
     if (!sub) return;
-    const cat = Data.categories.find(c => c.id === catId);
-    sub.innerHTML = '<option value="">اختر القسم الفرعي</option>' + (cat ? cat.subs.map(s => `<option value="${s.id}">${s.name}</option>`).join('') : '');
+    const cat = Data.getActiveCategories().find(c => c.id === catId);
+    sub.innerHTML = '<option value="">اختر القسم الفرعي</option>' + (cat ? cat.subs.filter(s => s.active !== false).map(s => `<option value="${s.id}">${s.name}</option>`).join('') : '');
     // Update custom dropdown
     const wrapper = sub.closest('.custom-select-wrapper');
     if (wrapper) { wrapper.innerHTML = ''; wrapper.appendChild(sub); this.initAllCustomSelects(); }
