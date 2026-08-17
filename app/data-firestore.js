@@ -355,8 +355,26 @@ const Data = {
   // Seed categories to Firestore (one-time)
   async seedCategories() {
     try {
-      const snapshot = await db.collection('categories').limit(1).get();
-      if (!snapshot.empty) return false; // Already seeded
+      const snapshot = await db.collection('categories').get();
+      if (!snapshot.empty) {
+        // Check if existing categories have the correct structure
+        const firstDoc = snapshot.docs[0].data();
+        if (firstDoc.subs && Array.isArray(firstDoc.subs) && firstDoc.subs.length > 0 && firstDoc.subs[0].id) {
+          return false; // Already seeded with correct structure
+        }
+        // Old structure detected — need admin to reseed
+        if (typeof Auth !== 'undefined' && Auth.currentUser && Auth.currentUser.role === 'admin') {
+          console.log('Old category structure detected, admin reseeding...');
+          const deleteBatch = db.batch();
+          snapshot.docs.forEach(doc => deleteBatch.delete(doc.ref));
+          await deleteBatch.commit();
+        } else {
+          // Non-admin: can't delete, but we can still seed if collection is empty after admin clears it
+          // For now, skip — admin must visit the site first to trigger reseed
+          console.log('Old category structure detected. Admin must visit site to reseed.');
+          return false;
+        }
+      }
       this._backupCategories();
       const batch = db.batch();
       for (const cat of this._hardcodedCategories) {
@@ -407,6 +425,17 @@ const Data = {
           }))
         };
       });
+      // Check if the loaded categories have valid subs structure
+      const hasValidSubs = firestoreCats.length > 0 && firestoreCats[0].subs && firestoreCats[0].subs.length > 0 && firestoreCats[0].subs[0].id;
+      if (!hasValidSubs) {
+        // Old structure detected — try to reseed
+        console.log('Old category structure in loadCategories, attempting reseed...');
+        const reseeded = await this.seedCategories();
+        if (reseeded) {
+          this._categoriesLoaded = true;
+          return this.categories;
+        }
+      }
       if (firestoreCats.length > 0) {
         this.categories = firestoreCats;
       }
