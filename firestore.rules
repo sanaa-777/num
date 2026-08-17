@@ -59,9 +59,10 @@ service cloud.firestore {
 
       // Helper: validate that category exists, is active, and subcategory belongs to it
       function validCategoryAndSub(catId, subId) {
-        // Test: just check category exists and has subs
-        return exists(/databases/$(database)/documents/categories/$(catId)) &&
-          get(/databases/$(database)/documents/categories/$(catId)).data.subs.size() > 0;
+        // Check category exists, is active, and subcategory is valid
+        let catData = get(/databases/$(database)/documents/categories/$(catId)).data;
+        return catData.active != false &&
+          catData.subs.map(s, s.id).hasAny([subId]);
       }
 
       // Authenticated users can create places (become pending)
