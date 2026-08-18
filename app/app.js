@@ -2353,7 +2353,7 @@ const App = {
       } else {
         this.showToast('⏳ تم إرسال طلبك! نشاطك قيد المراجعة وسيظهر بعد موافقة الإدارة', 'info', 5000);
       }
-      // Navigate immediately - don't wait
+      // Navigate immediately
       location.hash = 'myplaces';
     } catch (error) {
       // Re-enable button on error
