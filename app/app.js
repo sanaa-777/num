@@ -1228,7 +1228,7 @@ const App = {
               <p class="text-[10px] text-gray-400 mt-1">${this.placeImages.length}/5 صور مرفوعة</p>
               ${!ImageStorage.isConfigured() ? '<p class="text-[10px] text-orange-500 mt-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>رفع الصور غير مُفعّل. يرجى التواصل مع الإدارة.</p>' : ''}
             </div>
-            <button onclick="App.submitPlace()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i>إضافة المكان</button>
+            <button id="submitPlaceBtn" onclick="App.submitPlace()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i>إضافة المكان</button>
           </div>
         </div>
       </div>
@@ -2250,6 +2250,17 @@ const App = {
 
   async submitPlace() {
     if (!this.validatePlaceForm()) return;
+    
+    // Disable button to prevent double-click
+    const btn = document.getElementById('submitPlaceBtn');
+    if (btn) {
+      btn.disabled = true;
+      btn.dataset.originalHtml = btn.innerHTML;
+      btn.innerHTML = '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"/></svg> جاري الإرسال...';
+      btn.style.opacity = '0.7';
+      btn.style.pointerEvents = 'none';
+    }
+    
     const n = document.getElementById('placeName').value, c = document.getElementById('placeCategory').value, s = document.getElementById('placeSubCategory').value, ci = document.getElementById('placeCity').value;
     const workDays = Array.from(document.querySelectorAll('.work-day-cb:checked')).map(cb => cb.value);
     try {
@@ -2291,8 +2302,16 @@ const App = {
         lng:document.getElementById('placeLng').value || null,
         images:imageUrls, owner:Auth.currentUser.id, verified:false, featured:false 
       });
-      Admin.notifyNewPlace(n, Auth.currentUser.name);
+      // Notify admin (non-blocking, don't await)
+      Admin.notifyNewPlace(n, Auth.currentUser.name).catch(e => console.warn('Admin notification failed:', e.message));
       this.placeImages = [];
+      // Re-enable button
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      }
       // Check if user is verified (auto-approve for verified users)
       if (Auth.currentUser.verified) {
         this.showToast('✅ تم نشر نشاطك بنجاح وهو ظاهر الآن للجميع!', 'success', 4000);
@@ -2301,6 +2320,13 @@ const App = {
       }
       setTimeout(() => { location.hash = 'myplaces'; }, 1500);
     } catch (error) {
+      // Re-enable button on error
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      }
       ErrorTracker.capture(error, { operation: 'app.place.submit', source: 'submit_place_form' });
       this.showToast(ErrorTracker.getInlineMessage(error), 'error');
     }
