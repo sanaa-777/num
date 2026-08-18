@@ -284,10 +284,16 @@ const App = {
           this.placeMap = null;
           this.placeMarker = null;
         }
-        // Initialize map with multiple retries
-        setTimeout(() => this.initPlaceMap(), 500);
-        setTimeout(() => this.initPlaceMap(), 1500);
-        setTimeout(() => this.initPlaceMap(), 3000);
+        // Initialize map with single retry (prevent race conditions)
+        this._mapInitTimeout = setTimeout(() => this.initPlaceMap(), 800);
+      } else {
+        // Clean up map when leaving add page
+        if (this._mapInitTimeout) { clearTimeout(this._mapInitTimeout); this._mapInitTimeout = null; }
+        if (this.placeMap) {
+          try { this.placeMap.remove(); } catch(e) {}
+          this.placeMap = null;
+          this.placeMarker = null;
+        }
       }
       // Smart scroll: save position of old view, restore new view position
       if (this._lastRenderedView && this._lastRenderedView !== this.currentView) {
@@ -2335,13 +2341,20 @@ const App = {
         btn.style.opacity = '1';
         btn.style.pointerEvents = 'auto';
       }
+      // Clean up map to prevent blocking
+      if (this.placeMap) {
+        try { this.placeMap.remove(); } catch(e) {}
+        this.placeMap = null;
+        this.placeMarker = null;
+      }
       // Check if user is verified (auto-approve for verified users)
       if (Auth.currentUser.verified) {
         this.showToast('✅ تم نشر نشاطك بنجاح وهو ظاهر الآن للجميع!', 'success', 4000);
       } else {
         this.showToast('⏳ تم إرسال طلبك! نشاطك قيد المراجعة وسيظهر بعد موافقة الإدارة', 'info', 5000);
       }
-      setTimeout(() => { location.hash = 'myplaces'; }, 1500);
+      // Navigate immediately - don't wait
+      location.hash = 'myplaces';
     } catch (error) {
       // Re-enable button on error
       if (btn) {
