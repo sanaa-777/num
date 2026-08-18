@@ -1872,6 +1872,10 @@ const App = {
         </div>
       </div></section>${this.renderFooter()}${this.renderBottomNav(Auth.currentUser)}</div>`;
       this.initIcons();
+    }).catch(e => {
+      console.error('Show item detail failed:', e.message);
+      this.showToast('تعذر تحميل البيانات', 'error');
+      location.hash = backLink;
     });
   },
 
