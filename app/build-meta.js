@@ -1,5 +1,5 @@
 window.__APP_BUILD__ = Object.freeze({
-  version: '20260817090000',
-  commit: 'fix-sync-firebase-init',
-  deployedAt: '2026-08-17T09:00:00.000Z'
+  version: '20260818015003',
+  commit: '5366ab1',
+  deployedAt: '2026-08-18T01:50:03.406Z'
 });

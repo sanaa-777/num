@@ -289,6 +289,7 @@ const App = {
       } else {
         // Clean up map when leaving add page
         if (this._mapInitTimeout) { clearTimeout(this._mapInitTimeout); this._mapInitTimeout = null; }
+        if (this._leafletRetryTimeout) { clearTimeout(this._leafletRetryTimeout); this._leafletRetryTimeout = null; }
         if (this.placeMap) {
           try { this.placeMap.remove(); } catch(e) {}
           this.placeMap = null;
@@ -2186,18 +2187,26 @@ const App = {
   // ====== MAP INITIALIZATION ======
   placeMap: null,
   placeMarker: null,
+  _mapInitTimeout: null,
+  _leafletRetryTimeout: null,
   
   initPlaceMap() {
     if (this.placeMap) return;
     const mapEl = document.getElementById('placeMap');
     if (!mapEl) return;
-    if (typeof L === 'undefined') { console.warn('Leaflet not loaded, retrying...'); setTimeout(() => this.initPlaceMap(), 500); return; }
+    if (typeof L === 'undefined') {
+      console.warn('Leaflet not loaded, retrying...');
+      if (this._leafletRetryTimeout) clearTimeout(this._leafletRetryTimeout);
+      this._leafletRetryTimeout = setTimeout(() => this.initPlaceMap(), 500);
+      return;
+    }
     try {
       // Ensure container has explicit dimensions
       mapEl.style.width = '100%';
       mapEl.style.height = '100%';
       mapEl.style.minHeight = '280px';
       
+      if (this._leafletRetryTimeout) { clearTimeout(this._leafletRetryTimeout); this._leafletRetryTimeout = null; }
       this.placeMap = L.map('placeMap', { 
         zoomControl: true, 
         scrollWheelZoom: true,
@@ -2341,7 +2350,9 @@ const App = {
         btn.style.opacity = '1';
         btn.style.pointerEvents = 'auto';
       }
-      // Clean up map to prevent blocking
+      // Clean up map and pending retries before navigation
+      if (this._mapInitTimeout) { clearTimeout(this._mapInitTimeout); this._mapInitTimeout = null; }
+      if (this._leafletRetryTimeout) { clearTimeout(this._leafletRetryTimeout); this._leafletRetryTimeout = null; }
       if (this.placeMap) {
         try { this.placeMap.remove(); } catch(e) {}
         this.placeMap = null;
@@ -2353,8 +2364,14 @@ const App = {
       } else {
         this.showToast('⏳ تم إرسال طلبك! نشاطك قيد المراجعة وسيظهر بعد موافقة الإدارة', 'info', 5000);
       }
-      // Navigate immediately
-      location.hash = 'myplaces';
+      // Force view switch immediately to avoid relying only on hashchange
+      this.currentView = 'myplaces';
+      this.render();
+      if (location.hash !== '#myplaces') {
+        location.hash = 'myplaces';
+      } else {
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
     } catch (error) {
       // Re-enable button on error
       if (btn) {
@@ -2637,7 +2654,9 @@ const App = {
       this.showToast('✅ تم إرسال التعديل للمراجعة. النسخة الحالية ستبقى مرئية حتى موافقة الأدمن.', 'success', 5000);
       this._editingPlaceId = null;
       this._editingPlaceImages = [];
-      setTimeout(() => { location.hash = 'myplaces'; }, 1500);
+      this.currentView = 'myplaces';
+      this.render();
+      if (location.hash !== '#myplaces') location.hash = 'myplaces';
     } catch (error) {
       this.showToast(error.message || 'فشل إرسال التعديل', 'error');
     }

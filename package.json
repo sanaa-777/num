@@ -26,5 +26,8 @@
   "bugs": {
     "url": "https://github.com/sanaa-777/num/issues"
   },
-  "homepage": "https://github.com/sanaa-777/num#readme"
+  "homepage": "https://github.com/sanaa-777/num#readme",
+  "dependencies": {
+    "firebase-admin": "^13.0.2"
+  }
 }
