@@ -261,6 +261,26 @@ const Auth = {
 
   // ====== تسجيل حساب جديد ======
   async signup(name, email, password, phone) {
+    // Retry logic for transient errors
+    const maxRetries = 2;
+    let lastError = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await this._doSignupAttempt(name, email, password, phone, attempt > 0);
+      } catch (error) {
+        lastError = error;
+        // Only retry on internal/transient errors
+        if (attempt < maxRetries && (error.code === 'auth/internal-error' || error.code === 'auth/network-request-failed')) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError;
+  },
+
+  async _doSignupAttempt(name, email, password, phone, isRetry) {
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
@@ -693,7 +713,8 @@ const Auth = {
       'auth/web-storage-unsupported': 'المتصفح لا يدعم التخزين المطلوب',
       'auth/missing-initial-state': 'حدث خطأ في عملية تسجيل الدخول، يرجى المحاولة مرة أخرى',
       'auth/account-exists-with-different-credential': 'يوجد حساب بنفس البريد الإلكتروني بطريقة دخول مختلفة',
-      'auth/too-many-attempts': 'محاولات كثيرة، حاول لاحقاً'
+      'auth/too-many-attempts': 'محاولات كثيرة، حاول لاحقاً',
+      'auth/internal-error': 'حدث خطأ داخلي. تأكد من اتصالك بالإنترنت وحاول مرة أخرى. إذا استمرت المشكلة، جرّب مسح بيانات المتصفح أو استخدم نافذة تصفح خاص.'
     };
     return ErrorTracker.createUserError(error, {
       operation: 'auth.firebase',
