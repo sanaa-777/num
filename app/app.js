@@ -140,15 +140,21 @@ const App = {
     const [view, ...params] = hash.split('/');
     const previousView = this.currentView;
     this.currentView = view;
-    if (view === 'place' && params[0]) this.showPlace(params[0]);
-    else if (view === 'editplace' && params[0]) this.showEditPlace(params[0]);
-    else if (view === 'offer' && params[0]) this.showItemDetail(params[0], 'offer');
-    else if (view === 'job' && params[0]) this.showItemDetail(params[0], 'job');
-    else if (view === 'event' && params[0]) this.showItemDetail(params[0], 'event');
-    else if (view === 'category' && params[0]) { this.selectedCategory = params[0]; this.selectedCity = null; this.currentView = 'category'; this.render(); }
-    else if (view === 'subcategory' && params[0]) { this.selectedCategory = params[0]; this.selectedSubCategory = params[1]; this.selectedCity = null; this.currentView = 'subcategory'; this.render(); }
-    else if (view === 'city' && params[0]) { this.selectedCity = params[0]; this.currentView = 'search'; this.render(); }
-    else this.render();
+    try {
+      if (view === 'place' && params[0]) this.showPlace(params[0]);
+      else if (view === 'editplace' && params[0]) this.showEditPlace(params[0]);
+      else if (view === 'offer' && params[0]) this.showItemDetail(params[0], 'offer');
+      else if (view === 'job' && params[0]) this.showItemDetail(params[0], 'job');
+      else if (view === 'event' && params[0]) this.showItemDetail(params[0], 'event');
+      else if (view === 'category' && params[0]) { this.selectedCategory = params[0]; this.selectedCity = null; this.currentView = 'category'; this.render(); }
+      else if (view === 'subcategory' && params[0]) { this.selectedCategory = params[0]; this.selectedSubCategory = params[1]; this.selectedCity = null; this.currentView = 'subcategory'; this.render(); }
+      else if (view === 'city' && params[0]) { this.selectedCity = params[0]; this.currentView = 'search'; this.render(); }
+      else this.render();
+    } catch (e) {
+      console.error('Handle route error:', e);
+      this.currentView = 'home';
+      this.render();
+    }
   },
 
   // ====== Notification Badge Updater (Unified) ======
@@ -223,20 +229,28 @@ const App = {
   // Handle notification click — mark as read via unified system
   _onNotifClick: async function(notifId, alreadyRead) {
     if (!alreadyRead) {
-      await Auth.markNotificationRead(notifId);
-      // Update the visual state of the clicked item
-      const container = document.getElementById('notifsList');
-      if (container) {
-        // Re-render to reflect read state
-        this._loadNotifications();
+      try {
+        await Auth.markNotificationRead(notifId);
+        // Update the visual state of the clicked item
+        const container = document.getElementById('notifsList');
+        if (container) {
+          // Re-render to reflect read state
+          this._loadNotifications();
+        }
+      } catch (e) {
+        console.warn('Mark notification read failed:', e.message);
       }
     }
   },
 
   // Mark all notifications as read
   _markAllRead: async function() {
-    await Auth.markAllNotificationsRead();
-    this._loadNotifications();
+    try {
+      await Auth.markAllNotificationsRead();
+      this._loadNotifications();
+    } catch (e) {
+      console.warn('Mark all notifications read failed:', e.message);
+    }
   },
 
   // Dark mode helper
@@ -543,8 +557,13 @@ const App = {
 
   // Profile Image Upload
   async handleAvatarUpload(file) {
-    await Auth.uploadAvatar(file);
-    this.render();
+    try {
+      await Auth.uploadAvatar(file);
+      this.render();
+    } catch (e) {
+      console.error('Avatar upload failed:', e.message);
+      this.showToast('فشل رفع الصورة', 'error');
+    }
   },
 
   // ====== HEADER ======
@@ -2338,23 +2357,29 @@ const App = {
 
   async showEditPlace(placeId) {
     if (!Auth.currentUser) { location.hash = 'login'; return; }
-    // Load the place
-    const place = await Data.getPlace(placeId);
-    if (!place || place.owner !== Auth.currentUser.id) {
-      this.showToast('ليس لديك صلاحية تعديل هذا المكان', 'error');
-      location.hash = 'myplaces'; return;
+    try {
+      // Load the place
+      const place = await Data.getPlace(placeId);
+      if (!place || place.owner !== Auth.currentUser.id) {
+        this.showToast('ليس لديك صلاحية تعديل هذا المكان', 'error');
+        location.hash = 'myplaces'; return;
+      }
+      // Check for existing pending edit
+      const existingEdits = await Data.getMyPlaceEdits(Auth.currentUser.id);
+      const pendingEdit = existingEdits.find(e => e.placeId === placeId && e.status === 'pending');
+      if (pendingEdit) {
+        this.showToast('يوجد طلب تعديل معلق بالفعل. انتظر موافقة الأدمن أولاً.', 'warning', 4000);
+        location.hash = 'myplaces'; return;
+      }
+      this._editingPlaceId = placeId;
+      this._editingPlaceImages = [...(place.images || [])];
+      this.currentView = 'editplace';
+      this._renderEditPlaceForm(place);
+    } catch (e) {
+      console.error('Show edit place failed:', e.message);
+      this.showToast('تعذر تحميل بيانات النشاط', 'error');
+      location.hash = 'myplaces';
     }
-    // Check for existing pending edit
-    const existingEdits = await Data.getMyPlaceEdits(Auth.currentUser.id);
-    const pendingEdit = existingEdits.find(e => e.placeId === placeId && e.status === 'pending');
-    if (pendingEdit) {
-      this.showToast('يوجد طلب تعديل معلق بالفعل. انتظر موافقة الأدمن أولاً.', 'warning', 4000);
-      location.hash = 'myplaces'; return;
-    }
-    this._editingPlaceId = placeId;
-    this._editingPlaceImages = [...(place.images || [])];
-    this.currentView = 'editplace';
-    this._renderEditPlaceForm(place);
   },
 
   _renderEditPlaceForm(place) {
@@ -2601,11 +2626,11 @@ const App = {
     }
   },
 
-  async toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } await Data.toggleFavorite(Auth.currentUser.id, pid); await Data.preloadAll(); this.render(); },
+  async toggleFav(pid) { if (!Auth.currentUser) { location.hash = 'login'; return; } try { await Data.toggleFavorite(Auth.currentUser.id, pid); await Data.preloadAll(); this.render(); } catch (e) { console.error('Toggle favorite failed:', e.message); this.showToast('فشل تحديث المفضلة', 'error'); } },
   setRating(s) { document.querySelectorAll('[data-star]').forEach(b => { const v = parseInt(b.dataset.star); b.className = v <= s ? 'text-yellow-500' : 'text-gray-300'; b.querySelector('i')?.classList.toggle('fill-yellow-500', v <= s); }); this._selectedRating = s; },
   async submitReview(pid) { if (!this._selectedRating) { this.showToast('اختر تقييم أولاً', 'warning'); return; } const c = document.getElementById('reviewComment').value; if (!c) { this.showToast('اكتب تعليقك أولاً', 'warning'); return; } try { await Data.addReview(pid, Auth.currentUser.id, Auth.currentUser.name, Auth.currentUser.avatar || '', this._selectedRating, c); this._selectedRating = 0; await Data.preloadAll(); this.showToast('تم إضافة مراجعتك بنجاح', 'success'); setTimeout(() => this.showPlace(pid), 1000); } catch (error) { ErrorTracker.capture(error, { operation: 'app.review.submit', source: 'place_detail_review_form' }); this.showToast(ErrorTracker.getInlineMessage(error), 'error'); } },
-  deletePlaceConfirm(id) { if (confirm('هل أنت متأكد من حذف هذا النشاط؟')) { Data.deletePlace(id); this.showToast('تم حذف النشاط', 'success'); setTimeout(() => { location.hash = 'myplaces'; }, 1000); } },
-  async updateProfile() { await Auth.updateProfile({ name:document.getElementById('profileName').value, phone:document.getElementById('profilePhone').value, bio:document.getElementById('profileBio')?.value||'' }); this.showToast('تم تحديث الملف الشخصي', 'success'); setTimeout(() => this.render(), 1000); },
+  async deletePlaceConfirm(id) { if (confirm('هل أنت متأكد من حذف هذا النشاط؟')) { try { await Data.deletePlace(id); this.showToast('تم حذف النشاط', 'success'); setTimeout(() => { location.hash = 'myplaces'; }, 1000); } catch (e) { console.error('Delete place failed:', e.message); this.showToast('فشل حذف النشاط', 'error'); } } },
+  async updateProfile() { try { await Auth.updateProfile({ name:document.getElementById('profileName').value, phone:document.getElementById('profilePhone').value, bio:document.getElementById('profileBio')?.value||'' }); this.showToast('تم تحديث الملف الشخصي', 'success'); setTimeout(() => this.render(), 1000); } catch (e) { console.error('Update profile failed:', e.message); this.showToast('فشل تحديث الملف الشخصي', 'error'); } },
 
   // ====== مشاركة النشاط التجاري ======
   sharePlace(pid) {
