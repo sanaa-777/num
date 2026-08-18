@@ -137,6 +137,11 @@
   <script src="app/pricing-firestore.js?v=20260817090000"></script>
 
   <script>
+    // === Security: Prevent iframe embedding (clickjacking protection) ===
+    if (window.top !== window.self) {
+      window.top.location = window.self.location;
+    }
+
     // =============================================
     // Admin Panel Controller
     // =============================================
