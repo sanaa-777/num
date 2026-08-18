@@ -156,6 +156,18 @@ const Auth = {
       if (this._authListenerAttached) { resolve(this.currentUser); return; }
       this._authListenerAttached = true;
 
+      // Handle redirect result from Google Sign-In
+      auth.getRedirectResult().then((result) => {
+        if (result && result.user) {
+          console.log('Google redirect sign-in successful');
+          this._normalizeSocialUser(result.user).then(() => {
+            if (typeof App !== 'undefined' && App.render) App.render();
+          });
+        }
+      }).catch((error) => {
+        console.warn('Redirect result error:', error.code);
+      });
+
       // Timeout: إذا لم يستجب Firebase خلال 8 ثوانٍ
       const timeout = setTimeout(() => {
         console.warn('Auth init timeout - continuing without auth');
@@ -374,8 +386,8 @@ const Auth = {
           // fallback
         }
       }
-      // popup blocked — نحاول redirect كخيار أخير
-      if (error && (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment')) {
+      // popup blocked or internal error — نحاول redirect كخيار أخير
+      if (error && (error.code === 'auth/popup-blocked' || error.code === 'auth/operation-not-supported-in-this-environment' || error.code === 'auth/internal-error' || error.code === 'auth/cancelled-popup-request')) {
         try {
           await auth.signInWithRedirect(provider);
           return { redirecting: true };
