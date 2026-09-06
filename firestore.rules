@@ -23,6 +23,70 @@ service cloud.firestore {
         get(/databases/$(database)/documents/places/$(placeId)).data.owner == request.auth.uid;
     }
 
+    // Shared validation for user-submitted events, jobs and offers.
+    // Administrative writes are handled by isAdmin() in the collection rules.
+    function validListingFields() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+        'owner', 'title', 'description', 'startDate', 'endDate',
+        'location', 'phone', 'whatsapp', 'facebook', 'instagram',
+        'telegram', 'website', 'image', 'images', 'createdAt',
+        'updatedAt', 'status', 'isActive', 'featured', 'verified',
+        'views', 'clicks', 'organizer', 'companyName', 'agentName'
+      ]) &&
+      d.title is string && d.title.size() > 0 && d.title.size() <= 200 &&
+      (!d.keys().hasAny(['description']) ||
+        (d.description is string && d.description.size() <= 5000)) &&
+      (!d.keys().hasAny(['location']) ||
+        (d.location is string && d.location.size() <= 300)) &&
+      (!d.keys().hasAny(['phone']) ||
+        (d.phone is string && d.phone.size() <= 40)) &&
+      (!d.keys().hasAny(['whatsapp']) ||
+        (d.whatsapp is string && d.whatsapp.size() <= 40)) &&
+      (!d.keys().hasAny(['facebook']) ||
+        (d.facebook is string && d.facebook.size() <= 500)) &&
+      (!d.keys().hasAny(['instagram']) ||
+        (d.instagram is string && d.instagram.size() <= 500)) &&
+      (!d.keys().hasAny(['telegram']) ||
+        (d.telegram is string && d.telegram.size() <= 500)) &&
+      (!d.keys().hasAny(['website']) ||
+        (d.website is string && d.website.size() <= 500)) &&
+      (!d.keys().hasAny(['image']) ||
+        (d.image is string && d.image.size() <= 2048)) &&
+      (!d.keys().hasAny(['images']) ||
+        (d.images is list && d.images.size() <= 5)) &&
+      (!d.keys().hasAny(['views']) || d.views is int) &&
+      (!d.keys().hasAny(['clicks']) || d.clicks is int);
+    }
+
+    function validListingCreate() {
+      let d = request.resource.data;
+      return validListingFields() &&
+        d.owner == request.auth.uid &&
+        d.status == 'pending' &&
+        d.isActive == false &&
+        d.featured == false &&
+        d.verified == false &&
+        d.startDate is timestamp &&
+        d.endDate is timestamp &&
+        d.endDate >= d.startDate &&
+        d.createdAt is timestamp &&
+        d.updatedAt is timestamp &&
+        d.keys().hasAny(['description']) &&
+        d.keys().hasAny(['location']) &&
+        (!d.keys().hasAny(['organizer']) ||
+          (d.organizer is string && d.organizer.size() <= 200)) &&
+        (!d.keys().hasAny(['companyName']) ||
+          (d.companyName is string && d.companyName.size() <= 200)) &&
+        (!d.keys().hasAny(['agentName']) ||
+          (d.agentName is string && d.agentName.size() <= 200));
+    }
+
+    function validListingUpdate() {
+      let d = request.resource.data;
+      return validListingFields() && d.owner == resource.data.owner;
+    }
+
     // ============ Users ============
     match /users/{userId} {
       // Anyone authenticated can read user profiles (for displaying names/avatars)
@@ -143,22 +207,43 @@ service cloud.firestore {
     // ============ Offers ============
     match /offers/{offerId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
+      allow create: if isAdmin() || (isAuthenticated() && validListingCreate());
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        resource.data.owner == request.auth.uid &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['status', 'isActive', 'featured', 'verified', 'owner']) &&
+        validListingUpdate()
+      );
+      allow delete: if isAdmin();
     }
 
     // ============ Jobs ============
     match /jobs/{jobId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
+      allow create: if isAdmin() || (isAuthenticated() && validListingCreate());
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        resource.data.owner == request.auth.uid &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['status', 'isActive', 'featured', 'verified', 'owner']) &&
+        validListingUpdate()
+      );
+      allow delete: if isAdmin();
     }
 
     // ============ Events ============
     match /events/{eventId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
+      allow create: if isAdmin() || (isAuthenticated() && validListingCreate());
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        resource.data.owner == request.auth.uid &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['status', 'isActive', 'featured', 'verified', 'owner']) &&
+        validListingUpdate()
+      );
+      allow delete: if isAdmin();
     }
 
     // ============ Pricing ============

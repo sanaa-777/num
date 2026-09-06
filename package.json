@@ -6,9 +6,12 @@
     "build:css": "tailwindcss -c tailwind.config.cjs -i ./tailwind.input.css -o ./app/tailwind.css --minify",
     "stamp:build": "node scripts/stamp-build.js",
     "build": "npm run build:css && npm run stamp:build",
+    "test:rules": "firebase emulators:exec --only firestore --project deel-39f2e-rules-tests \"node scripts/firestore-rules.test.js\"",
     "serve": "python3 -m http.server 4173"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.18.0",
     "tailwindcss": "^3.4.17"
   },
   "description": "مستودع منظم لملفات تطبيق **دليل اليمن** المستخرجة من ملف APK المتوفر.",
