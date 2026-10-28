@@ -1,9 +1,9 @@
 // =============================================
 // التطبيق الرئيسي - Main App (أيقونات Lucide احترافية)
 // =============================================
-
 const App = {
   currentView: 'home', searchQuery: '', selectedCategory: null, selectedSubCategory: null, selectedCity: null, _selectedRating: 0, _initialized: false, _lastRenderedView: null, _scrollPositions: {}, _isRestoringScroll: false,
+  _authNavigationTarget: null, _authNavigationTimeout: null, _lastRenderedUserId: null,
 
   // ====== HTML Sanitization (XSS Prevention) ======
   _escHtml(str) {
@@ -152,6 +152,34 @@ const App = {
       else this.render();
     } catch (e) {
       console.error('Handle route error:', e);
+      this.currentView = 'home';
+      this.render();
+    }
+  },
+
+  _beginAuthNavigation() {
+    this._authNavigationTarget = 'home';
+    clearTimeout(this._authNavigationTimeout);
+    this._authNavigationTimeout = setTimeout(() => {
+      this._authNavigationTarget = null;
+      this._authNavigationTimeout = null;
+    }, 10000);
+  },
+
+  _cancelAuthNavigation() {
+    clearTimeout(this._authNavigationTimeout);
+    this._authNavigationTimeout = null;
+    this._authNavigationTarget = null;
+  },
+
+  _navigateHomeAfterAuth() {
+    const hashView = (location.hash.slice(1) || 'home').split('/')[0];
+    const userId = Auth.currentUser?.id || null;
+    if (hashView !== 'home') {
+      location.hash = 'home';
+      return;
+    }
+    if (this.currentView !== 'home' || this._lastRenderedUserId !== userId) {
       this.currentView = 'home';
       this.render();
     }
@@ -309,6 +337,7 @@ const App = {
         }
       }
       this._lastRenderedView = this.currentView;
+      this._lastRenderedUserId = user?.id || null;
     } catch (e) {
       console.error('Render error:', e);
       const payload = ErrorTracker.normalize(e, {
@@ -2067,11 +2096,12 @@ const App = {
   async doLogin() {
     const err = document.getElementById('loginError');
     try {
+      this._beginAuthNavigation();
       await Auth.login(document.getElementById('loginEmail').value, document.getElementById('loginPassword').value);
       err.classList.add('hidden');
-      location.hash = 'home';
-      this.render();
+      this._navigateHomeAfterAuth();
     } catch (e) {
+      this._cancelAuthNavigation();
       err.querySelector('span').textContent = ErrorTracker.getInlineMessage(e);
       err.classList.remove('hidden');
       this.initIcons();
@@ -2109,11 +2139,12 @@ const App = {
     if (!n||!e||!pw) { err.querySelector('span').textContent = 'يرجى ملء الحقول المطلوبة'; err.classList.remove('hidden'); this.initIcons(); return; }
     if (pw.length < 6) { err.querySelector('span').textContent = 'كلمة المرور 6 أحرف على الأقل'; err.classList.remove('hidden'); this.initIcons(); return; }
     try {
+      this._beginAuthNavigation();
       await Auth.signup(n, e, pw, p);
       err.classList.add('hidden');
-      location.hash = 'home';
-      this.render();
+      this._navigateHomeAfterAuth();
     } catch (x) {
+      this._cancelAuthNavigation();
       err.querySelector('span').textContent = ErrorTracker.getInlineMessage(x);
       err.classList.remove('hidden');
       this.initIcons();
@@ -2129,11 +2160,12 @@ const App = {
       btn.style.pointerEvents = 'none';
     }
     try {
+      this._beginAuthNavigation();
       const result = await Auth.loginWithGoogle();
-      if (result && result.redirecting) return;
-      location.hash = 'home';
-      this.render();
+      if (result && result.redirecting) { this._cancelAuthNavigation(); return; }
+      this._navigateHomeAfterAuth();
     } catch (e) {
+      this._cancelAuthNavigation();
       const msg = ErrorTracker.getInlineMessage(e);
       if (msg && !msg.includes('تم إغلاق')) {
         const errEl = document.getElementById('loginError') || document.getElementById('signupError');

@@ -241,9 +241,23 @@ const Auth = {
           // تحديث الواجهة إذا كان التطبيق مُحمّلاً
           // لا تمسح صفحات التفاصيل — تدير محتواها بنفسها
           if (typeof App !== 'undefined' && App.render) {
-            const v = App.currentView;
-            if (!['place', 'offer', 'job', 'event', 'editplace'].includes(v)) {
-              App.render();
+            const target = App._authNavigationTarget;
+            if (target) {
+              App._authNavigationTarget = null;
+              clearTimeout(App._authNavigationTimeout);
+              App._authNavigationTimeout = null;
+              const route = (location.hash.slice(1) || 'home').split('/')[0];
+              if (route !== target) {
+                location.hash = target;
+              } else if (App.currentView !== target || App._lastRenderedUserId !== (this.currentUser?.id || null)) {
+                App.currentView = target;
+                App.render();
+              }
+            } else {
+              const v = App.currentView;
+              if (!['place', 'offer', 'job', 'event', 'editplace'].includes(v)) {
+                App.render();
+              }
             }
           }
         });

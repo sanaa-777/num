@@ -7,6 +7,8 @@
     "stamp:build": "node scripts/stamp-build.js",
     "build": "npm run build:css && npm run stamp:build",
     "test:images": "node scripts/image-upload-regression.test.js",
+    "test:navigation": "node scripts/auth-navigation-regression.test.js",
+    "test": "npm run test:images && npm run test:navigation",
     "test:rules": "firebase emulators:exec --only firestore --project deel-39f2e-rules-tests \"node scripts/firestore-rules.test.js\"",
     "serve": "python3 -m http.server 4173"
   },
