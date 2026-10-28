@@ -479,6 +479,7 @@ const App = {
   placeImages: [],
   _uploadingImages: false,
   _uploadProgress: {},
+  _submittingPlace: false,
   
   async handlePlaceImageUpload(files) {
     if (!files || files.length === 0) return;
@@ -1286,10 +1287,19 @@ const App = {
                 <i data-lucide="image" class="w-3.5 h-3.5 text-gray-500"></i>صور المكان <span class="text-gray-400 font-normal">(حتى 5 صور)</span>
               </label>
               <div id="placeImagePreview" class="flex flex-wrap gap-2"></div>
-              <p class="text-[10px] text-gray-400 mt-1">${this.placeImages.length}/5 صور مرفوعة</p>
+              <p class="text-[10px] text-gray-400 mt-1">${this.placeImages.length}/5 صور مختارة — تُرفع عند إرسال الطلب</p>
+              <div id="placeUploadStatus" class="hidden mt-2 rounded-lg border border-blue-100 bg-blue-50 p-3" role="status" aria-live="polite">
+                <div class="flex items-center justify-between gap-2 text-xs text-blue-800">
+                  <span id="placeUploadProgressText">جاري تجهيز الصور...</span>
+                  <span id="placeUploadProgressPercent" class="font-bold tabular-nums">0%</span>
+                </div>
+                <div class="mt-2 h-2 overflow-hidden rounded-full bg-blue-100" role="progressbar" aria-label="تقدم رفع الصور" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div id="placeUploadProgressBar" class="h-full rounded-full bg-blue-600 transition-all duration-150" style="width:0%"></div>
+                </div>
+              </div>
               ${!ImageStorage.isConfigured() ? '<p class="text-[10px] text-orange-500 mt-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>رفع الصور غير مُفعّل. يرجى التواصل مع الإدارة.</p>' : ''}
             </div>
-            <button id="submitPlaceBtn" onclick="App.submitPlace()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i>إضافة المكان</button>
+            <button id="submitPlaceBtn" onclick="App.submitPlace()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"><i data-lucide="send" class="w-5 h-5"></i>نشر النشاط للمراجعة</button>
           </div>
         </div>
       </div>
@@ -2324,8 +2334,29 @@ const App = {
     return isValid;
   },
 
+  _setPlaceUploadProgress(message, percent, state) {
+    const status = document.getElementById('placeUploadStatus');
+    if (!status) return;
+    status.classList.remove('hidden');
+    status.dataset.state = state || 'uploading';
+    const text = document.getElementById('placeUploadProgressText');
+    const value = document.getElementById('placeUploadProgressPercent');
+    const bar = document.getElementById('placeUploadProgressBar');
+    const progressbar = status.querySelector('[role="progressbar"]');
+    if (text) text.textContent = message;
+    if (value) value.textContent = Math.max(0, Math.min(100, Math.round(percent || 0)) ) + '%';
+    if (bar) {
+      bar.style.width = Math.max(0, Math.min(100, percent || 0)) + '%';
+      bar.classList.toggle('bg-red-600', state === 'error');
+      bar.classList.toggle('bg-blue-600', state !== 'error');
+    }
+    if (progressbar) progressbar.setAttribute('aria-valuenow', String(Math.max(0, Math.min(100, Math.round(percent || 0)))));
+  },
+
   async submitPlace() {
+    if (this._submittingPlace) return;
     if (!this.validatePlaceForm()) return;
+    this._submittingPlace = true;
     
     // Disable button to prevent double-click
     const btn = document.getElementById('submitPlaceBtn');
@@ -2340,27 +2371,46 @@ const App = {
     const n = document.getElementById('placeName').value, c = document.getElementById('placeCategory').value, s = document.getElementById('placeSubCategory').value, ci = document.getElementById('placeCity').value;
     const workDays = Array.from(document.querySelectorAll('.work-day-cb:checked')).map(cb => cb.value);
     try {
-      // Upload images to GitHub-based storage (free, no payment)
+      // Upload every selected image before writing the pending place document.
       let imageUrls = [];
       if (this.placeImages && this.placeImages.length > 0) {
         if (!ImageStorage.isConfigured()) {
-          this.showToast('⚠️ رفع الصور غير مُفعّل. يرجى التواصل مع الإدارة.', 'warning', 5000);
-        } else {
-          this.showToast('جاري رفع الصور...', 'info', 10000);
-          for (const dataUrl of this.placeImages) {
-            try {
-              // A data: URL is already base64-encoded; convert it directly.
-              // fetch(data:) is inconsistently supported/rejected by browsers and
-              // can fail before the real Cloudinary upload starts.
-              const blob = ImageStorage._dataURLtoBlob(dataUrl);
-              const result = await ImageStorage.upload(blob, 'places/' + (Auth.currentUser?.id || 'anon'));
-              imageUrls.push(result.url);
-            } catch (uploadErr) {
-              console.error('Image upload failed:', uploadErr);
-              this.showToast('فشل رفع صورة: ' + uploadErr.message, 'error');
-            }
+          throw new Error('رفع الصور غير مُعدّ حالياً. لم يتم إرسال الطلب؛ يرجى المحاولة لاحقاً أو التواصل مع الإدارة.');
+        }
+        const imageBlobs = this.placeImages.map((dataUrl) => {
+          const blob = ImageStorage._dataURLtoBlob(dataUrl);
+          if (!blob.size) throw new Error('إحدى الصور المختارة فارغة أو غير صالحة.');
+          return blob;
+        });
+        const totalBytes = imageBlobs.reduce((sum, blob) => sum + blob.size, 0);
+        let completedBytes = 0;
+        for (let i = 0; i < imageBlobs.length; i++) {
+          const blob = imageBlobs[i];
+          const imageNumber = i + 1;
+          const totalImages = imageBlobs.length;
+          const setProgress = (imagePercent) => {
+            const uploadedBytes = completedBytes + blob.size * (imagePercent / 100);
+            const totalPercent = totalBytes ? Math.floor((uploadedBytes / totalBytes) * 100) : imagePercent;
+            const safeTotalPercent = imageNumber === totalImages && imagePercent === 100 ? 100 : totalPercent;
+            const message = `جاري رفع الصورة ${imageNumber} من ${totalImages}`;
+            this._setPlaceUploadProgress(message, safeTotalPercent, 'uploading');
+            if (btn) btn.innerHTML = `<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"/></svg> ${message} (${safeTotalPercent}%)`;
+          };
+          setProgress(0);
+          try {
+            // A data URL is already base64-encoded; convert directly to a Blob.
+            const result = await ImageStorage.upload(blob, 'places/' + (Auth.currentUser?.id || 'anon'), (event) => setProgress(event.percent));
+            imageUrls.push(result.url);
+            completedBytes += blob.size;
+            setProgress(100);
+          } catch (uploadErr) {
+            const error = new Error(`تعذر رفع الصورة ${imageNumber} من ${totalImages}: ${uploadErr.message}`);
+            error.cause = uploadErr;
+            throw error;
           }
         }
+      } else if (btn) {
+        btn.innerHTML = '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"/></svg> جاري إرسال طلبك...';
       }
 
       await Data.addPlace({ 
@@ -2403,7 +2453,7 @@ const App = {
       if (Auth.currentUser.verified) {
         this.showToast('✅ تم نشر نشاطك بنجاح وهو ظاهر الآن للجميع!', 'success', 4000);
       } else {
-        this.showToast('⏳ تم إرسال طلبك! نشاطك قيد المراجعة وسيظهر بعد موافقة الإدارة', 'info', 5000);
+        this.showToast('تم إرسال طلبك إلى الإدارة للمراجعة بنجاح. ستتلقى إشعاراً بعد مراجعته.', 'info', 6000);
       }
       // Force view switch immediately to avoid relying only on hashchange
       this.currentView = 'myplaces';
@@ -2414,6 +2464,7 @@ const App = {
         window.scrollTo({ top: 0, behavior: 'instant' });
       }
     } catch (error) {
+      this._setPlaceUploadProgress(error.message || 'تعذر إرسال الطلب. تحقق من الاتصال وحاول مجدداً.', 0, 'error');
       // Re-enable button on error
       if (btn) {
         btn.disabled = false;
@@ -2422,7 +2473,15 @@ const App = {
         btn.style.pointerEvents = 'auto';
       }
       ErrorTracker.capture(error, { operation: 'app.place.submit', source: 'submit_place_form' });
-      this.showToast(ErrorTracker.getInlineMessage(error), 'error');
+      this.showToast(this.h(error.message || ErrorTracker.getInlineMessage(error)), 'error', 6000);
+    } finally {
+      this._submittingPlace = false;
+      if (btn && btn.isConnected && btn.disabled) {
+        btn.disabled = false;
+        btn.innerHTML = btn.dataset.originalHtml || '<i data-lucide="send" class="w-5 h-5"></i>نشر النشاط للمراجعة';
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      }
     }
   },
 

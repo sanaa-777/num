@@ -111,7 +111,7 @@ const ImageStorage = {
   },
 
   // ====== Upload to Cloudinary ======
-  async upload(file, folder) {
+  async upload(file, folder, onProgress) {
     if (!this.isConfigured()) {
       throw new Error('رفع الصور غير مُعدّل. يرجى تكوين Cloudinary من إعدادات لوحة التحكم.');
     }
@@ -135,30 +135,50 @@ const ImageStorage = {
     var random = Math.random().toString(36).slice(2, 8);
     formData.append('public_id', timestamp + '_' + random);
 
-    // Upload
-    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    var timeout = controller ? setTimeout(function () { controller.abort(); }, this.UPLOAD_TIMEOUT_MS) : null;
-    var response;
-    try {
-      response = await fetch(
-        'https://api.cloudinary.com/v1_1/' + this._cloudName + '/image/upload',
-        { method: 'POST', body: formData, signal: controller ? controller.signal : undefined }
-      );
-    } catch (error) {
-      if (error && error.name === 'AbortError') {
-        throw new Error('انتهت مهلة رفع الصورة. تحقق من الاتصال ثم أعد المحاولة.');
+    // XMLHttpRequest exposes actual upload progress; fetch does not expose
+    // request-body progress in all supported browsers.
+    var result = await new Promise((resolve, reject) => {
+      var xhr = new XMLHttpRequest();
+      var settled = false;
+      var finish = function (callback, value) {
+        if (settled) return;
+        settled = true;
+        xhr.onload = xhr.onerror = xhr.ontimeout = xhr.onabort = null;
+        if (xhr.upload) xhr.upload.onprogress = null;
+        callback(value);
+      };
+
+      xhr.open('POST', 'https://api.cloudinary.com/v1_1/' + this._cloudName + '/image/upload', true);
+      xhr.timeout = this.UPLOAD_TIMEOUT_MS;
+      if (xhr.upload && typeof onProgress === 'function') {
+        xhr.upload.onprogress = function (event) {
+          if (!event.lengthComputable || settled) return;
+          var percent = Math.max(0, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+          try { onProgress({ loaded: event.loaded, total: event.total, percent: percent }); }
+          catch (callbackError) { console.warn('Image upload progress callback failed:', callbackError); }
+        };
       }
-      throw error;
-    } finally {
-      if (timeout) clearTimeout(timeout);
-    }
-
-    if (!response.ok) {
-      var err = await response.json().catch(function () { return {}; });
-      throw new Error(err.error?.message || 'Upload failed: HTTP ' + response.status);
-    }
-
-    var result = await response.json();
+      xhr.onload = function () {
+        var body = {};
+        try { body = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
+        if (xhr.status >= 200 && xhr.status < 300) {
+          finish(resolve, body);
+        } else {
+          finish(reject, new Error(body.error?.message || 'فشل رفع الصورة (HTTP ' + xhr.status + ')'));
+        }
+      };
+      xhr.onerror = function () {
+        finish(reject, new Error('تعذر الاتصال بخدمة الصور. تحقق من الإنترنت ثم أعد المحاولة.'));
+      };
+      xhr.ontimeout = function () {
+        finish(reject, new Error('انتهت مهلة رفع الصورة. تحقق من الاتصال ثم أعد المحاولة.'));
+      };
+      xhr.onabort = function () {
+        finish(reject, new Error('تم إلغاء رفع الصورة قبل اكتماله.'));
+      };
+      try { xhr.send(formData); }
+      catch (error) { finish(reject, error); }
+    });
 
     // Return optimized URL (auto format + quality)
     var optimizedUrl = result.secure_url.replace(
