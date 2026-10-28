@@ -25,6 +25,7 @@ const ImageStorage = {
   MAX_DIMENSION: 1200,
   QUALITY: 0.82,
   MAX_FILE_SIZE: 900000,  // 900 KB after compression (Cloudinary free: 10 MB upload limit)
+  UPLOAD_TIMEOUT_MS: 30000,
 
   // ====== Configuration ======
   configure(cloudName, uploadPreset) {
@@ -77,23 +78,29 @@ const ImageStorage = {
       reader.onload = function (e) {
         var img = new Image();
         img.onload = function () {
-          var canvas = document.createElement('canvas');
-          var w = img.width, h = img.height;
-          if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
-          if (h > maxWidth) { w = (maxWidth / h) * w; h = maxWidth; }
-          canvas.width = w;
-          canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          try {
+            var canvas = document.createElement('canvas');
+            var w = img.width, h = img.height;
+            if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
+            if (h > maxWidth) { w = (maxWidth / h) * w; h = maxWidth; }
+            canvas.width = w;
+            canvas.height = h;
+            var context = canvas.getContext('2d');
+            if (!context) throw new Error('تعذر تهيئة معالجة الصورة في هذا المتصفح');
+            context.drawImage(img, 0, 0, w, h);
 
-          // Try decreasing quality until under size limit
-          var quality = ImageStorage.QUALITY;
-          var blob;
-          do {
-            blob = ImageStorage._dataURLtoBlob(canvas.toDataURL('image/jpeg', quality));
-            quality -= 0.08;
-          } while (blob.size > ImageStorage.MAX_FILE_SIZE && quality > 0.25);
+            // Try decreasing quality until under size limit
+            var quality = ImageStorage.QUALITY;
+            var blob;
+            do {
+              blob = ImageStorage._dataURLtoBlob(canvas.toDataURL('image/jpeg', quality));
+              quality -= 0.08;
+            } while (blob.size > ImageStorage.MAX_FILE_SIZE && quality > 0.25);
 
-          resolve(blob);
+            resolve(blob);
+          } catch (error) {
+            reject(error);
+          }
         };
         img.onerror = function () { reject(new Error('فشل تحميل الصورة')); };
         img.src = e.target.result;
@@ -129,10 +136,22 @@ const ImageStorage = {
     formData.append('public_id', timestamp + '_' + random);
 
     // Upload
-    var response = await fetch(
-      'https://api.cloudinary.com/v1_1/' + this._cloudName + '/image/upload',
-      { method: 'POST', body: formData }
-    );
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timeout = controller ? setTimeout(function () { controller.abort(); }, this.UPLOAD_TIMEOUT_MS) : null;
+    var response;
+    try {
+      response = await fetch(
+        'https://api.cloudinary.com/v1_1/' + this._cloudName + '/image/upload',
+        { method: 'POST', body: formData, signal: controller ? controller.signal : undefined }
+      );
+    } catch (error) {
+      if (error && error.name === 'AbortError') {
+        throw new Error('انتهت مهلة رفع الصورة. تحقق من الاتصال ثم أعد المحاولة.');
+      }
+      throw error;
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       var err = await response.json().catch(function () { return {}; });
