@@ -46,7 +46,7 @@ const ImageStorage = {
     try {
       // Test using the same unsigned upload endpoint as real uploads.
       // Upload a tiny 1x1 transparent PNG to verify credentials work.
-      var TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQI12NgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12P4z8BQDwAEgAF/QualzQAAAABJRU5ErkJggg==';
+      var TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j6WQAAAAASUVORK5CYII=';
       var blob = this._dataURLtoBlob(TINY_PNG);
       var formData = new FormData();
       formData.append('file', blob);

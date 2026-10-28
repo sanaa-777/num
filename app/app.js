@@ -496,13 +496,19 @@ const App = {
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let w = img.width, h = img.height;
-          if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
-          if (h > maxWidth) { w = (maxWidth / h) * w; h = maxWidth; }
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL('image/jpeg', 0.75));
+          try {
+            const canvas = document.createElement('canvas');
+            let w = img.width, h = img.height;
+            if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
+            if (h > maxWidth) { w = (maxWidth / h) * w; h = maxWidth; }
+            canvas.width = w; canvas.height = h;
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error('تعذر تهيئة معالجة الصورة في هذا المتصفح');
+            context.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', 0.75));
+          } catch (error) {
+            reject(error);
+          }
         };
         img.onerror = () => reject(new Error('Failed to load image'));
         img.src = e.target.result;
@@ -2311,7 +2317,10 @@ const App = {
           this.showToast('جاري رفع الصور...', 'info', 10000);
           for (const dataUrl of this.placeImages) {
             try {
-              const blob = await fetch(dataUrl).then(r => r.blob());
+              // A data: URL is already base64-encoded; convert it directly.
+              // fetch(data:) is inconsistently supported/rejected by browsers and
+              // can fail before the real Cloudinary upload starts.
+              const blob = ImageStorage._dataURLtoBlob(dataUrl);
               const result = await ImageStorage.upload(blob, 'places/' + (Auth.currentUser?.id || 'anon'));
               imageUrls.push(result.url);
             } catch (uploadErr) {
