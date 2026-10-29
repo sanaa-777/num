@@ -14,8 +14,14 @@ assert.ok(submitMatch, 'submitPlace implementation exists');
 const submitSource = submitMatch[1];
 assert.match(submitSource, /ImageStorage\.upload\(blob,[\s\S]*?\(event\) => setProgress\(event\.percent\)\)/,
   'submitPlace displays real upload progress');
+assert.match(submitSource, /Math\.min\(99, totalPercent\)/,
+  'upload progress stays below 100% until the server confirms the upload');
+assert.match(submitSource, /setProgress\(100, true\)/,
+  '100% is shown only after the upload request succeeds');
 assert.ok(submitSource.indexOf('new Error(`تعذر رفع الصورة') < submitSource.indexOf('await Data.addPlace('),
   'image upload must complete successfully before the Firestore write begins');
+assert.ok(submitSource.indexOf('اكتمل رفع الصور، جاري إرسال النشاط إلى الإدارة') < submitSource.indexOf('await Data.addPlace('),
+  'the UI explicitly transitions from image upload to Firestore submission');
 assert.match(appSource, /id="placeUploadStatus"[\s\S]*?role="progressbar"/,
   'add-place form includes an accessible upload progress bar');
 assert.match(submitSource, /new Error\(`تعذر رفع الصورة/,

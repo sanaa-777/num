@@ -2388,11 +2388,15 @@ const App = {
           const blob = imageBlobs[i];
           const imageNumber = i + 1;
           const totalImages = imageBlobs.length;
-          const setProgress = (imagePercent) => {
+          const setProgress = (imagePercent, serverConfirmed = false) => {
             const uploadedBytes = completedBytes + blob.size * (imagePercent / 100);
             const totalPercent = totalBytes ? Math.floor((uploadedBytes / totalBytes) * 100) : imagePercent;
-            const safeTotalPercent = imageNumber === totalImages && imagePercent === 100 ? 100 : totalPercent;
-            const message = `جاري رفع الصورة ${imageNumber} من ${totalImages}`;
+            // XHR upload progress measures bytes sent by the browser, not the
+            // server's response. Reserve 100% for a successful Cloudinary response.
+            const safeTotalPercent = serverConfirmed ? totalPercent : Math.min(99, totalPercent);
+            const message = serverConfirmed
+              ? `تم رفع الصورة ${imageNumber} من ${totalImages}`
+              : `جاري رفع الصورة ${imageNumber} من ${totalImages}`;
             this._setPlaceUploadProgress(message, safeTotalPercent, 'uploading');
             if (btn) btn.innerHTML = `<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"/></svg> ${message} (${safeTotalPercent}%)`;
           };
@@ -2402,16 +2406,22 @@ const App = {
             const result = await ImageStorage.upload(blob, 'places/' + (Auth.currentUser?.id || 'anon'), (event) => setProgress(event.percent));
             imageUrls.push(result.url);
             completedBytes += blob.size;
-            setProgress(100);
+            setProgress(100, true);
           } catch (uploadErr) {
             const error = new Error(`تعذر رفع الصورة ${imageNumber} من ${totalImages}: ${uploadErr.message}`);
             error.cause = uploadErr;
             throw error;
           }
         }
-      } else if (btn) {
-        btn.innerHTML = '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"/></svg> جاري إرسال طلبك...';
       }
+
+      // Make the transition explicit; otherwise the last upload's spinner and
+      // "image N of N" label remain visible while Firestore saves the request.
+      const savingMessage = imageUrls.length
+        ? 'اكتمل رفع الصور، جاري إرسال النشاط إلى الإدارة...'
+        : 'جاري إرسال النشاط إلى الإدارة...';
+      this._setPlaceUploadProgress(savingMessage, 100, 'saving');
+      if (btn) btn.innerHTML = '<svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"/><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="1"/></svg> جاري إرسال طلبك إلى الإدارة...';
 
       await Data.addPlace({ 
         name:n, category:c, subcategory:s||null, city:ci, 
