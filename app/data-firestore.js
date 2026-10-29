@@ -1080,10 +1080,6 @@ const Data = {
     });
   },
 
-  getMyPlacesSync() {
-    return this._myPlacesCache;
-  },
-
   _stopMyPlacesListener() {
     if (this._myPlacesListener) {
       this._myPlacesListener();
@@ -1239,7 +1235,9 @@ const Data = {
   },
 
   getMyPlacesSync(userId) {
-    return (this._placesCache || []).filter(p => p.owner === userId);
+    const currentUserId = userId || (typeof Auth !== 'undefined' ? Auth.currentUser?.id : null);
+    const myPlaces = this._myPlacesCache || [];
+    return currentUserId ? myPlaces.filter(p => p.owner === currentUserId) : myPlaces.slice();
   },
 
   // تحميل مسبق لجميع البيانات
