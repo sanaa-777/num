@@ -834,14 +834,16 @@ const App = {
     const city = Data.cities.find(c => c.id === p.city);
     const isFav = Auth.currentUser && Data.isFavoriteSync(Auth.currentUser.id, p.id);
     const catColor = cat ? cat.color : '#3b82f6';
-    const hasImages = p.images && p.images.length > 0;
+    const imageUrls = this.getPlaceImageUrls(p);
+    const firstImage = imageUrls[0] || '';
+    const hasImages = Boolean(firstImage);
     return `
     <div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all cursor-pointer active-scale" onclick="location.hash='place/${p.id}'">
       <div class="h-28 md:h-36 relative flex items-center justify-center" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
-        ${hasImages ? `<img src="${p.images[0]}" alt="${App.h(p.name)}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">` : `<div style="color:${catColor};opacity:0.3">${cat ? I(cat.icon, 'w-16 h-16 md:w-20 md:h-20') : I('map-pin', 'w-16 h-16')}</div>`}
+        ${hasImages ? `<div data-place-image-fallback class="absolute inset-0 flex items-center justify-center" style="color:${catColor};opacity:0.3">${cat ? I(cat.icon, 'w-16 h-16 md:w-20 md:h-20') : I('map-pin', 'w-16 h-16')}</div><img src="${App.h(this._cloudinaryJpegFallback(firstImage) || firstImage)}" data-original-src="${App.h(firstImage)}" alt="${App.h(p.name)}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="App.handlePlaceCardImageError(this)">` : `<div style="color:${catColor};opacity:0.3">${cat ? I(cat.icon, 'w-16 h-16 md:w-20 md:h-20') : I('map-pin', 'w-16 h-16')}</div>`}
         ${p.verified ? `<div class="absolute top-2 right-2 bg-green-500 text-white px-2 py-0.5 rounded text-[9px] font-medium flex items-center gap-0.5"><i data-lucide="check-circle" class="w-3 h-3"></i>موثّق</div>` : ''}
         ${p.featured ? `<div class="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded text-[9px] font-medium flex items-center gap-0.5"><i data-lucide="star" class="w-3 h-3"></i></div>` : ''}
-        ${p.images && p.images.length > 1 ? `<div class="absolute bottom-2 right-2 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="image" class="w-3 h-3"></i>${p.images.length}</div>` : ''}
+        ${imageUrls.length > 1 ? `<div class="absolute bottom-2 right-2 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="image" class="w-3 h-3"></i>${imageUrls.length}</div>` : ''}
         ${Auth.currentUser ? `<button onclick="event.stopPropagation();App.toggleFav('${p.id}')" class="absolute bottom-2 left-2 w-7 h-7 rounded-full bg-white/80 flex items-center justify-center"><i data-lucide="heart" class="w-4 h-4 ${isFav ? 'text-red-500 fill-red-500' : 'text-gray-400'}"></i></button>` : ''}
       </div>
       <div class="p-2.5 md:p-3">
@@ -1576,10 +1578,11 @@ const App = {
         const statusColor = statusColors[status] || statusColors.approved;
         const statusLabel = statusLabels[status] || statusLabels.approved;
         const statusMsg = statusMessages[status] || '';
-        const hasImage = p.images && p.images.length > 0 && p.images[0];
+        const imageUrl = this.getPlaceImageUrls(p)[0] || '';
+        const hasImage = Boolean(imageUrl);
         return `<div class="bg-white rounded-xl overflow-hidden border border-gray-100">
           <div class="flex items-center gap-3 p-4">
-            ${hasImage ? `<img src="${p.images[0]}" alt="" class="w-14 h-14 rounded-lg object-cover shrink-0" onerror="this.style.display='none'">` : `<div class="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="building-2" class="w-6 h-6 text-gray-300"></i></div>`}
+            ${hasImage ? `<div class="relative w-14 h-14 rounded-lg overflow-hidden shrink-0"><div data-place-image-fallback class="absolute inset-0 bg-gray-100 flex items-center justify-center"><i data-lucide="building-2" class="w-6 h-6 text-gray-300"></i></div><img src="${App.h(this._cloudinaryJpegFallback(imageUrl) || imageUrl)}" data-original-src="${App.h(imageUrl)}" alt="${App.h(p.name)}" class="absolute inset-0 w-full h-full rounded-lg object-cover" loading="lazy" onerror="App.handlePlaceCardImageError(this)"></div>` : `<div class="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="building-2" class="w-6 h-6 text-gray-300"></i></div>`}
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-1">
                 <h4 class="font-bold text-sm text-gray-900 truncate">${App.h(p.name)}</h4>
@@ -2009,10 +2012,12 @@ const App = {
         const statusColors = { pending: 'bg-yellow-50 text-yellow-700 border-yellow-200', approved: 'bg-green-50 text-green-700 border-green-200', rejected: 'bg-red-50 text-red-700 border-red-200' };
         const statusLabels = { pending: '⏳ قيد المراجعة', approved: '✅ معتمد', rejected: '❌ مرفوض' };
         const status = p.status || 'approved';
+        const imageUrl = this.getPlaceImageUrls(p)[0] || '';
         return `<div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all">
           <div class="h-24 relative" style="background:linear-gradient(135deg, ${cat?.color || '#3b82f6'}20, ${cat?.color || '#3b82f6'}40)">
-            ${p.images && p.images[0] ? `<img src="${p.images[0]}" class="w-full h-full object-cover" loading="lazy">` : ''}
-            <span class="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full border ${statusColors[status]}">${statusLabels[status]}</span>
+            <div data-place-image-fallback class="absolute inset-0 flex items-center justify-center text-gray-400"><i data-lucide="image-off" class="w-8 h-8"></i></div>
+            ${imageUrl ? `<img src="${App.h(this._cloudinaryJpegFallback(imageUrl) || imageUrl)}" data-original-src="${App.h(imageUrl)}" alt="${App.h(p.name)}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="App.handlePlaceCardImageError(this)">` : ''}
+            <span class="absolute top-2 right-2 z-10 text-[10px] px-2 py-0.5 rounded-full border ${statusColors[status]}">${statusLabels[status]}</span>
           </div>
           <div class="p-3">
             <h4 class="font-bold text-sm text-gray-900 mb-1">${App.h(p.name)}</h4>
@@ -2224,6 +2229,21 @@ const App = {
       segments[transformIndex] += ',f_jpg';
     }
     return url.slice(0, markerIndex + marker.length) + segments.join('/');
+  },
+  handlePlaceCardImageError(img) {
+    if (!img || !img.isConnected) return;
+    const source = img.dataset.originalSrc || img.currentSrc || img.src;
+    const jpegSource = this._cloudinaryJpegFallback(source);
+    const currentSource = img.currentSrc || img.src;
+    if (jpegSource && currentSource !== jpegSource && img.dataset.jpegFallbackTried !== 'true') {
+      img.dataset.jpegFallbackTried = 'true';
+      img.src = jpegSource;
+      return;
+    }
+    img.style.display = 'none';
+    const fallback = img.parentElement?.querySelector('[data-place-image-fallback]');
+    if (fallback) fallback.classList.remove('hidden');
+    console.warn('تعذر تحميل صورة النشاط في البطاقة:', source);
   },
   initGallery(images) {
     Object.values(this._galleryBlobUrls || {}).forEach(url => URL.revokeObjectURL(url));

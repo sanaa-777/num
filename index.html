@@ -151,7 +151,25 @@
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         const buildVersion = (window.__APP_BUILD__ && window.__APP_BUILD__.version) || 'dev';
-        navigator.serviceWorker.register(`/sw.js?v=20260818015003${encodeURIComponent(buildVersion)}`, { updateViaCache: 'none' })
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          const activatedVersion = event.data && event.data.type === 'DY_VERSION_ACTIVATED' ? String(event.data.version || '') : '';
+          if (!activatedVersion || activatedVersion === String(buildVersion)) return;
+          const route = location.hash.slice(1);
+          if (/^(add|login|signup|verify|reset|profile|settings|edit|write|checkout)(\/|$)/.test(route)) {
+            window.__DY_PENDING_BUILD_VERSION__ = activatedVersion;
+            console.info('تحديث الموقع جاهز؛ لم تتم إعادة التحميل حفاظاً على البيانات المدخلة.');
+            return;
+          }
+          const reloadKey = `dy-sw-reloaded-${activatedVersion}`;
+          try {
+            if (sessionStorage.getItem(reloadKey)) return;
+            sessionStorage.setItem(reloadKey, '1');
+          } catch (error) {
+            console.warn('تعذر حفظ علامة تحديث Service Worker لمرة واحدة:', error.message);
+          }
+          location.reload();
+        });
+        navigator.serviceWorker.register(`/sw.js?build=${encodeURIComponent(buildVersion)}`, { updateViaCache: 'none' })
           .then((reg) => reg.update().then(() => console.log('SW registered:', reg.scope)))
           .catch((err) => console.log('SW registration failed:', err));
       });

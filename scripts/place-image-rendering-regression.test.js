@@ -3,6 +3,8 @@ const fs = require('node:fs');
 
 const appSource = fs.readFileSync('app/app.js', 'utf8');
 const hosting = JSON.parse(fs.readFileSync('firebase.json', 'utf8'));
+const indexSource = fs.readFileSync('index.html', 'utf8');
+const workerSource = fs.readFileSync('sw.js', 'utf8');
 
 const imageUrlsMatch = appSource.match(/getPlaceImageUrls\(place\)\s*\{([\s\S]*?)\n  \},/);
 assert.ok(imageUrlsMatch, 'place image URL normalizer exists');
@@ -28,6 +30,26 @@ assert.equal(
 );
 assert.equal(cloudinaryJpegFallback('https://example.com/a.jpg'), null,
   'non-Cloudinary images are not rewritten');
+
+const cardMatch = appSource.match(/renderPlaceCard\(p\)\s*\{([\s\S]*?)\n  \},/);
+assert.ok(cardMatch, 'the shared activity-card renderer exists');
+assert.match(cardMatch[1], /getPlaceImageUrls\(p\)/,
+  'cards use the normalized plural and legacy singular image fields');
+assert.match(cardMatch[1], /_cloudinaryJpegFallback\(firstImage\)/,
+  'homepage, category, recommendation, and search cards request compatible JPEGs');
+assert.match(cardMatch[1], /handlePlaceCardImageError\(this\)/,
+  'card failures reveal a real placeholder rather than hiding the image silently');
+assert.match(cardMatch[1], /data-place-image-fallback/,
+  'cards provide a visible fallback behind the image');
+assert.doesNotMatch(cardMatch[1], /onerror="this\.style\.display='none'"/,
+  'the shared card renderer never silently hides failures');
+assert.ok((appSource.match(/_cloudinaryJpegFallback\(imageUrl\)/g) || []).length >= 2,
+  'My Places and My Advertisements use the same compatible URL strategy');
+
+const cardErrorMatch = appSource.match(/handlePlaceCardImageError\(img\)\s*\{([\s\S]*?)\n  \},/);
+assert.ok(cardErrorMatch, 'the generic activity-card error handler exists');
+assert.match(cardErrorMatch[1], /data-place-image-fallback/,
+  'failed cards reveal their contextual placeholder');
 
 const galleryStart = appSource.indexOf('id="placeGallery"');
 const galleryEnd = appSource.indexOf('${place.verified', galleryStart);
@@ -62,5 +84,24 @@ assert.match(imgSrc, /https:\/\/res\.cloudinary\.com/, 'Cloudinary is allowed as
 assert.match(imgSrc, /blob:/, 'recovered object URLs are allowed as image sources');
 assert.match(connectSrc, /https:\/\/res\.cloudinary\.com/,
   'CSP allows the CORS fetch used to recover a failed image element');
+
+assert.match(workerSource,
+  /url\.hostname === 'res\.cloudinary\.com'[\s\S]*event\.request\.destination === 'image'[\s\S]*return;/,
+  'Cloudinary image requests bypass opaque Service Worker proxy/cache handling');
+assert.match(indexSource, /DY_VERSION_ACTIVATED/,
+  'open tabs detect that the Service Worker activated a newer build');
+assert.match(indexSource, /dy-sw-reloaded-/,
+  'the update reload is guarded to happen only once per build');
+assert.match(indexSource, /sw\.js\?build=/,
+  'Service Worker registrations use a clean versioned URL');
+for (const path of ['/', '/index.html', '/sw.js']) {
+  const header = hosting.hosting.headers.find(entry => entry.source === path)
+    ?.headers.find(entry => entry.key === 'Cache-Control');
+  assert.ok(header && /no-store/.test(header.value), `${path} bypasses browser/CDN stale caching`);
+}
+const appScriptCache = hosting.hosting.headers.find(entry => entry.source === '/app/*.js')
+  ?.headers.find(entry => entry.key === 'Cache-Control');
+assert.ok(appScriptCache && /no-store/.test(appScriptCache.value),
+  'app scripts are revalidated instead of serving stale builds');
 
 console.log('PASS place-image rendering, format fallback, and CSP regression checks');

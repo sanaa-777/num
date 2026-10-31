@@ -95,6 +95,11 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
+  // Let Cloudinary images load natively; do not proxy/cache opaque image responses in the SW.
+  if (url.origin !== self.location.origin && url.hostname === 'res.cloudinary.com' && event.request.destination === 'image') {
+    return;
+  }
+
   if (url.origin !== self.location.origin) {
     // Never cache Firebase Auth, Firestore, Storage, or Google API calls
     const host = url.hostname;
