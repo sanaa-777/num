@@ -1059,7 +1059,7 @@ const App = {
           <div class="h-40 md:h-56 relative" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
             ${placeImages.length > 0 ? `
               <div id="placeGallery" class="relative w-full h-full">
-                <img src="${App.h(placeImages[0])}" alt="${App.h(place.name)}" class="w-full h-full object-contain bg-gray-50" id="placeGalleryImg" data-gallery-index="0" data-gallery-request="0" loading="eager" decoding="async" fetchpriority="high" onerror="App.handlePlaceGalleryImageError(this)">
+                <img src="${App.h(this._cloudinaryJpegFallback(placeImages[0]) || placeImages[0])}" alt="${App.h(place.name)}" class="w-full h-full object-contain bg-gray-50" id="placeGalleryImg" data-gallery-index="0" data-gallery-request="0" loading="eager" decoding="async" fetchpriority="high" onerror="App.handlePlaceGalleryImageError(this)">
                 <div id="placeGalleryFallback" class="hidden absolute inset-0 flex-col items-center justify-center gap-2 bg-gray-50 text-gray-400" role="status" aria-live="polite"><i data-lucide="image-off" class="w-10 h-10"></i><span class="text-xs">تعذر تحميل الصورة</span></div>
                 ${placeImages.length > 1 ? `
                   <button onclick="App.galleryPrev()" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors z-10"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
@@ -2309,7 +2309,7 @@ const App = {
       img.dataset.galleryRequest = String(this._galleryRequestSequence);
       img.dataset.galleryRecoveryAttempted = 'false';
       img.style.display = 'block';
-      img.src = this._galleryImages[index];
+      img.src = this._cloudinaryJpegFallback(this._galleryImages[index]) || this._galleryImages[index];
     }
     const fallback = document.getElementById('placeGalleryFallback');
     if (fallback) {

@@ -35,11 +35,15 @@ assert.notEqual(galleryStart, -1, 'place details gallery exists');
 assert.notEqual(galleryEnd, -1, 'gallery template has a bounded end');
 const gallery = appSource.slice(galleryStart, galleryEnd);
 assert.match(gallery, /object-contain/, 'gallery preserves the full image aspect ratio');
+assert.match(gallery, /_cloudinaryJpegFallback\(placeImages\[0\]\)/,
+  'the first Cloudinary image is requested as JPEG for broad browser compatibility');
 assert.match(gallery, /onerror="App\.handlePlaceGalleryImageError\(this\)"/,
   'failed source images use an explicit recovery path');
 assert.match(gallery, /placeGalleryFallback/, 'failed images show a visible fallback instead of a blank card');
 assert.doesNotMatch(gallery, /onerror="this\.style\.display='none'"/,
   'gallery errors are not silently hidden');
+assert.match(appSource, /img\.src = this\._cloudinaryJpegFallback\(this\._galleryImages\[index\]\) \|\| this\._galleryImages\[index\];/,
+  'manual gallery navigation uses the same compatible Cloudinary image URL');
 
 const recoveryMatch = appSource.match(/async handlePlaceGalleryImageError\(img\)\s*\{([\s\S]*?)\n  \},\n  galleryGoTo/);
 assert.ok(recoveryMatch, 'gallery error recovery exists');
