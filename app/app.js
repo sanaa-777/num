@@ -1044,6 +1044,7 @@ const App = {
     const isFav = Auth.currentUser && Data.isFavoriteSync(Auth.currentUser.id, place.id);
     const isOwner = Auth.currentUser && place.owner === Auth.currentUser.id;
     const catColor = cat ? cat.color : '#3b82f6';
+    const placeImages = this.getPlaceImageUrls(place);
 
     const app = document.getElementById('app');
     app.innerHTML = `<div class="min-h-screen bg-gray-50">${this.renderHeader(Auth.currentUser)}
@@ -1056,16 +1057,17 @@ const App = {
         </div>
         <div class="bg-white rounded-xl overflow-hidden border border-gray-100">
           <div class="h-40 md:h-56 relative" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
-            ${place.images && place.images.length > 0 ? `
+            ${placeImages.length > 0 ? `
               <div id="placeGallery" class="relative w-full h-full">
-                <img src="${place.images[0]}" alt="${App.h(place.name)}" class="w-full h-full object-cover" id="placeGalleryImg" onerror="this.style.display='none'">
-                ${place.images.length > 1 ? `
+                <img src="${App.h(placeImages[0])}" alt="${App.h(place.name)}" class="w-full h-full object-contain bg-gray-50" id="placeGalleryImg" data-gallery-index="0" data-gallery-request="0" loading="eager" decoding="async" fetchpriority="high" onerror="App.handlePlaceGalleryImageError(this)">
+                <div id="placeGalleryFallback" class="hidden absolute inset-0 flex-col items-center justify-center gap-2 bg-gray-50 text-gray-400" role="status" aria-live="polite"><i data-lucide="image-off" class="w-10 h-10"></i><span class="text-xs">تعذر تحميل الصورة</span></div>
+                ${placeImages.length > 1 ? `
                   <button onclick="App.galleryPrev()" class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors z-10"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
                   <button onclick="App.galleryNext()" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors z-10"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
                   <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                    ${place.images.map((_, i) => `<button onclick="App.galleryGoTo(${i})" class="w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-white/50'}" data-gallery-dot="${i}"></button>`).join('')}
+                    ${placeImages.map((_, i) => `<button onclick="App.galleryGoTo(${i})" class="w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-white/50'}" data-gallery-dot="${i}"></button>`).join('')}
                   </div>
-                  <div class="absolute top-3 left-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full z-10"><span id="galleryCounter">1</span>/${place.images.length}</div>
+                  <div class="absolute top-3 left-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full z-10"><span id="galleryCounter">1</span>/${placeImages.length}</div>
                 ` : ''}
               </div>
             ` : `
@@ -1169,7 +1171,7 @@ const App = {
     </section>${this.renderFooter()}${this.renderBottomNav(Auth.currentUser)}</div>`;
     this.initIcons();
     // Initialize gallery if images exist
-    if (place.images && place.images.length > 0) { this.initGallery(place.images); }
+    this.initGallery(placeImages);
     // Initialize map if coordinates exist
     if (place.lat && place.lng) {
       setTimeout(() => {
@@ -2197,13 +2199,123 @@ const App = {
   // ====== IMAGE GALLERY ======
   _galleryImages: [],
   _galleryIndex: 0,
-  initGallery(images) { this._galleryImages = images || []; this._galleryIndex = 0; },
+  _galleryBlobUrls: Object.create(null),
+  _galleryRequestSequence: 0,
+  getPlaceImageUrls(place) {
+    const values = Array.isArray(place?.images) ? [...place.images] : [];
+    if (place?.image && !values.includes(place.image)) values.push(place.image);
+    return [...new Set(values.map(value => typeof value === 'string' ? value.trim() : '')
+      .filter(value => value.length > 0))];
+  },
+  _cloudinaryJpegFallback(url) {
+    if (typeof url !== 'string' || !url.startsWith('https://res.cloudinary.com/')) return null;
+    const marker = '/image/upload/';
+    const markerIndex = url.indexOf(marker);
+    if (markerIndex < 0) return null;
+    const path = url.slice(markerIndex + marker.length);
+    const segments = path.split('/');
+    const transformIndex = segments.findIndex(segment => /^(?:f_|q_|c_|w_|h_|e_|fl_|ar_|dpr_|bo_|b_)/.test(segment));
+    if (transformIndex < 0) {
+      segments.unshift('f_jpg,q_auto');
+    } else if (/(?:^|,)f_(?:auto|webp|avif|png|jpeg|jpg)(?:,|$)/.test(segments[transformIndex])) {
+      segments[transformIndex] = segments[transformIndex]
+        .replace(/(^|,)f_(?:auto|webp|avif|png|jpeg|jpg)(?=,|$)/, '$1f_jpg');
+    } else {
+      segments[transformIndex] += ',f_jpg';
+    }
+    return url.slice(0, markerIndex + marker.length) + segments.join('/');
+  },
+  initGallery(images) {
+    Object.values(this._galleryBlobUrls || {}).forEach(url => URL.revokeObjectURL(url));
+    this._galleryBlobUrls = Object.create(null);
+    this._galleryImages = images || [];
+    this._galleryIndex = 0;
+    this._galleryRequestSequence += 1;
+    const img = document.getElementById('placeGalleryImg');
+    if (img) {
+      img.dataset.galleryIndex = '0';
+      img.dataset.galleryRequest = String(this._galleryRequestSequence);
+      img.dataset.galleryRecoveryAttempted = 'false';
+    }
+  },
+  async handlePlaceGalleryImageError(img) {
+    if (!img || !img.isConnected) return;
+    const index = Number(img.dataset.galleryIndex || this._galleryIndex || 0);
+    const request = img.dataset.galleryRequest;
+    const showFallback = () => {
+      if (!img.isConnected || img.dataset.galleryRequest !== request) return;
+      img.style.display = 'none';
+      const fallback = document.getElementById('placeGalleryFallback');
+      if (fallback) {
+        fallback.classList.remove('hidden');
+        fallback.classList.add('flex');
+      }
+      console.warn('تعذر تحميل صورة النشاط بعد تجربة المصدر والبديل بصيغة JPEG.');
+    };
+    if (img.dataset.galleryRecoveryAttempted === 'true') {
+      showFallback();
+      return;
+    }
+    img.dataset.galleryRecoveryAttempted = 'true';
+    const source = this._galleryImages[index];
+    if (!source) {
+      showFallback();
+      return;
+    }
+    const jpegSource = this._cloudinaryJpegFallback(source);
+    const candidates = [...new Set([jpegSource, source].filter(Boolean))];
+    for (const candidate of candidates) {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timeout = setTimeout(() => controller?.abort(), 12000);
+      try {
+        const response = await fetch(candidate, {
+          mode: 'cors',
+          credentials: 'omit',
+          ...(controller ? { signal: controller.signal } : {})
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const contentType = (response.headers.get('content-type') || blob.type || '').toLowerCase();
+        if (!contentType.startsWith('image/') || !blob.size) throw new Error('استجابة الصورة غير صالحة');
+        if (!img.isConnected || img.dataset.galleryRequest !== request || index !== this._galleryIndex) return;
+        const objectUrl = URL.createObjectURL(blob);
+        if (this._galleryBlobUrls[index]) URL.revokeObjectURL(this._galleryBlobUrls[index]);
+        this._galleryBlobUrls[index] = objectUrl;
+        img.style.display = 'block';
+        img.src = objectUrl;
+        return;
+      } catch (error) {
+        console.warn('تعذرت استعادة صورة النشاط من Cloudinary:', error.message);
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    showFallback();
+  },
   galleryGoTo(index) {
     if (!this._galleryImages.length) return;
+    if (!Number.isInteger(index) || index < 0 || index >= this._galleryImages.length) return;
+    const previousBlob = this._galleryBlobUrls[this._galleryIndex];
+    if (previousBlob) {
+      URL.revokeObjectURL(previousBlob);
+      delete this._galleryBlobUrls[this._galleryIndex];
+    }
     this._galleryIndex = index;
+    this._galleryRequestSequence += 1;
     const img = document.getElementById('placeGalleryImg');
     const counter = document.getElementById('galleryCounter');
-    if (img) img.src = this._galleryImages[index];
+    if (img) {
+      img.dataset.galleryIndex = String(index);
+      img.dataset.galleryRequest = String(this._galleryRequestSequence);
+      img.dataset.galleryRecoveryAttempted = 'false';
+      img.style.display = 'block';
+      img.src = this._galleryImages[index];
+    }
+    const fallback = document.getElementById('placeGalleryFallback');
+    if (fallback) {
+      fallback.classList.add('hidden');
+      fallback.classList.remove('flex');
+    }
     if (counter) counter.textContent = index + 1;
     document.querySelectorAll('[data-gallery-dot]').forEach((dot, i) => {
       dot.className = `w-2 h-2 rounded-full ${i === index ? 'bg-white' : 'bg-white/50'}`;
