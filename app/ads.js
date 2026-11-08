@@ -174,7 +174,7 @@ const Ads = {
         <img src="${ad.images[0]}" alt="${ad.title || 'إعلان'}" loading="lazy"
              class="w-full object-cover" style="aspect-ratio:${ad.size === 'banner' ? '728/90' : ad.size === 'leaderboard' ? '728/60' : ad.size === 'square' ? '1/1' : ad.size === 'rectangle' ? '300/250' : '16/9'}">
       `}
-      ${ad.title ? `<div class="absolute top-2 right-2 bg-black/50 text-white text-[9px] px-2 py-0.5 rounded">إعلان</div>` : ''}
+      ${ad.title ? `<div class="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded">إعلان</div>` : ''}
     </div>`;
   },
 

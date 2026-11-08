@@ -239,7 +239,7 @@ const App = {
               <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="${icon}" class="w-4 h-4 ${color}"></i></div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm ${n.read ? 'text-gray-600' : 'text-gray-900 font-medium'}">${App.h(n.message || '')}</p>
-                <span class="text-[10px] text-gray-400">${date}</span>
+                <span class="text-[11px] text-gray-400">${date}</span>
               </div>
               ${!n.read ? '<div class="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-2"></div>' : ''}
             </div>`;
@@ -566,7 +566,7 @@ const App = {
         <button onclick="App.removePlaceImage(${i})" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
           <i data-lucide="x" class="w-3 h-3"></i>
         </button>
-        <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 rounded-b-xl">${i+1}/5</div>
+        <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center py-0.5 rounded-b-xl">${i+1}/5</div>
       </div>`;
     });
     
@@ -575,12 +575,12 @@ const App = {
       if (p.status === 'processing') {
         html += `<div class="w-20 h-20 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 flex flex-col items-center justify-center">
           <div class="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-1"></div>
-          <span class="text-[8px] text-blue-600 truncate max-w-[70px]">${p.name?.substring(0,8) || ''}</span>
+          <span class="text-[10px] text-blue-600 truncate max-w-[70px]">${p.name?.substring(0,8) || ''}</span>
         </div>`;
       } else if (p.status === 'error') {
         html += `<div class="w-20 h-20 rounded-xl border-2 border-dashed border-red-300 bg-red-50 flex flex-col items-center justify-center">
           <i data-lucide="alert-circle" class="w-5 h-5 text-red-500 mb-1"></i>
-          <span class="text-[8px] text-red-600">خطأ</span>
+          <span class="text-[10px] text-red-600">خطأ</span>
         </div>`;
       }
     });
@@ -589,7 +589,7 @@ const App = {
     if (this.placeImages.length < 5 && !this._uploadingImages) {
       html += `<label class="w-20 h-20 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
         <i data-lucide="plus" class="w-5 h-5 text-gray-400 mb-1"></i>
-        <span class="text-[8px] text-gray-400">إضافة</span>
+        <span class="text-[10px] text-gray-400">إضافة</span>
         <input type="file" accept="image/*" multiple onchange="App.handlePlaceImageUpload(this.files)" class="hidden">
       </label>`;
     }
@@ -627,11 +627,11 @@ const App = {
           </button>
           ${user ? `<a href="#notifications" class="mobile-header-btn relative" id="mobileNotifBell">
             <i data-lucide="bell" class="w-5 h-5"></i>
-            <span id="mobileNotifBadge" class="hidden absolute -top-0.5 -left-0.5 bg-red-500 text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-bold"></span>
+            <span id="mobileNotifBadge" class="hidden absolute -top-0.5 -left-0.5 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold"></span>
           </a>
           <a href="#favorites" class="mobile-header-btn relative">
             <i data-lucide="heart" class="w-5 h-5"></i>
-            ${favCount > 0 ? `<span class="absolute -top-0.5 -left-0.5 bg-red-500 text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center font-bold">${favCount > 9 ? '9+' : favCount}</span>` : ''}
+            ${favCount > 0 ? `<span class="absolute -top-0.5 -left-0.5 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">${favCount > 9 ? '9+' : favCount}</span>` : ''}
           </a>` : ''}
           <button onclick="App.toggleDarkMode()" class="mobile-header-btn">
             <i data-lucide="${isDark ? 'sun' : 'moon'}" class="w-5 h-5"></i>
@@ -671,11 +671,11 @@ const App = {
             ${user ? `
               <a href="#notifications" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 relative" title="الإشعارات" id="desktopNotifBell">
                 <i data-lucide="bell" class="w-4 h-4"></i>
-                <span id="desktopNotifBadge" class="hidden absolute top-0.5 left-0.5 bg-red-500 text-white text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold"></span>
+                <span id="desktopNotifBadge" class="hidden absolute top-0.5 left-0.5 bg-red-500 text-white text-[10px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold"></span>
               </a>
               <a href="#favorites" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-dark-700 relative" title="المفضلة">
                 <i data-lucide="heart" class="w-4 h-4"></i>
-                ${favCount > 0 ? `<span class="absolute top-0.5 left-0.5 bg-red-500 text-white text-[8px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold">${favCount > 9 ? '9+' : favCount}</span>` : ''}
+                ${favCount > 0 ? `<span class="absolute top-0.5 left-0.5 bg-red-500 text-white text-[10px] w-3.5 h-3.5 rounded-full flex items-center justify-center font-bold">${favCount > 9 ? '9+' : favCount}</span>` : ''}
               </a>
               <a href="#add" class="px-4 py-2 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-1.5 shadow-sm">
                 <i data-lucide="plus" class="w-3.5 h-3.5"></i>${isAr ? 'إضافة مكان' : 'Add Place'}
@@ -688,7 +688,7 @@ const App = {
                 <div class="absolute left-0 top-full mt-1 bg-white dark:bg-dark-800 rounded-xl shadow-lg border border-gray-100 dark:border-dark-700 py-2 w-52 hidden group-hover:block z-50">
                   <div class="px-3 py-2 border-b border-gray-100 dark:border-dark-700">
                     <div class="font-medium text-sm text-gray-900 dark:text-white">${user.name}</div>
-                    <div class="text-[11px] text-gray-400">${user.email}</div>
+                    <div class="text-[12px] text-gray-400">${user.email}</div>
                   </div>
                   ${user.verified ? '<div class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-green-600 bg-green-50 dark:bg-green-900/20"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i>حساب موثّق</div>' : '<div class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-500 bg-gray-50 dark:bg-dark-700"><i data-lucide="clock" class="w-3.5 h-3.5"></i>بانتظار التوثيق</div>'}
                   <hr class="my-1 border-gray-100 dark:border-dark-700">
@@ -753,10 +753,10 @@ const App = {
 
     <section class="bg-white py-2 md:py-4 border-b">
       <div class="max-w-7xl mx-auto px-3 md:px-4 grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-3 text-center">
-        <a href="#offers" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${offersCount}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="tag" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>عروض</div></a>
-        <a href="#events" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${eventsCount}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="calendar" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>فعاليات</div></a>
-        <a href="#jobs" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${jobsCount}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="briefcase" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>وظائف</div></a>
-        <a href="#pricing" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${pricingCount}+</div><div class="text-[9px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="trending-up" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>تسعيرات</div></a>
+        <a href="#offers" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${offersCount}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="tag" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>عروض</div></a>
+        <a href="#events" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${eventsCount}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="calendar" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>فعاليات</div></a>
+        <a href="#jobs" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${jobsCount}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="briefcase" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>وظائف</div></a>
+        <a href="#pricing" class="hover:bg-gray-50 rounded-lg p-1 transition-colors"><div class="text-base md:text-2xl font-bold text-blue-600">${pricingCount}+</div><div class="text-[10px] md:text-xs text-gray-500 flex items-center justify-center gap-0.5"><i data-lucide="trending-up" class="w-2.5 h-2.5 md:w-3 md:h-3"></i>تسعيرات</div></a>
       </div>
     </section>
 
@@ -768,8 +768,8 @@ const App = {
             const count = places.filter(p => p.category === c.id).length;
             return `<a href="#category/${c.id}" class="bg-white rounded-xl p-2 md:p-3 text-center hover:shadow-md transition-all cursor-pointer border border-gray-100 active-scale">
               <div class="flex justify-center mb-1.5">${IB(c.icon, c.color, 'icon-lg')}</div>
-              <div class="text-[10px] md:text-xs font-medium text-gray-700 leading-tight">${c.name}</div>
-              <div class="text-[9px] text-gray-400 mt-0.5">${count} مكان</div>
+              <div class="text-[11px] md:text-xs font-medium text-gray-700 leading-tight">${c.name}</div>
+              <div class="text-[10px] text-gray-400 mt-0.5">${count} مكان</div>
             </a>`;
           }).join('')}
         </div>
@@ -841,20 +841,20 @@ const App = {
     <div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all cursor-pointer active-scale" onclick="location.hash='place/${p.id}'">
       <div class="h-28 md:h-36 relative flex items-center justify-center" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
         ${hasImages ? `<div data-place-image-fallback class="absolute inset-0 flex items-center justify-center" style="color:${catColor};opacity:0.3">${cat ? I(cat.icon, 'w-16 h-16 md:w-20 md:h-20') : I('map-pin', 'w-16 h-16')}</div><img src="${App.h(this._cloudinaryJpegFallback(firstImage) || firstImage)}" data-original-src="${App.h(firstImage)}" alt="${App.h(p.name)}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="App.handlePlaceCardImageError(this)">` : `<div style="color:${catColor};opacity:0.3">${cat ? I(cat.icon, 'w-16 h-16 md:w-20 md:h-20') : I('map-pin', 'w-16 h-16')}</div>`}
-        ${p.verified ? `<div class="absolute top-2 right-2 bg-green-500 text-white px-2 py-0.5 rounded text-[9px] font-medium flex items-center gap-0.5"><i data-lucide="check-circle" class="w-3 h-3"></i>موثّق</div>` : ''}
-        ${p.featured ? `<div class="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded text-[9px] font-medium flex items-center gap-0.5"><i data-lucide="star" class="w-3 h-3"></i></div>` : ''}
-        ${imageUrls.length > 1 ? `<div class="absolute bottom-2 right-2 bg-black/50 text-white text-[9px] px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="image" class="w-3 h-3"></i>${imageUrls.length}</div>` : ''}
+        ${p.verified ? `<div class="absolute top-2 right-2 bg-green-500 text-white px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5"><i data-lucide="check-circle" class="w-3 h-3"></i>موثّق</div>` : ''}
+        ${p.featured ? `<div class="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-0.5"><i data-lucide="star" class="w-3 h-3"></i></div>` : ''}
+        ${imageUrls.length > 1 ? `<div class="absolute bottom-2 right-2 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="image" class="w-3 h-3"></i>${imageUrls.length}</div>` : ''}
         ${Auth.currentUser ? `<button onclick="event.stopPropagation();App.toggleFav('${p.id}')" class="absolute bottom-2 left-2 w-7 h-7 rounded-full bg-white/80 flex items-center justify-center"><i data-lucide="heart" class="w-4 h-4 ${isFav ? 'text-red-500 fill-red-500' : 'text-gray-400'}"></i></button>` : ''}
       </div>
       <div class="p-2.5 md:p-3">
         <h4 class="font-bold text-gray-900 text-xs md:text-sm mb-1 truncate">${App.h(p.name)}</h4>
-        <div class="flex items-center gap-1 text-[10px] md:text-xs text-gray-500 mb-1.5">
+        <div class="flex items-center gap-1 text-[11px] md:text-xs text-gray-500 mb-1.5">
           ${sub ? `<span class="bg-gray-100 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="${sub.icon}" class="w-3 h-3"></i>${sub.name}</span>` : (cat ? `<span class="bg-gray-100 px-1.5 py-0.5 rounded flex items-center gap-0.5"><i data-lucide="${cat.icon}" class="w-3 h-3"></i>${cat.name}</span>` : '')}
           ${city ? `<span class="flex items-center gap-0.5"><i data-lucide="map-pin" class="w-3 h-3"></i>${city.name}</span>` : ''}
         </div>
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-1"><i data-lucide="star" class="w-3.5 h-3.5 text-yellow-500 fill-yellow-500"></i><span class="font-bold text-xs">${p.rating || '0'}</span><span class="text-[10px] text-gray-400">(${p.reviews || 0})</span></div>
-          <span class="text-[10px] text-gray-400 flex items-center gap-0.5"><i data-lucide="eye" class="w-3 h-3"></i>${p.views || 0}</span>
+          <div class="flex items-center gap-1"><i data-lucide="star" class="w-3.5 h-3.5 text-yellow-500 fill-yellow-500"></i><span class="font-bold text-xs">${p.rating || '0'}</span><span class="text-[11px] text-gray-400">(${p.reviews || 0})</span></div>
+          <span class="text-[11px] text-gray-400 flex items-center gap-0.5"><i data-lucide="eye" class="w-3 h-3"></i>${p.views || 0}</span>
         </div>
       </div>
     </div>`;
@@ -1069,7 +1069,7 @@ const App = {
                   <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                     ${placeImages.map((_, i) => `<button onclick="App.galleryGoTo(${i})" class="w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-white/50'}" data-gallery-dot="${i}"></button>`).join('')}
                   </div>
-                  <div class="absolute top-3 left-3 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full z-10"><span id="galleryCounter">1</span>/${placeImages.length}</div>
+                  <div class="absolute top-3 left-3 bg-black/50 text-white text-[11px] px-2 py-0.5 rounded-full z-10"><span id="galleryCounter">1</span>/${placeImages.length}</div>
                 ` : ''}
               </div>
             ` : `
@@ -1166,7 +1166,7 @@ const App = {
           ${reviews.length ? reviews.map(r => `<div class="border-b border-gray-100 py-2.5 last:border-0">
             <div class="flex items-center justify-between mb-1"><span class="font-semibold text-xs">${App.h(r.userName)}</span><span class="flex">${Array(r.rating).fill(0).map(() => '<i data-lucide="star" class="w-3.5 h-3.5 text-yellow-500 fill-yellow-500"></i>').join('')}</span></div>
             <p class="text-gray-600 text-xs">${App.h(r.comment)}</p>
-            <span class="text-[10px] text-gray-400 flex items-center gap-1 mt-1"><i data-lucide="clock" class="w-3 h-3"></i>${r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('ar') : (r.createdAt ? new Date(r.createdAt).toLocaleDateString('ar') : '')}</span>
+            <span class="text-[11px] text-gray-400 flex items-center gap-1 mt-1"><i data-lucide="clock" class="w-3 h-3"></i>${r.createdAt?.toDate ? r.createdAt.toDate().toLocaleDateString('ar') : (r.createdAt ? new Date(r.createdAt).toLocaleDateString('ar') : '')}</span>
           </div>`).join('') : '<p class="text-gray-400 text-center py-4 text-xs">لا توجد مراجعات</p>'}
         </div>
       </div>
@@ -1221,21 +1221,21 @@ const App = {
               </label>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-[10px] text-gray-500 mb-1">وقت الفتح</label>
+                  <label class="block text-[11px] text-gray-500 mb-1">وقت الفتح</label>
                   <input type="time" id="placeOpenTime" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm">
                 </div>
                 <div>
-                  <label class="block text-[10px] text-gray-500 mb-1">وقت الإغلاق</label>
+                  <label class="block text-[11px] text-gray-500 mb-1">وقت الإغلاق</label>
                   <input type="time" id="placeCloseTime" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm">
                 </div>
               </div>
               <div class="mt-2">
-                <label class="block text-[10px] text-gray-500 mb-1">أيام العمل</label>
+                <label class="block text-[11px] text-gray-500 mb-1">أيام العمل</label>
                 <div class="flex flex-wrap gap-1.5">
                   ${['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'].map((day,i) => `
                     <label class="flex items-center gap-1 cursor-pointer">
                       <input type="checkbox" value="${day}" class="work-day-cb w-3.5 h-3.5 rounded border-gray-300 text-blue-600" ${i < 6 ? 'checked' : ''}>
-                      <span class="text-[10px] text-gray-600">${day}</span>
+                      <span class="text-[11px] text-gray-600">${day}</span>
                     </label>
                   `).join('')}
                 </div>
@@ -1258,7 +1258,7 @@ const App = {
                 <input type="hidden" id="placeLat">
                 <input type="hidden" id="placeLng">
               </div>
-              <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1"><i data-lucide="info" class="w-3 h-3"></i>انقر على الخريطة لوضع دبوس موقعك</p>
+              <p class="text-[11px] text-gray-400 mt-1 flex items-center gap-1"><i data-lucide="info" class="w-3 h-3"></i>انقر على الخريطة لوضع دبوس موقعك</p>
             </div>
             
             <!-- روابط التواصل الاجتماعي -->
@@ -1291,7 +1291,7 @@ const App = {
                 <i data-lucide="image" class="w-3.5 h-3.5 text-gray-500"></i>صور المكان <span class="text-gray-400 font-normal">(حتى 5 صور)</span>
               </label>
               <div id="placeImagePreview" class="flex flex-wrap gap-2"></div>
-              <p class="text-[10px] text-gray-400 mt-1">${this.placeImages.length}/5 صور مختارة — تُرفع عند إرسال الطلب</p>
+              <p class="text-[11px] text-gray-400 mt-1">${this.placeImages.length}/5 صور مختارة — تُرفع عند إرسال الطلب</p>
               <div id="placeUploadStatus" class="hidden mt-2 rounded-lg border border-blue-100 bg-blue-50 p-3" role="status" aria-live="polite">
                 <div class="flex items-center justify-between gap-2 text-xs text-blue-800">
                   <span id="placeUploadProgressText">جاري تجهيز الصور...</span>
@@ -1301,7 +1301,7 @@ const App = {
                   <div id="placeUploadProgressBar" class="h-full rounded-full bg-blue-600 transition-all duration-150" style="width:0%"></div>
                 </div>
               </div>
-              ${!ImageStorage.isConfigured() ? '<p class="text-[10px] text-orange-500 mt-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>رفع الصور غير مُفعّل. يرجى التواصل مع الإدارة.</p>' : ''}
+              ${!ImageStorage.isConfigured() ? '<p class="text-[11px] text-orange-500 mt-1 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>رفع الصور غير مُفعّل. يرجى التواصل مع الإدارة.</p>' : ''}
             </div>
             <button id="submitPlaceBtn" onclick="App.submitPlace()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"><i data-lucide="send" class="w-5 h-5"></i>نشر النشاط للمراجعة</button>
           </div>
@@ -1490,7 +1490,7 @@ const App = {
         <a href="#myplaces" class="bg-white rounded-xl p-3 border border-gray-100 text-center hover:shadow-md transition-all">
           <i data-lucide="building-2" class="w-6 h-6 text-blue-600 mx-auto mb-1"></i>
           <div class="text-xs font-medium text-gray-700">مواقعي</div>
-          <div class="text-[10px] text-gray-400">${myPlaces.length} نشاط</div>
+          <div class="text-[11px] text-gray-400">${myPlaces.length} نشاط</div>
         </a>
         <a href="#favorites" class="bg-white rounded-xl p-3 border border-gray-100 text-center hover:shadow-md transition-all">
           <i data-lucide="heart" class="w-6 h-6 text-red-500 mx-auto mb-1"></i>
@@ -1586,16 +1586,16 @@ const App = {
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-1">
                 <h4 class="font-bold text-sm text-gray-900 truncate">${App.h(p.name)}</h4>
-                <span class="text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap ${statusColor}">${statusLabel}</span>
+                <span class="text-[11px] px-2 py-0.5 rounded-full border whitespace-nowrap ${statusColor}">${statusLabel}</span>
               </div>
               <div class="flex items-center gap-2 text-xs text-gray-500 mb-1">
                 ${cat ? `<span>${App.h(cat.name)}</span>` : ''}
                 ${city ? `<span>• ${App.h(city.name)}</span>` : ''}
               </div>
-              ${status === 'pending' ? `<p class="text-[11px] text-amber-600 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i>${statusMsg}</p>` : ''}
-              ${status === 'rejected' ? `<p class="text-[11px] text-red-600 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>${statusMsg}</p>` : ''}
-              ${status === 'approved' ? `<p class="text-[11px] text-green-600 flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i>${statusMsg}</p>` : ''}
-              ${p.adminNote ? `<p class="text-[11px] text-gray-500 mt-1 bg-gray-50 rounded px-2 py-1">📝 ${App.h(p.adminNote)}</p>` : ''}
+              ${status === 'pending' ? `<p class="text-[12px] text-amber-600 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i>${statusMsg}</p>` : ''}
+              ${status === 'rejected' ? `<p class="text-[12px] text-red-600 flex items-center gap-1"><i data-lucide="alert-circle" class="w-3 h-3"></i>${statusMsg}</p>` : ''}
+              ${status === 'approved' ? `<p class="text-[12px] text-green-600 flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i>${statusMsg}</p>` : ''}
+              ${p.adminNote ? `<p class="text-[12px] text-gray-500 mt-1 bg-gray-50 rounded px-2 py-1">📝 ${App.h(p.adminNote)}</p>` : ''}
             </div>
             <div class="flex flex-col gap-1.5 shrink-0">
               ${status === 'approved' ? `<a href="#place/${p.id}" class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center" title="عرض"><i data-lucide="eye" class="w-4 h-4"></i></a>` : ''}
@@ -1631,12 +1631,12 @@ const App = {
     return `<div class="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-md transition-all cursor-pointer active-scale" onclick="location.hash='${type}/${item.id}'">
       <div class="h-28 md:h-36 relative flex items-center justify-center" style="background:linear-gradient(135deg, ${typeColor}20, ${typeColor}40)">
         ${(item.image || item.imageUrl) ? `<img src="${item.image || item.imageUrl}" alt="${App.h(item.title || '')}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="this.style.display='none'">` : `<i data-lucide="${typeIcon}" class="w-12 h-12 md:w-16 md:h-16" style="color:${typeColor};opacity:0.3"></i>`}
-        ${item.isActive === false ? `<div class="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[9px] font-medium">منتهي</div>` : ''}
+        ${item.isActive === false ? `<div class="absolute top-2 right-2 bg-red-500 text-white px-2 py-0.5 rounded text-[10px] font-medium">منتهي</div>` : ''}
       </div>
       <div class="p-2.5 md:p-3">
         <h4 class="font-bold text-gray-900 text-xs md:text-sm mb-1 truncate">${App.h(item.title || 'بدون عنوان')}</h4>
-        ${subtitle ? `<p class="text-[10px] md:text-xs text-gray-500 truncate mb-1">${App.h(subtitle)}</p>` : ''}
-        ${dateStr ? `<p class="text-[9px] text-gray-400 flex items-center gap-0.5"><i data-lucide="calendar" class="w-2.5 h-2.5"></i>${dateStr}</p>` : ''}
+        ${subtitle ? `<p class="text-[11px] md:text-xs text-gray-500 truncate mb-1">${App.h(subtitle)}</p>` : ''}
+        ${dateStr ? `<p class="text-[10px] text-gray-400 flex items-center gap-0.5"><i data-lucide="calendar" class="w-2.5 h-2.5"></i>${dateStr}</p>` : ''}
       </div>
     </div>`;
   },
@@ -1759,9 +1759,9 @@ const App = {
     // Price change indicator
     function priceChange(item) {
       const change = item.priceChange || 0;
-      if (change > 0) return `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 text-[10px] font-bold"><i data-lucide="arrow-up" class="w-2.5 h-2.5"></i>${Math.abs(change).toFixed(2)}</span>`;
-      if (change < 0) return `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-red-50 text-red-500 text-[10px] font-bold"><i data-lucide="arrow-down" class="w-2.5 h-2.5"></i>${Math.abs(change).toFixed(2)}</span>`;
-      return `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gray-50 text-gray-400 text-[10px] font-bold"><i data-lucide="minus" class="w-2.5 h-2.5"></i>0.00</span>`;
+      if (change > 0) return `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-green-50 text-green-600 text-[11px] font-bold"><i data-lucide="arrow-up" class="w-2.5 h-2.5"></i>${Math.abs(change).toFixed(2)}</span>`;
+      if (change < 0) return `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-red-50 text-red-500 text-[11px] font-bold"><i data-lucide="arrow-down" class="w-2.5 h-2.5"></i>${Math.abs(change).toFixed(2)}</span>`;
+      return `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-gray-50 text-gray-400 text-[11px] font-bold"><i data-lucide="minus" class="w-2.5 h-2.5"></i>0.00</span>`;
     }
 
     // Column labels based on category
@@ -1815,9 +1815,9 @@ const App = {
             <div class="flex items-center gap-2">
               <span class="w-2.5 h-2.5 rounded-full" style="background:${sectionColor}"></span>
               <h3 class="text-sm font-bold text-gray-800">${catInfo?.name || 'الأسعار'}</h3>
-              <span class="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">${items.length} عنصر</span>
+              <span class="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">${items.length} عنصر</span>
             </div>
-            <span class="text-[10px] text-gray-400 flex items-center gap-1">
+            <span class="text-[11px] text-gray-400 flex items-center gap-1">
               <i data-lucide="clock" class="w-3 h-3"></i>
               ${items.length && items[0]?.lastUpdated?.toDate ? items[0].lastUpdated.toDate().toLocaleDateString('ar') : 'غير محدد'}
             </span>
@@ -1828,9 +1828,9 @@ const App = {
             <table class="w-full">
               <thead>
                 <tr class="bg-gray-50/80">
-                  <th class="text-[11px] font-bold text-gray-500 text-right px-4 py-2.5">${cols.col1}</th>
-                  <th class="text-[11px] font-bold text-gray-500 text-center px-4 py-2.5">${cols.col2}</th>
-                  <th class="text-[11px] font-bold text-gray-500 text-center px-4 py-2.5">${cols.col3}</th>
+                  <th class="text-[12px] font-bold text-gray-500 text-right px-4 py-2.5">${cols.col1}</th>
+                  <th class="text-[12px] font-bold text-gray-500 text-center px-4 py-2.5">${cols.col2}</th>
+                  <th class="text-[12px] font-bold text-gray-500 text-center px-4 py-2.5">${cols.col3}</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-50">
@@ -1840,18 +1840,18 @@ const App = {
                       <div class="flex items-center gap-2.5">
                         ${getItemIcon(item)}
                         <div>
-                          <div class="text-[13px] font-bold text-gray-900">${App.h(item.name || item.currencyName || '')}</div>
-                          ${item.unit ? `<div class="text-[10px] text-gray-400">${App.h(item.unit)}</div>` : ''}
+                          <div class="text-[14px] font-bold text-gray-900">${App.h(item.name || item.currencyName || '')}</div>
+                          ${item.unit ? `<div class="text-[11px] text-gray-400">${App.h(item.unit)}</div>` : ''}
                         </div>
                       </div>
                     </td>
                     <td class="px-4 py-3 text-center">
-                      <span class="text-[13px] font-bold text-gray-900 tabular-nums">${App.h(item.buyPrice || '-')}</span>
-                      ${item.currencyCode ? `<div class="text-[9px] text-gray-400">${App.h(item.currencyCode)}</div>` : ''}
+                      <span class="text-[14px] font-bold text-gray-900 tabular-nums">${App.h(item.buyPrice || '-')}</span>
+                      ${item.currencyCode ? `<div class="text-[10px] text-gray-400">${App.h(item.currencyCode)}</div>` : ''}
                     </td>
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-1.5 justify-center">
-                        <span class="text-[13px] font-bold text-gray-900 tabular-nums">${App.h(item.sellPrice || '-')}</span>
+                        <span class="text-[14px] font-bold text-gray-900 tabular-nums">${App.h(item.sellPrice || '-')}</span>
                         ${priceChange(item)}
                       </div>
                     </td>
@@ -1869,7 +1869,7 @@ const App = {
               <i data-lucide="trending-up" class="w-8 h-8 text-gray-300"></i>
             </div>
             <p class="text-sm text-gray-400 mb-1">لا توجد أسعار في هذا القسم</p>
-            <p class="text-[11px] text-gray-300">يتم تحديث الأسعار من قبل الإدارة</p>
+            <p class="text-[12px] text-gray-300">يتم تحديث الأسعار من قبل الإدارة</p>
           </div>
         </div>
         `}
@@ -2017,7 +2017,7 @@ const App = {
           <div class="h-24 relative" style="background:linear-gradient(135deg, ${cat?.color || '#3b82f6'}20, ${cat?.color || '#3b82f6'}40)">
             <div data-place-image-fallback class="absolute inset-0 flex items-center justify-center text-gray-400"><i data-lucide="image-off" class="w-8 h-8"></i></div>
             ${imageUrl ? `<img src="${App.h(this._cloudinaryJpegFallback(imageUrl) || imageUrl)}" data-original-src="${App.h(imageUrl)}" alt="${App.h(p.name)}" class="absolute inset-0 w-full h-full object-cover" loading="lazy" onerror="App.handlePlaceCardImageError(this)">` : ''}
-            <span class="absolute top-2 right-2 z-10 text-[10px] px-2 py-0.5 rounded-full border ${statusColors[status]}">${statusLabels[status]}</span>
+            <span class="absolute top-2 right-2 z-10 text-[11px] px-2 py-0.5 rounded-full border ${statusColors[status]}">${statusLabels[status]}</span>
           </div>
           <div class="p-3">
             <h4 class="font-bold text-sm text-gray-900 mb-1">${App.h(p.name)}</h4>
@@ -2025,7 +2025,7 @@ const App = {
               ${cat ? `<span>${App.h(cat.name)}</span>` : ''}
               ${city ? `<span>• ${App.h(city.name)}</span>` : ''}
             </div>
-            <div class="flex items-center gap-2 text-[10px] text-gray-400">
+            <div class="flex items-center gap-2 text-[11px] text-gray-400">
               <span class="flex items-center gap-0.5"><i data-lucide="eye" class="w-3 h-3"></i>${p.views || 0}</span>
               <span class="flex items-center gap-0.5"><i data-lucide="star" class="w-3 h-3"></i>${p.rating || 0}</span>
               <span class="flex items-center gap-0.5"><i data-lucide="message-circle" class="w-3 h-3"></i>${p.reviews || 0}</span>
@@ -2352,7 +2352,7 @@ const App = {
     const toast = document.createElement('div');
     toast.className = 'app-toast fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] shadow-2xl';
     toast.style.cssText = 'animation: toastSlideUp 0.3s ease-out;';
-    toast.innerHTML = `<div class="${config.bg} text-white px-5 py-3 rounded-2xl flex items-center gap-3 min-w-[280px] max-w-[90vw]" style="font-family:'Noto Kufi Arabic',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,0.3);"><i data-lucide="${config.icon}" class="w-5 h-5 ${config.iconColor} shrink-0"></i><span class="text-sm font-medium flex-1">${message}</span><button onclick="this.closest('.app-toast').remove()" class="shrink-0 opacity-70 hover:opacity-100"><i data-lucide="x" class="w-4 h-4"></i></button></div>`;
+    toast.innerHTML = `<div class="${config.bg} text-white px-5 py-3 rounded-2xl flex items-center gap-3 min-w-[280px] max-w-[90vw]" style="font-family:var(--font-arabic);box-shadow:0 20px 60px rgba(0,0,0,0.3);"><i data-lucide="${config.icon}" class="w-5 h-5 ${config.iconColor} shrink-0"></i><span class="text-sm font-medium flex-1">${message}</span><button onclick="this.closest('.app-toast').remove()" class="shrink-0 opacity-70 hover:opacity-100"><i data-lucide="x" class="w-4 h-4"></i></button></div>`;
     if (!document.getElementById('toast-styles')) {
       const style = document.createElement('style');
       style.id = 'toast-styles';
@@ -2693,16 +2693,16 @@ const App = {
           <div class="border-t border-gray-100 pt-3">
             <label class="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-gray-500"></i>ساعات العمل</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label class="block text-[10px] text-gray-500 mb-1">وقت الفتح</label><input type="time" id="editPlaceOpenTime" value="${place.openTime || ''}" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
-              <div><label class="block text-[10px] text-gray-500 mb-1">وقت الإغلاق</label><input type="time" id="editPlaceCloseTime" value="${place.closeTime || ''}" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+              <div><label class="block text-[11px] text-gray-500 mb-1">وقت الفتح</label><input type="time" id="editPlaceOpenTime" value="${place.openTime || ''}" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
+              <div><label class="block text-[11px] text-gray-500 mb-1">وقت الإغلاق</label><input type="time" id="editPlaceCloseTime" value="${place.closeTime || ''}" class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:outline-none text-sm"></div>
             </div>
             <div class="mt-2">
-              <label class="block text-[10px] text-gray-500 mb-1">أيام العمل</label>
+              <label class="block text-[11px] text-gray-500 mb-1">أيام العمل</label>
               <div class="flex flex-wrap gap-1.5">
                 ${allDays.map(day => `
                   <label class="flex items-center gap-1 cursor-pointer">
                     <input type="checkbox" value="${day}" class="edit-work-day-cb w-3.5 h-3.5 rounded border-gray-300 text-blue-600" ${workDays.includes(day) ? 'checked' : ''}>
-                    <span class="text-[10px] text-gray-600">${day}</span>
+                    <span class="text-[11px] text-gray-600">${day}</span>
                   </label>
                 `).join('')}
               </div>
@@ -2737,7 +2737,7 @@ const App = {
               <input type="hidden" id="editPlaceLat" value="${place.lat || ''}">
               <input type="hidden" id="editPlaceLng" value="${place.lng || ''}">
             </div>
-            <p class="text-[10px] text-gray-400 mt-1">انقر على الخريطة لتحديث الموقع</p>
+            <p class="text-[11px] text-gray-400 mt-1">انقر على الخريطة لتحديث الموقع</p>
           </div>
           <div class="border-t border-gray-100 pt-3">
             <label class="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-1"><i data-lucide="image" class="w-3.5 h-3.5 text-gray-500"></i>صور المكان <span class="text-gray-400 font-normal">(حتى 5 صور)</span></label>
@@ -2832,7 +2832,7 @@ const App = {
       html += `<div class="relative group">
         <img src="${img}" class="w-20 h-20 object-cover rounded-xl border-2 border-gray-200" loading="lazy">
         <button onclick="App.removeEditImage(${i})" class="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"><i data-lucide="x" class="w-3 h-3"></i></button>
-        <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[9px] text-center py-0.5 rounded-b-xl">${i+1}/5</div>
+        <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center py-0.5 rounded-b-xl">${i+1}/5</div>
       </div>`;
     });
     preview.innerHTML = html;

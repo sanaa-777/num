@@ -9,26 +9,26 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png">
   <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png">
+  <link rel="preload" href="/assets/fonts/ibm-plex-sans-arabic-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="app/tailwind.css?v=20260818015003">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="app/lucide-local.js"></script>
   <style>
-    * { font-family: 'Noto Kufi Arabic', sans-serif; box-sizing: border-box; margin: 0; padding: 0; }
+    * { font-family: var(--font-arabic); box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #f8fafc; }
     a { text-decoration: none; color: inherit; }
-    select { -webkit-appearance:none; -moz-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 12px center; background-size:12px; padding-left:32px; padding-right:12px; cursor:pointer; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; color:#374151; background-color:#fff; }
+    select { -webkit-appearance:none; -moz-appearance:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:left 12px center; background-size:12px; padding-left:32px; padding-right:12px; cursor:pointer; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; color:#374151; background-color:#fff; }
     select:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.1); }
     .icon-sm { width:18px; height:18px; } .icon-md { width:22px; height:22px; } .icon-lg { width:28px; height:28px; }
     .loading-spinner { width:40px; height:40px; border:3px solid #e2e8f0; border-top-color:#dc2626; border-radius:50%; animation:spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .login-box { background: #fff; border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
-    .field-label { display: block; font-size: 12px; font-weight: 500; color: #374151; margin-bottom: 4px; text-align: right; }
+    .field-label { display: block; font-size:13px; font-weight: 500; color: #374151; margin-bottom: 4px; text-align: right; }
     .field-input { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; outline: none; }
     .field-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
     .btn-login { width: 100%; background: #dc2626; color: #fff; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
     .btn-login:hover { background: #b91c1c; }
     .btn-login:disabled { background: #f87171; cursor: not-allowed; opacity: 0.7; }
-    .error-box { display: none; background: #fef2f2; color: #dc2626; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 12px; text-align: right; }
+    .error-box { display: none; background: #fef2f2; color: #dc2626; padding: 10px; border-radius: 8px; font-size:13px; margin-bottom: 12px; text-align: right; }
     .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-left: 8px; vertical-align: middle; }
     .img-preview { max-width: 120px; max-height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid #e5e7eb; }
 
@@ -107,7 +107,7 @@
       </div>
       <div id="loginError" class="error-box"></div>
       <button id="loginBtn" class="btn-login">دخول لوحة التحكم</button>
-      <p style="margin-top:16px;"><a href="/" style="color:#6b7280;font-size:12px;">العودة للموقع</a></p>
+      <p style="margin-top:16px;"><a href="/" style="color:#6b7280;font-size:13px;">العودة للموقع</a></p>
     </div>
   </div>
 
@@ -479,7 +479,7 @@
                   '<button onclick="AdminPanel.openSidebar()" class="lg:hidden p-2 rounded-lg hover:bg-gray-100"><i data-lucide="menu" class="w-5 h-5 text-gray-700"></i></button>' +
                   '<div>' +
                     '<h1 class="text-base font-bold text-gray-900">' + this.getTabName(this.currentTab) + '</h1>' +
-                    '<p class="text-[10px] text-gray-400">لوحة تحكم الدليل اليمني</p>' +
+                    '<p class="text-[11px] text-gray-400">لوحة تحكم الدليل اليمني</p>' +
                   '</div>' +
                 '</div>' +
                 '<div class="flex items-center gap-2">' +
@@ -537,7 +537,7 @@
             return '<div class="flex items-center gap-2 p-2 rounded-lg ' + (n.read ? 'bg-gray-50' : 'bg-blue-50') + ' text-xs">' +
               '<i data-lucide="' + (n.type === 'request' ? 'user-plus' : n.type === 'new_place' ? 'building-2' : 'info') + '" class="w-4 h-4 ' + (n.read ? 'text-gray-400' : 'text-blue-600') + ' shrink-0"></i>' +
               '<span class="flex-1 ' + (n.read ? 'text-gray-600' : 'text-gray-900 font-medium') + '">' + AdminPanel._escHtml(n.message) + '</span>' +
-              '<span class="text-[10px] text-gray-400 shrink-0">' + (n.createdAt && n.createdAt.toDate ? n.createdAt.toDate().toLocaleString('ar') : '') + '</span>' +
+              '<span class="text-[11px] text-gray-400 shrink-0">' + (n.createdAt && n.createdAt.toDate ? n.createdAt.toDate().toLocaleString('ar') : '') + '</span>' +
             '</div>';
           }).join('') +
           '</div></div>';
@@ -545,9 +545,9 @@
 
       statCard: function(icon, label, value, hint, iconColor) {
         return '<div class="bg-white rounded-xl p-4 border border-gray-100">' +
-          '<div class="flex items-center gap-2 mb-1"><i data-lucide="' + icon + '" class="w-4 h-4 ' + (iconColor || 'text-blue-600') + '"></i><span class="text-[10px] text-gray-500">' + label + '</span></div>' +
+          '<div class="flex items-center gap-2 mb-1"><i data-lucide="' + icon + '" class="w-4 h-4 ' + (iconColor || 'text-blue-600') + '"></i><span class="text-[11px] text-gray-500">' + label + '</span></div>' +
           '<div class="text-xl font-bold">' + value + '</div>' +
-          '<div class="text-[10px] text-gray-500">' + hint + '</div>' +
+          '<div class="text-[11px] text-gray-500">' + hint + '</div>' +
         '</div>';
       },
 
@@ -582,8 +582,8 @@
               recentUsers.map(function(u) {
                 return '<div class="flex items-center gap-2 p-2 rounded-lg bg-gray-50 text-xs">' +
                   '<img src="' + AdminPanel._escHtml(u.avatar || '') + '" class="w-7 h-7 rounded-full" alt="">' +
-                  '<div class="flex-1"><div class="font-medium">' + AdminPanel._escHtml(u.name || 'بدون اسم') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml(u.email || '') + '</div></div>' +
-                  '<span class="text-[10px] px-2 py-0.5 rounded ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : u.suspended ? 'bg-red-100 text-red-700' : u.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700') + '">' + (u.role === 'admin' ? 'أدمن' : u.suspended ? 'موقوف' : u.verified ? 'موثّق' : 'معلّق') + '</span>' +
+                  '<div class="flex-1"><div class="font-medium">' + AdminPanel._escHtml(u.name || 'بدون اسم') + '</div><div class="text-[11px] text-gray-400">' + AdminPanel._escHtml(u.email || '') + '</div></div>' +
+                  '<span class="text-[11px] px-2 py-0.5 rounded ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : u.suspended ? 'bg-red-100 text-red-700' : u.verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700') + '">' + (u.role === 'admin' ? 'أدمن' : u.suspended ? 'موقوف' : u.verified ? 'موثّق' : 'معلّق') + '</span>' +
                 '</div>';
               }).join('') +
             '</div>' +
@@ -594,7 +594,7 @@
               (pendingPlaces.length ? pendingPlaces.map(function(p) {
                 return '<div class="p-2 rounded-lg bg-yellow-50 border border-yellow-200 text-xs">' +
                   '<div class="font-medium">' + AdminPanel._escHtml(p.name || 'نشاط بدون اسم') + '</div>' +
-                  '<div class="text-[10px] text-gray-500 mt-1">' + AdminPanel._escHtml(p.address || p.city || '') + '</div>' +
+                  '<div class="text-[11px] text-gray-500 mt-1">' + AdminPanel._escHtml(p.address || p.city || '') + '</div>' +
                   '<div class="flex gap-2 mt-2">' +
                     '<button onclick="AdminPanel.approvePlace(\'' + p.id + '\')" class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700">موافقة</button>' +
                     '<button onclick="AdminPanel.rejectPlace(\'' + p.id + '\')" class="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700">رفض</button>' +
@@ -661,15 +661,15 @@
                 return '<tr class="hover:bg-gray-50">' +
                   '<td class="px-3 py-3"><div class="flex items-center gap-2"><img src="' + AdminPanel._escHtml(u.avatar || '') + '" class="w-8 h-8 rounded-full" alt=""><div><div class="font-medium">' + AdminPanel._escHtml(u.name || 'بدون اسم') + '</div></div></div></td>' +
                   '<td class="px-3 py-3 text-gray-600">' + AdminPanel._escHtml(u.email || '') + '</td>' +
-                  '<td class="px-3 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-medium ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700') + '">' + (u.role === 'admin' ? 'أدمن' : 'مستخدم') + '</span></td>' +
-                  '<td class="px-3 py-3">' + (u.suspended ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700">موقوف</span>' : u.verified ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">موثّق</span>' : u.active ? '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">مفعّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-yellow-100 text-yellow-700">معلّق</span>') + '</td>' +
+                  '<td class="px-3 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-medium ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700') + '">' + (u.role === 'admin' ? 'أدمن' : 'مستخدم') + '</span></td>' +
+                  '<td class="px-3 py-3">' + (u.suspended ? '<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-700">موقوف</span>' : u.verified ? '<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-green-100 text-green-700">موثّق</span>' : u.active ? '<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-100 text-blue-700">مفعّل</span>' : '<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-yellow-100 text-yellow-700">معلّق</span>') + '</td>' +
                   '<td class="px-3 py-3">' + (u.role !== 'admin' ?
                     '<div class="flex items-center gap-1">' +
                       '<button onclick="AdminPanel.toggleActiveUser(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.active ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-green-200" title="' + (u.active ? 'إلغاء التفعيل' : 'تفعيل') + '"><i data-lucide="power" class="w-3.5 h-3.5"></i></button>' +
                       '<button onclick="AdminPanel.toggleVerify(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.verified ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-blue-200" title="توثيق"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>' +
                       '<button onclick="AdminPanel.toggleSuspend(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.suspended ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-yellow-200" title="إيقاف"><i data-lucide="ban" class="w-3.5 h-3.5"></i></button>' +
                       '<button onclick="AdminPanel.deleteUser(\'' + u.id + '\')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="تعطيل"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>' +
-                    '</div>' : '<span class="text-[10px] text-gray-400">-</span>') + '</td>' +
+                    '</div>' : '<span class="text-[11px] text-gray-400">-</span>') + '</td>' +
                 '</tr>';
               }).join('') +
             '</tbody></table></div></div>' +
@@ -701,7 +701,7 @@
               '<h3 class="text-sm font-bold">تعديل النشاط: ' + AdminPanel._escHtml(ep.name || '') + '</h3>' +
               '<button onclick="AdminPanel.cancelPlaceEdit()" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"><i data-lucide="x" class="w-4 h-4"></i></button>' +
             '</div>' +
-            '<div id="placeFormError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:12px;margin-bottom:12px;"></div>' +
+            '<div id="placeFormError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px;"></div>' +
             '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
               '<div><label class="field-label">اسم النشاط *</label><input type="text" id="editPlaceName" class="field-input" value="' + AdminPanel._escHtml(ep.name || '') + '"></div>' +
               '<div><label class="field-label">الهاتف</label><input type="tel" id="editPlacePhone" class="field-input" value="' + AdminPanel._escHtml(ep.phone || '') + '"></div>' +
@@ -750,21 +750,21 @@
               filtered.map(function(p) {
                 var cat = Data.categories.find(function(c) { return c.id === p.category; });
                 var statusBadge = p.status === 'approved'
-                  ? '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">معتمد</span>'
+                  ? '<span class="px-2 py-0.5 rounded text-[11px] bg-green-100 text-green-700">معتمد</span>'
                   : p.status === 'pending'
-                    ? '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700">بانتظار المراجعة</span>'
-                    : '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">مرفوض</span>';
+                    ? '<span class="px-2 py-0.5 rounded text-[11px] bg-yellow-100 text-yellow-700">بانتظار المراجعة</span>'
+                    : '<span class="px-2 py-0.5 rounded text-[11px] bg-red-100 text-red-700">مرفوض</span>';
                 var activeBadge = p.isActive === false
-                  ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 mr-1">معلّق</span>'
-                  : '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 mr-1">نشط</span>';
+                  ? '<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 mr-1">معلّق</span>'
+                  : '<span class="px-2 py-0.5 rounded text-[11px] bg-blue-100 text-blue-700 mr-1">نشط</span>';
                 return '<tr class="hover:bg-gray-50 align-top">' +
                   '<td class="px-3 py-3"><div class="flex items-center gap-2">' +
                     ((p.image || (p.images && p.images[0])) ? '<img src="' + AdminPanel._escHtml(p.image || p.images[0]) + '" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.style.display=\'none\'">' : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>') +
-                    '<div><div class="font-medium">' + AdminPanel._escHtml(p.name || 'نشاط بدون اسم') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml(p.phone || '') + ' • ' + AdminPanel._escHtml(p.address || '') + '</div>' +
-                    (p.images && p.images.length > 1 ? '<span class="text-[9px] text-blue-500">' + p.images.length + ' صور</span>' : '') +
+                    '<div><div class="font-medium">' + AdminPanel._escHtml(p.name || 'نشاط بدون اسم') + '</div><div class="text-[11px] text-gray-400">' + AdminPanel._escHtml(p.phone || '') + ' • ' + AdminPanel._escHtml(p.address || '') + '</div>' +
+                    (p.images && p.images.length > 1 ? '<span class="text-[10px] text-blue-500">' + p.images.length + ' صور</span>' : '') +
                     '</div></div></td>' +
                   '<td class="px-3 py-3 text-gray-600">' + (cat ? AdminPanel._escHtml(cat.name) : '-') + '</td>' +
-                  '<td class="px-3 py-3">' + statusBadge + activeBadge + (p.verified ? '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700 mr-1">موثّق</span>' : '') + (p.featured ? '<span class="px-2 py-0.5 rounded text-[10px] bg-yellow-100 text-yellow-700 mr-1">مميّز</span>' : '') + '</td>' +
+                  '<td class="px-3 py-3">' + statusBadge + activeBadge + (p.verified ? '<span class="px-2 py-0.5 rounded text-[11px] bg-green-100 text-green-700 mr-1">موثّق</span>' : '') + (p.featured ? '<span class="px-2 py-0.5 rounded text-[11px] bg-yellow-100 text-yellow-700 mr-1">مميّز</span>' : '') + '</td>' +
                   '<td class="px-3 py-3 text-gray-500 max-w-xs">' + AdminPanel._escHtml(p.adminNote || '-') + '</td>' +
                   '<td class="px-3 py-3"><div class="flex items-center gap-1 flex-wrap">' +
                     '<button onclick="AdminPanel.approvePlace(\'' + p.id + '\')" class="p-1.5 rounded-lg bg-green-100 text-green-700 hover:bg-green-200" title="موافقة"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>' +
@@ -818,11 +818,11 @@
               return '<div class="bg-white rounded-lg p-3 border border-amber-200 flex items-center gap-3">' +
                 '<div class="flex-1">' +
                   '<div class="font-medium text-sm">' + AdminPanel._escHtml(edit.placeName || 'نشاط') + '</div>' +
-                  '<div class="text-[10px] text-gray-500">بواسطة: ' + AdminPanel._escHtml(edit.ownerName || edit.owner || '') + '</div>' +
-                  '<div class="text-[10px] text-amber-700 mt-1">التغييرات: ' + (changes.length > 0 ? changes.join('، ') : 'غير محدد') + '</div>' +
+                  '<div class="text-[11px] text-gray-500">بواسطة: ' + AdminPanel._escHtml(edit.ownerName || edit.owner || '') + '</div>' +
+                  '<div class="text-[11px] text-amber-700 mt-1">التغييرات: ' + (changes.length > 0 ? changes.join('، ') : 'غير محدد') + '</div>' +
                 '</div>' +
                 '<div class="flex gap-1.5">' +
-                  '<button onclick="AdminPanel._viewingEdit=\'' + edit.id + '\';AdminPanel.render()" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-medium hover:bg-blue-700 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i>مراجعة</button>' +
+                  '<button onclick="AdminPanel._viewingEdit=\'' + edit.id + '\';AdminPanel.render()" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[11px] font-medium hover:bg-blue-700 flex items-center gap-1"><i data-lucide="eye" class="w-3 h-3"></i>مراجعة</button>' +
                 '</div>' +
               '</div>';
             }).join('') +
@@ -868,7 +868,7 @@
           return '<tr class="' + (changed ? 'bg-yellow-50' : '') + '">' +
             '<td class="px-3 py-2 font-medium text-gray-600">' + f.label + '</td>' +
             '<td class="px-3 py-2 text-gray-500">' + AdminPanel._escHtml(curVal || '-') + '</td>' +
-            '<td class="px-3 py-2 ' + (changed ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + AdminPanel._escHtml(newVal || '-') + (changed ? ' <span class="text-[9px] text-amber-600">✦</span>' : '') + '</td>' +
+            '<td class="px-3 py-2 ' + (changed ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + AdminPanel._escHtml(newVal || '-') + (changed ? ' <span class="text-[10px] text-amber-600">✦</span>' : '') + '</td>' +
           '</tr>';
         }).join('');
 
@@ -877,35 +877,35 @@
         var catNew = getCategoryName(proposed.category);
         var cityCur = getCityName(current.city);
         var cityNew = getCityName(proposed.city);
-        rows = '<tr class="' + (catCur !== catNew ? 'bg-yellow-50' : '') + '"><td class="px-3 py-2 font-medium text-gray-600">القسم</td><td class="px-3 py-2 text-gray-500">' + AdminPanel._escHtml(catCur) + '</td><td class="px-3 py-2 ' + (catCur !== catNew ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + AdminPanel._escHtml(catNew) + (catCur !== catNew ? ' <span class="text-[9px] text-amber-600">✦</span>' : '') + '</td></tr>' +
-          '<tr class="' + (cityCur !== cityNew ? 'bg-yellow-50' : '') + '"><td class="px-3 py-2 font-medium text-gray-600">المدينة</td><td class="px-3 py-2 text-gray-500">' + AdminPanel._escHtml(cityCur) + '</td><td class="px-3 py-2 ' + (cityCur !== cityNew ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + AdminPanel._escHtml(cityNew) + (cityCur !== cityNew ? ' <span class="text-[9px] text-amber-600">✦</span>' : '') + '</td></tr>' +
+        rows = '<tr class="' + (catCur !== catNew ? 'bg-yellow-50' : '') + '"><td class="px-3 py-2 font-medium text-gray-600">القسم</td><td class="px-3 py-2 text-gray-500">' + AdminPanel._escHtml(catCur) + '</td><td class="px-3 py-2 ' + (catCur !== catNew ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + AdminPanel._escHtml(catNew) + (catCur !== catNew ? ' <span class="text-[10px] text-amber-600">✦</span>' : '') + '</td></tr>' +
+          '<tr class="' + (cityCur !== cityNew ? 'bg-yellow-50' : '') + '"><td class="px-3 py-2 font-medium text-gray-600">المدينة</td><td class="px-3 py-2 text-gray-500">' + AdminPanel._escHtml(cityCur) + '</td><td class="px-3 py-2 ' + (cityCur !== cityNew ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + AdminPanel._escHtml(cityNew) + (cityCur !== cityNew ? ' <span class="text-[10px] text-amber-600">✦</span>' : '') + '</td></tr>' +
           rows;
 
         // Images comparison
         var curImages = current.images || [];
         var newImages = proposed.images || [];
-        var imagesRow = '<tr><td class="px-3 py-2 font-medium text-gray-600">الصور</td><td class="px-3 py-2 text-gray-500">' + curImages.length + ' صورة</td><td class="px-3 py-2 ' + (curImages.length !== newImages.length ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + newImages.length + ' صورة' + (curImages.length !== newImages.length ? ' <span class="text-[9px] text-amber-600">✦</span>' : '') + '</td></tr>';
+        var imagesRow = '<tr><td class="px-3 py-2 font-medium text-gray-600">الصور</td><td class="px-3 py-2 text-gray-500">' + curImages.length + ' صورة</td><td class="px-3 py-2 ' + (curImages.length !== newImages.length ? 'text-gray-900 font-medium' : 'text-gray-500') + '">' + newImages.length + ' صورة' + (curImages.length !== newImages.length ? ' <span class="text-[10px] text-amber-600">✦</span>' : '') + '</td></tr>';
 
         return '<div class="bg-white rounded-xl border border-amber-300 p-5 mb-4 shadow-sm">' +
           '<div class="flex items-center justify-between mb-4">' +
             '<div>' +
               '<h3 class="text-sm font-bold flex items-center gap-2"><i data-lucide="edit-3" class="w-4 h-4 text-amber-600"></i>مراجعة تعديل: ' + AdminPanel._escHtml(edit.placeName || '') + '</h3>' +
-              '<p class="text-[10px] text-gray-500 mt-1">بواسطة: ' + AdminPanel._escHtml(edit.ownerName || edit.owner || '') + '</p>' +
+              '<p class="text-[11px] text-gray-500 mt-1">بواسطة: ' + AdminPanel._escHtml(edit.ownerName || edit.owner || '') + '</p>' +
             '</div>' +
             '<button onclick="AdminPanel._viewingEdit=null;AdminPanel.render()" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"><i data-lucide="x" class="w-4 h-4"></i></button>' +
           '</div>' +
           '<!-- Current vs Proposed images -->' +
           '<div class="grid grid-cols-2 gap-4 mb-4">' +
             '<div>' +
-              '<p class="text-[10px] font-medium text-gray-500 mb-2">النسخة الحالية</p>' +
+              '<p class="text-[11px] font-medium text-gray-500 mb-2">النسخة الحالية</p>' +
               '<div class="flex flex-wrap gap-2">' +
-                (curImages.length > 0 ? curImages.map(function(img) { return '<img src="' + AdminPanel._escHtml(img) + '" class="w-16 h-16 rounded-lg object-cover border border-gray-200" onerror="this.style.display=\'none\'">'; }).join('') : '<span class="text-[10px] text-gray-400">لا توجد صور</span>') +
+                (curImages.length > 0 ? curImages.map(function(img) { return '<img src="' + AdminPanel._escHtml(img) + '" class="w-16 h-16 rounded-lg object-cover border border-gray-200" onerror="this.style.display=\'none\'">'; }).join('') : '<span class="text-[11px] text-gray-400">لا توجد صور</span>') +
               '</div>' +
             '</div>' +
             '<div>' +
-              '<p class="text-[10px] font-medium text-amber-700 mb-2">النسخة المقترحة</p>' +
+              '<p class="text-[11px] font-medium text-amber-700 mb-2">النسخة المقترحة</p>' +
               '<div class="flex flex-wrap gap-2">' +
-                (newImages.length > 0 ? newImages.map(function(img) { return '<img src="' + AdminPanel._escHtml(img) + '" class="w-16 h-16 rounded-lg object-cover border border-amber-300" onerror="this.style.display=\'none\'">'; }).join('') : '<span class="text-[10px] text-gray-400">لا توجد صور</span>') +
+                (newImages.length > 0 ? newImages.map(function(img) { return '<img src="' + AdminPanel._escHtml(img) + '" class="w-16 h-16 rounded-lg object-cover border border-amber-300" onerror="this.style.display=\'none\'">'; }).join('') : '<span class="text-[11px] text-gray-400">لا توجد صور</span>') +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -994,17 +994,17 @@
                 var isExpired = ad.endDate && ad.endDate.toDate && ad.endDate.toDate() < now;
                 var isScheduled = ad.startDate && ad.startDate.toDate && ad.startDate.toDate() > now;
                 var statusHtml = '';
-                if (!ad.isActive) statusHtml = '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>';
-                else if (isExpired) statusHtml = '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>';
-                else if (isScheduled) statusHtml = '<span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700">مجدول</span>';
-                else statusHtml = '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>';
+                if (!ad.isActive) statusHtml = '<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">معطّل</span>';
+                else if (isExpired) statusHtml = '<span class="px-2 py-0.5 rounded text-[11px] bg-red-100 text-red-700">منتهي</span>';
+                else if (isScheduled) statusHtml = '<span class="px-2 py-0.5 rounded text-[11px] bg-blue-100 text-blue-700">مجدول</span>';
+                else statusHtml = '<span class="px-2 py-0.5 rounded text-[11px] bg-green-100 text-green-700">نشط</span>';
 
                 return '<tr class="hover:bg-gray-50">' +
                   '<td class="px-3 py-3">' + ((ad.images && ad.images[0]) ? '<img src="' + AdminPanel._escHtml(ad.images[0]) + '" class="w-16 h-10 rounded-lg object-cover" onerror="this.style.display=\'none\'">' : '<div class="w-16 h-10 rounded-lg bg-gray-100 flex items-center justify-center"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>') + '</td>' +
-                  '<td class="px-3 py-3"><div class="font-medium">' + AdminPanel._escHtml(ad.title || 'بدون عنوان') + '</div>' + (ad.description ? '<div class="text-[10px] text-gray-400 truncate max-w-[200px]">' + AdminPanel._escHtml(ad.description) + '</div>' : '') + '</td>' +
+                  '<td class="px-3 py-3"><div class="font-medium">' + AdminPanel._escHtml(ad.title || 'بدون عنوان') + '</div>' + (ad.description ? '<div class="text-[11px] text-gray-400 truncate max-w-[200px]">' + AdminPanel._escHtml(ad.description) + '</div>' : '') + '</td>' +
                   '<td class="px-3 py-3 text-gray-500">' + AdminPanel._escHtml(posName) + '</td>' +
-                  '<td class="px-3 py-3 text-gray-500 text-[10px]">' + startStr + '<br>إلى ' + endStr + '</td>' +
-                  '<td class="px-3 py-3 text-gray-500 text-[10px]">👁 ' + (ad.views || 0) + ' • 🖱 ' + (ad.clicks || 0) + '</td>' +
+                  '<td class="px-3 py-3 text-gray-500 text-[11px]">' + startStr + '<br>إلى ' + endStr + '</td>' +
+                  '<td class="px-3 py-3 text-gray-500 text-[11px]">👁 ' + (ad.views || 0) + ' • 🖱 ' + (ad.clicks || 0) + '</td>' +
                   '<td class="px-3 py-3">' + statusHtml + '</td>' +
                   '<td class="px-3 py-3"><div class="flex items-center gap-1">' +
                     '<button onclick="AdminPanel._editingAd=JSON.parse(JSON.stringify(AdminPanel._ads.find(function(a){return a.id===\'' + ad.id + '\';})||{}));AdminPanel._editingAd.id=\'' + ad.id + '\';AdminPanel.render()" class="p-1.5 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200" title="تعديل"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>' +
@@ -1030,7 +1030,7 @@
             '<h3 class="text-sm font-bold">' + (isNew ? 'إضافة إعلان جديد' : 'تعديل الإعلان') + '</h3>' +
             '<button onclick="AdminPanel._editingAd=null;AdminPanel.render()" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"><i data-lucide="x" class="w-4 h-4"></i></button>' +
           '</div>' +
-          '<div id="adFormError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:12px;margin-bottom:12px;"></div>' +
+          '<div id="adFormError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px;"></div>' +
           '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
             '<div><label class="field-label">اسم الإعلان *</label><input type="text" id="adTitle" class="field-input" value="' + AdminPanel._escHtml(ad.title || '') + '" placeholder="اسم الإعلان"></div>' +
             '<div><label class="field-label">وصف مختصر</label><input type="text" id="adDescription" class="field-input" value="' + AdminPanel._escHtml(ad.description || '') + '" placeholder="وصف اختياري"></div>' +
@@ -1147,10 +1147,10 @@
             '</div>' +
             this.renderDataTable(offers, 'offer', [
               { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + AdminPanel._escHtml(item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
-              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
+              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[11px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
               { label: 'الوكيل', render: function(item) { return AdminPanel._escHtml(item.agentName || '-'); } },
-              { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
-              { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>'); } }
+              { label: 'التواريخ', render: function(item) { return '<div class="text-[12px]">' + self.formatDate(item.startDate) + '</div><div class="text-[11px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
+              { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[11px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[11px] bg-green-100 text-green-700">نشط</span>'); } }
             ]) +
           '</div>' +
         '</div>';
@@ -1192,10 +1192,10 @@
             '</div>' +
             this.renderDataTable(jobs, 'job', [
               { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + AdminPanel._escHtml(item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
-              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
+              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[11px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
               { label: 'الشركة', render: function(item) { return AdminPanel._escHtml(item.companyName || '-'); } },
-              { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
-              { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>'); } }
+              { label: 'التواريخ', render: function(item) { return '<div class="text-[12px]">' + self.formatDate(item.startDate) + '</div><div class="text-[11px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
+              { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[11px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[11px] bg-green-100 text-green-700">نشط</span>'); } }
             ]) +
           '</div>' +
         '</div>';
@@ -1237,10 +1237,10 @@
             '</div>' +
             this.renderDataTable(events, 'event', [
               { label: 'الصورة', render: function(item) { return (item.image || item.imageUrl) ? '<img src="' + AdminPanel._escHtml(item.image || item.imageUrl) + '" class="w-12 h-12 rounded-lg object-cover">' : '<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400"><i data-lucide="image" class="w-5 h-5"></i></div>'; } },
-              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[10px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
+              { label: 'العنوان', render: function(item) { return '<div class="font-medium">' + AdminPanel._escHtml(item.title || '-') + '</div><div class="text-[11px] text-gray-400">' + AdminPanel._escHtml((item.description || '').substring(0, 50)) + '</div>'; } },
               { label: 'جهة التنظيم', render: function(item) { return AdminPanel._escHtml(item.organizer || '-'); } },
-              { label: 'التواريخ', render: function(item) { return '<div class="text-[11px]">' + self.formatDate(item.startDate) + '</div><div class="text-[10px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
-              { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[10px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[10px] bg-green-100 text-green-700">نشط</span>'); } }
+              { label: 'التواريخ', render: function(item) { return '<div class="text-[12px]">' + self.formatDate(item.startDate) + '</div><div class="text-[11px] text-gray-400">إلى ' + self.formatDate(item.endDate) + '</div>'; } },
+              { label: 'الحالة', render: function(item) { return self.isExpired(item.endDate) ? '<span class="px-2 py-0.5 rounded text-[11px] bg-red-100 text-red-700">منتهي</span>' : (item.isActive === false ? '<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700">معطّل</span>' : '<span class="px-2 py-0.5 rounded text-[11px] bg-green-100 text-green-700">نشط</span>'); } }
             ]) +
           '</div>' +
         '</div>';
@@ -1342,7 +1342,7 @@
           html += '<div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:' + (cat.color || '#3b82f6') + '15"><i data-lucide="' + (cat.icon || 'folder') + '" class="w-5 h-5" style="color:' + (cat.color || '#3b82f6') + '"></i></div>';
           html += '<div>';
           html += '<div class="font-bold text-sm">' + self._escHtml(cat.name) + '</div>';
-          html += '<div class="text-[10px] text-gray-400">' + cat.id + ' • ' + activeSubs.length + '/' + totalSubs + ' فرع نشط</div>';
+          html += '<div class="text-[11px] text-gray-400">' + cat.id + ' • ' + activeSubs.length + '/' + totalSubs + ' فرع نشط</div>';
           html += '</div></div>';
           html += '<div class="flex items-center gap-2">';
           // Toggle category
@@ -1375,7 +1375,7 @@
       _showCatToast: function(msg, type) {
         var colors = { success: '#059669', error: '#dc2626', info: '#2563eb' };
         var toast = document.createElement('div');
-        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;background:' + (colors[type] || colors.info) + ';color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-family:"Noto Kufi Arabic",sans-serif;box-shadow:0 8px 24px rgba(0,0,0,0.2);transition:opacity 0.3s;';
+        toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;background:' + (colors[type] || colors.info) + ';color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-family:var(--font-arabic);box-shadow:0 8px 24px rgba(0,0,0,0.2);transition:opacity 0.3s;';
         toast.textContent = msg;
         document.body.appendChild(toast);
         setTimeout(function() { toast.style.opacity = '0'; setTimeout(function() { toast.remove(); }, 300); }, 3000);
@@ -1554,7 +1554,7 @@
             '<h3 class="text-sm font-bold">' + title + '</h3>' +
             '<button onclick="AdminPanel.editingItem=null;AdminPanel.render()" class="p-1.5 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200"><i data-lucide="x" class="w-4 h-4"></i></button>' +
           '</div>' +
-          '<div id="formError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:12px;margin-bottom:12px;"></div>' +
+          '<div id="formError" style="display:none;background:#fef2f2;color:#dc2626;padding:10px;border-radius:8px;font-size:13px;margin-bottom:12px;"></div>' +
           '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
             fieldsHtml +
             imageField +
@@ -2020,7 +2020,7 @@
     margin-right: auto;
     background: #dc2626;
     color: white;
-    font-size: 10px;
+    font-size:11px;
     padding: 2px 8px;
     border-radius: 10px;
     font-weight: 600;
