@@ -701,7 +701,7 @@ const Data = {
         ...place,
         verified: false,
         featured: false,
-        isActive: true,
+        isActive: false,
         status: 'pending',
         views: 0,
         reviews: 0,
@@ -714,7 +714,7 @@ const Data = {
       // Immediately add to my-places cache so it shows up right away
       const newPlace = {
         id: docRef.id, ...place,
-        verified: false, featured: false, isActive: true, status: 'pending',
+        verified: false, featured: false, isActive: false, status: 'pending',
         views: 0, reviews: 0, rating: 0, adminNote: '',
         images: place.images || [],
         createdAt: { toMillis: () => Date.now() },
@@ -835,16 +835,42 @@ const Data = {
 
   // ====== المراجعات (Firestore) ======
   async addReview(placeId, userId, userName, userAvatar, rating, comment) {
-    try {
-      await db.collection('reviews').add({
-        placeId, userId, userName, userAvatar: userAvatar || '',
-        rating, comment,
+    if (!Auth.currentUser || Auth.currentUser.id !== userId) {
+      throw new Error('لا يمكن إرسال تقييم باسم مستخدم آخر');
+    }
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new Error('التقييم يجب أن يكون من نجمة إلى خمس نجوم');
+    }
+    if (typeof comment !== 'string' || !comment.trim() || comment.trim().length > 2000) {
+      throw new Error('اكتب تعليقاً لا يتجاوز 2000 حرف');
+    }
+    // Older reviews used auto-generated IDs. Check them before creating the new
+    // deterministic record so a returning reviewer cannot add a second review.
+    const priorReviews = await db.collection('reviews')
+      .where('placeId', '==', placeId)
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+    if (!priorReviews.empty) throw new Error('سبق أن قيّمت هذا النشاط');
+    const reviewRef = db.collection('reviews').doc(`${placeId}_${userId}`);
+    await db.runTransaction(async (transaction) => {
+      const existing = await transaction.get(reviewRef);
+      if (existing.exists) {
+        const error = new Error('سبق أن قيّمت هذا النشاط');
+        error.code = 'review/already-exists';
+        throw error;
+      }
+      transaction.set(reviewRef, {
+        placeId,
+        userId,
+        userName: String(userName || '').slice(0, 120),
+        userAvatar: String(userAvatar || '').slice(0, 2048),
+        rating,
+        comment: comment.trim(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      await this._updatePlaceRating(placeId);
-    } catch (e) {
-      console.error('addReview error:', e);
-    }
+    });
+    return { id: reviewRef.id, placeId, userId, rating, comment: comment.trim() };
   },
 
   async getReviews(placeId) {
@@ -1100,6 +1126,7 @@ const Data = {
     // Check if there's already a pending edit
     const existing = await db.collection('place_edits')
       .where('placeId', '==', placeId)
+      .where('owner', '==', Auth.currentUser.id)
       .where('status', '==', 'pending')
       .get();
     if (!existing.empty) throw new Error('يوجد طلب تعديل معلق بالفعل لهذا المكان. انتظر موافقة أو رفض الأدمن أولاً.');

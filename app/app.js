@@ -75,7 +75,6 @@ const App = {
       window.addEventListener('hashchange', () => this.handleRoute());
       
       // Load remaining data in background
-      Admin.initDefaultAdmin().catch(() => {});
       // Preload ads EARLY so renderPosition() has data on first render
       Ads.getAll().catch(() => {});
       Data.preloadAll().then(() => {

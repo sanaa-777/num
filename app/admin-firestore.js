@@ -9,45 +9,6 @@ const Admin = {
     return Auth.currentUser && Auth.currentUser.role === 'admin';
   },
 
-  // ====== تهيئة الأدمن الافتراضي (مرة واحدة) ======
-  async initDefaultAdmin() {
-    try {
-      if (!Auth.currentUser) return;
-      if (Auth.currentUser.email !== 'admin@yemendirectory.net') return;
-      const userRef = db.collection('users').doc(Auth.currentUser.id);
-      const userDoc = await userRef.get();
-      if (userDoc.exists && userDoc.data().role === 'admin') return; // Already admin
-      // Create or update admin document
-      if (!userDoc.exists) {
-        // Document doesn't exist — CREATE with role: 'admin'
-        await userRef.set({
-          name: Auth.currentUser.name || 'مدير النظام',
-          email: 'admin@yemendirectory.net',
-          phone: '',
-          avatar: Auth.currentUser.avatar || '',
-          role: 'admin',
-          verified: true,
-          suspended: false,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      } else {
-        // Document exists — UPDATE only admin fields (matches Firestore rule)
-        await userRef.update({
-          role: 'admin',
-          verified: true,
-          suspended: false,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      }
-      Auth.currentUser.role = 'admin';
-      Auth.currentUser.verified = true;
-      console.log('Admin role ensured in Firestore');
-    } catch (e) {
-      console.error('initDefaultAdmin error:', e.message);
-    }
-  },
-
   // ====== إدارة المستخدمين ======
   async getAllUsers() {
     try {
@@ -302,7 +263,8 @@ const Admin = {
       await db.collection('admin_notifications').add({
         type, message,
         read: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdBy: auth.currentUser ? auth.currentUser.uid : ''
       });
     } catch (e) {
       console.error('addNotification error:', e);

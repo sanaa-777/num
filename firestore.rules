@@ -1,8 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ============ Helper Functions ============
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -23,8 +21,80 @@ service cloud.firestore {
         get(/databases/$(database)/documents/places/$(placeId)).data.owner == request.auth.uid;
     }
 
-    // Shared validation for user-submitted events, jobs and offers.
-    // Administrative writes are handled by isAdmin() in the collection rules.
+    function validOptionalString(data, field, maxLength) {
+      return !data.keys().hasAny([field]) || data[field] == null ||
+        (data[field] is string && data[field].size() <= maxLength);
+    }
+
+    function validOptionalList(data, field, maxSize) {
+      return !data.keys().hasAny([field]) || data[field] == null ||
+        (data[field] is list && data[field].size() <= maxSize);
+    }
+
+    function validPlaceContent(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 160 &&
+        data.category is string && data.category.size() > 0 && data.category.size() <= 100 &&
+        data.subcategory is string && data.subcategory.size() > 0 && data.subcategory.size() <= 100 &&
+        data.city is string && data.city.size() > 0 && data.city.size() <= 100 &&
+        validOptionalString(data, 'description', 5000) &&
+        validOptionalString(data, 'address', 300) &&
+        validOptionalString(data, 'phone', 40) &&
+        validOptionalString(data, 'whatsapp', 40) &&
+        validOptionalString(data, 'email', 254) &&
+        validOptionalString(data, 'facebook', 500) &&
+        validOptionalString(data, 'instagram', 500) &&
+        validOptionalString(data, 'telegram', 500) &&
+        validOptionalString(data, 'website', 500) &&
+        validOptionalString(data, 'openTime', 40) &&
+        validOptionalString(data, 'closeTime', 40) &&
+        validOptionalString(data, 'lat', 30) &&
+        validOptionalString(data, 'lng', 30) &&
+        validOptionalList(data, 'workDays', 7) &&
+        (!data.keys().hasAny(['images']) ||
+          (data.images is list && data.images.size() <= 5 &&
+           data.images.toSet().size() == data.images.size())) &&
+        (!data.keys().hasAny(['image']) || data.image == null ||
+          (data.image is string && data.image.size() <= 2048));
+    }
+
+    function validPlaceCategory(data) {
+      return exists(/databases/$(database)/documents/categories/$(data.category)) &&
+        get(/databases/$(database)/documents/categories/$(data.category)).data.active != false &&
+        get(/databases/$(database)/documents/categories/$(data.category)).data.subIds.hasAny([data.subcategory]);
+    }
+
+    function validPlaceCreate() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'owner', 'name', 'category', 'subcategory', 'city', 'description', 'address',
+          'phone', 'whatsapp', 'email', 'facebook', 'instagram', 'telegram', 'website',
+          'openTime', 'closeTime', 'workDays', 'lat', 'lng', 'images', 'image',
+          'verified', 'featured', 'isActive', 'status', 'views', 'reviews', 'rating',
+          'adminNote', 'createdAt', 'updatedAt'
+        ]) &&
+        d.owner == request.auth.uid &&
+        d.status == 'pending' && d.isActive == false &&
+        d.verified == false && d.featured == false &&
+        d.views == 0 && d.reviews == 0 && d.rating == 0 && d.adminNote == '' &&
+        d.createdAt is timestamp && d.createdAt == request.time &&
+        d.updatedAt is timestamp && d.updatedAt == request.time &&
+        validPlaceContent(d) && validPlaceCategory(d);
+    }
+
+    function validPlaceOwnerUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let d = request.resource.data;
+      return changed.hasOnly([
+          'name', 'category', 'subcategory', 'city', 'description', 'address', 'phone',
+          'whatsapp', 'email', 'facebook', 'instagram', 'telegram', 'website', 'openTime',
+          'closeTime', 'workDays', 'lat', 'lng', 'images', 'image', 'updatedAt'
+        ]) &&
+        d.owner == resource.data.owner &&
+        d.updatedAt is timestamp && d.updatedAt == request.time &&
+        validPlaceContent(d) &&
+        (!changed.hasAny(['category', 'subcategory']) || validPlaceCategory(d));
+    }
+
     function validListingFields() {
       let d = request.resource.data;
       return d.keys().hasOnly([
@@ -35,26 +105,16 @@ service cloud.firestore {
         'views', 'clicks', 'organizer', 'companyName', 'agentName'
       ]) &&
       d.title is string && d.title.size() > 0 && d.title.size() <= 200 &&
-      (!d.keys().hasAny(['description']) ||
-        (d.description is string && d.description.size() <= 5000)) &&
-      (!d.keys().hasAny(['location']) ||
-        (d.location is string && d.location.size() <= 300)) &&
-      (!d.keys().hasAny(['phone']) ||
-        (d.phone is string && d.phone.size() <= 40)) &&
-      (!d.keys().hasAny(['whatsapp']) ||
-        (d.whatsapp is string && d.whatsapp.size() <= 40)) &&
-      (!d.keys().hasAny(['facebook']) ||
-        (d.facebook is string && d.facebook.size() <= 500)) &&
-      (!d.keys().hasAny(['instagram']) ||
-        (d.instagram is string && d.instagram.size() <= 500)) &&
-      (!d.keys().hasAny(['telegram']) ||
-        (d.telegram is string && d.telegram.size() <= 500)) &&
-      (!d.keys().hasAny(['website']) ||
-        (d.website is string && d.website.size() <= 500)) &&
-      (!d.keys().hasAny(['image']) ||
-        (d.image is string && d.image.size() <= 2048)) &&
-      (!d.keys().hasAny(['images']) ||
-        (d.images is list && d.images.size() <= 5)) &&
+      (!d.keys().hasAny(['description']) || (d.description is string && d.description.size() <= 5000)) &&
+      (!d.keys().hasAny(['location']) || (d.location is string && d.location.size() <= 300)) &&
+      (!d.keys().hasAny(['phone']) || (d.phone is string && d.phone.size() <= 40)) &&
+      (!d.keys().hasAny(['whatsapp']) || (d.whatsapp is string && d.whatsapp.size() <= 40)) &&
+      (!d.keys().hasAny(['facebook']) || (d.facebook is string && d.facebook.size() <= 500)) &&
+      (!d.keys().hasAny(['instagram']) || (d.instagram is string && d.instagram.size() <= 500)) &&
+      (!d.keys().hasAny(['telegram']) || (d.telegram is string && d.telegram.size() <= 500)) &&
+      (!d.keys().hasAny(['website']) || (d.website is string && d.website.size() <= 500)) &&
+      (!d.keys().hasAny(['image']) || (d.image is string && d.image.size() <= 2048)) &&
+      (!d.keys().hasAny(['images']) || (d.images is list && d.images.size() <= 5)) &&
       (!d.keys().hasAny(['views']) || d.views is int) &&
       (!d.keys().hasAny(['clicks']) || d.clicks is int);
     }
@@ -62,249 +122,232 @@ service cloud.firestore {
     function validListingCreate() {
       let d = request.resource.data;
       return validListingFields() &&
-        d.owner == request.auth.uid &&
-        d.status == 'pending' &&
-        d.isActive == false &&
-        d.featured == false &&
-        d.verified == false &&
-        d.startDate is timestamp &&
-        d.endDate is timestamp &&
-        d.endDate >= d.startDate &&
-        d.createdAt is timestamp &&
-        d.updatedAt is timestamp &&
-        d.keys().hasAny(['description']) &&
-        d.keys().hasAny(['location']) &&
-        (!d.keys().hasAny(['organizer']) ||
-          (d.organizer is string && d.organizer.size() <= 200)) &&
-        (!d.keys().hasAny(['companyName']) ||
-          (d.companyName is string && d.companyName.size() <= 200)) &&
-        (!d.keys().hasAny(['agentName']) ||
-          (d.agentName is string && d.agentName.size() <= 200));
+        d.owner == request.auth.uid && d.status == 'pending' &&
+        d.isActive == false && d.featured == false && d.verified == false &&
+        d.startDate is timestamp && d.endDate is timestamp && d.endDate >= d.startDate &&
+        d.createdAt is timestamp && d.updatedAt is timestamp &&
+        d.keys().hasAny(['description']) && d.keys().hasAny(['location']);
     }
 
     function validListingUpdate() {
+      return validListingFields() && request.resource.data.owner == resource.data.owner;
+    }
+
+    function validUserCreate() {
       let d = request.resource.data;
-      return validListingFields() && d.owner == resource.data.owner;
+      return d.keys().hasOnly([
+          'name', 'email', 'phone', 'avatar', 'coverImage', 'role', 'verified',
+          'suspended', 'bio', 'location', 'website', 'createdAt', 'updatedAt',
+          'lastLoginAt', 'providerId', 'active'
+        ]) &&
+        d.role == 'user' && d.verified == false && d.suspended == false &&
+        d.email == request.auth.token.email &&
+        d.name is string && d.name.size() > 0 && d.name.size() <= 120 &&
+        validOptionalString(d, 'phone', 40) && validOptionalString(d, 'avatar', 2048) &&
+        validOptionalString(d, 'coverImage', 2048) && validOptionalString(d, 'bio', 1000) &&
+        validOptionalString(d, 'location', 200) && validOptionalString(d, 'website', 500) &&
+        (!d.keys().hasAny(['createdAt']) || (d.createdAt is timestamp && d.createdAt == request.time)) &&
+        (!d.keys().hasAny(['updatedAt']) || (d.updatedAt is timestamp && d.updatedAt == request.time));
     }
 
-    // ============ Users ============
+    function validUserOwnerUpdate() {
+      let d = request.resource.data;
+      let changed = d.diff(resource.data).affectedKeys();
+      return changed.hasOnly([
+          'name', 'email', 'phone', 'avatar', 'coverImage', 'bio', 'location',
+          'website', 'updatedAt', 'lastLoginAt', 'providerId'
+        ]) &&
+        d.role == resource.data.role && d.verified == resource.data.verified &&
+        d.suspended == resource.data.suspended &&
+        d.email == request.auth.token.email &&
+        (!changed.hasAny(['name']) || (d.name is string && d.name.size() > 0 && d.name.size() <= 120)) &&
+        validOptionalString(d, 'phone', 40) && validOptionalString(d, 'avatar', 2048) &&
+        validOptionalString(d, 'coverImage', 2048) && validOptionalString(d, 'bio', 1000) &&
+        validOptionalString(d, 'location', 200) && validOptionalString(d, 'website', 500) &&
+        (!changed.hasAny(['updatedAt']) || (d.updatedAt is timestamp && d.updatedAt == request.time)) &&
+        (!changed.hasAny(['lastLoginAt']) || (d.lastLoginAt is timestamp && d.lastLoginAt == request.time)) &&
+        (!changed.hasAny(['providerId']) || (d.providerId is string && d.providerId.size() <= 80));
+    }
+
     match /users/{userId} {
-      // Anyone authenticated can read user profiles (for displaying names/avatars)
-      allow read: if isAuthenticated();
-      // Users can create their own profile
-      // Admin bootstrap: admin@yemendirectory.net can create with role: 'admin'
-      allow create: if isOwner(userId) && (
-        !request.resource.data.keys().hasAny(['role']) ||
-        request.resource.data.role == 'user' ||
-        request.auth.token.email == 'admin@yemendirectory.net'
-      );
-      // Users can update their own profile BUT cannot change role, verified, or suspended
-      // EXCEPT: the designated admin email can set its own role to 'admin' (bootstrap)
-      allow update: if isAdmin() || (
-        isOwner(userId) &&
-        (
-          // Normal users: cannot touch role/verified/suspended
-          (!request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['role', 'verified', 'suspended']))
-          ||
-          // Admin bootstrap: allow admin@yemendirectory.net to set own role
-          (request.auth.token.email == 'admin@yemendirectory.net' &&
-           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'verified', 'suspended', 'updatedAt']))
-        )
-      );
-      // Only admins can delete users
-      allow delete: if isAdmin();
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && validUserCreate();
+      // Admins may manage non-role account flags; role assignment is reserved for trusted tooling.
+      allow update: if (isAdmin() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'verified', 'suspended', 'active', 'updatedAt', 'name', 'phone',
+            'avatar', 'coverImage', 'bio', 'location', 'website'
+          ]) && request.resource.data.role == resource.data.role &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['verified']) || request.resource.data.verified is bool) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['suspended']) || request.resource.data.suspended is bool) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['active']) || request.resource.data.active is bool) &&
+          (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['updatedAt']) || request.resource.data.updatedAt == request.time)) ||
+        (isOwner(userId) && validUserOwnerUpdate());
+      allow delete: if isAdmin() && resource.data.role != 'admin';
     }
 
-    // ============ Places ============
     match /places/{placeId} {
-      // Anyone can read active approved places (public directory)
-      allow read: if true;
-
-      // Helper: validate that category exists, is active, and subcategory belongs to it
-      function validCategoryAndSub(catId, subId) {
-        return exists(/databases/$(database)/documents/categories/$(catId)) &&
-          get(/databases/$(database)/documents/categories/$(catId)).data.active != false &&
-          get(/databases/$(database)/documents/categories/$(catId)).data.subIds.hasAny([subId]);
-      }
-
-      // Authenticated users can create places (become pending)
-      // Category and subcategory must be valid and the sub must belong to the category
-      allow create: if isAuthenticated() &&
-        request.resource.data.owner == request.auth.uid &&
-        request.resource.data.status == 'pending' &&
-        request.resource.data.category is string &&
-        request.resource.data.category.size() > 0 &&
-        request.resource.data.subcategory is string &&
-        request.resource.data.subcategory.size() > 0 &&
-        validCategoryAndSub(request.resource.data.category, request.resource.data.subcategory);
-
-      // Owners can update their own places (limited fields)
-      // Admins can update any place (full access including status changes)
-      allow update: if isAdmin() || (
-        isPlaceOwner(placeId) &&
-        // Owners cannot change status, verified, featured, isActive
-        (!request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['status', 'verified', 'featured', 'isActive', 'owner'])) &&
-        // If category or subcategory changed, validate the pair
-        (
-          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['category', 'subcategory']) ||
-          validCategoryAndSub(request.resource.data.category, request.resource.data.subcategory)
-        )
-      );
-      // Only admins can delete places
+      allow read: if isAdmin() ||
+        (isAuthenticated() && resource.data.owner == request.auth.uid) ||
+        (resource.data.status == 'approved' && resource.data.isActive == true);
+      allow create: if isAuthenticated() && validPlaceCreate();
+      allow update: if isAdmin() ||
+        (isAuthenticated() && resource.data.owner == request.auth.uid && validPlaceOwnerUpdate());
       allow delete: if isAdmin();
     }
 
-    // ============ Reviews ============
     match /reviews/{reviewId} {
-      // Anyone can read reviews
       allow read: if true;
-      // Authenticated users can create reviews
       allow create: if isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid;
-      // Owners can update/delete their own reviews
-      allow update, delete: if isAuthenticated() &&
-        resource.data.userId == request.auth.uid;
+        reviewId == request.resource.data.placeId + '_' + request.auth.uid &&
+        request.resource.data.keys().hasOnly([
+          'placeId', 'userId', 'userName', 'userAvatar', 'rating', 'comment', 'createdAt'
+        ]) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.placeId is string && request.resource.data.placeId.size() > 0 &&
+        request.resource.data.userName is string && request.resource.data.userName.size() <= 120 &&
+        request.resource.data.userAvatar is string && request.resource.data.userAvatar.size() <= 2048 &&
+        request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
+        request.resource.data.comment is string && request.resource.data.comment.size() > 0 && request.resource.data.comment.size() <= 2000 &&
+        request.resource.data.createdAt is timestamp && request.resource.data.createdAt == request.time &&
+        exists(/databases/$(database)/documents/places/$(request.resource.data.placeId)) &&
+        get(/databases/$(database)/documents/places/$(request.resource.data.placeId)).data.status == 'approved' &&
+        get(/databases/$(database)/documents/places/$(request.resource.data.placeId)).data.isActive == true;
+      // A member can edit their own one deterministic review, but cannot change its identity or owner.
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'comment']) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.placeId == resource.data.placeId &&
+        request.resource.data.rating is int && request.resource.data.rating >= 1 && request.resource.data.rating <= 5 &&
+        request.resource.data.comment is string && request.resource.data.comment.size() > 0 && request.resource.data.comment.size() <= 2000;
+      // Reviews are retained; deletion would let a user recreate a second review.
+      allow delete: if false;
     }
 
-    // ============ Favorites ============
     match /favorites/{favId} {
-      // Only the owner can read their favorites
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      // Users can create/delete their own favorites
-      allow create: if isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
-    // ============ Notifications ============
     match /notifications/{notifId} {
-      // Only the target user can read their notifications
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      // Users can create notifications only for themselves
-      // Admins can create notifications for any user (via isAdmin bypass)
-      allow create: if isAuthenticated() && (
-        request.resource.data.userId == request.auth.uid ||
-        isAdmin()
-      );
-      // Users can mark their own notifications as read
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      // Users can delete their own notifications
+      allow create: if isAdmin() &&
+        request.resource.data.keys().hasOnly(['userId', 'type', 'message', 'read', 'createdAt']) &&
+        request.resource.data.userId is string && request.resource.data.type == 'admin' &&
+        request.resource.data.message is string && request.resource.data.message.size() <= 1000 &&
+        request.resource.data.read == false && request.resource.data.createdAt == request.time;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']) &&
+        request.resource.data.read is bool;
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
-    // ============ Admin Notifications ============
     match /admin_notifications/{notifId} {
-      // Only admins can read admin notifications
       allow read: if isAdmin();
-      // Any authenticated user can create (e.g., new place notifications)
-      allow create: if isAuthenticated();
-      // Only admins can update (mark as read) or delete
-      allow update, delete: if isAdmin();
+      // Submissions from signed-in users are limited and attributed; only admins can review them.
+      allow create: if isAuthenticated() &&
+        request.resource.data.keys().hasOnly(['type', 'message', 'read', 'createdAt', 'createdBy']) &&
+        request.resource.data.type is string && request.resource.data.type.size() <= 40 &&
+        (isAdmin() || ['request', 'new_place'].hasAny([request.resource.data.type])) &&
+        request.resource.data.message is string && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 500 &&
+        request.resource.data.read == false && request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.createdAt is timestamp && request.resource.data.createdAt == request.time;
+      allow update: if isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']) &&
+        request.resource.data.read is bool;
+      allow delete: if isAdmin();
     }
 
-    // ============ Offers ============
     match /offers/{offerId} {
       allow read: if true;
       allow create: if isAdmin() || (isAuthenticated() && validListingCreate());
-      allow update: if isAdmin() || (
-        isAuthenticated() &&
+      allow update: if isAdmin() || (isAuthenticated() &&
         resource.data.owner == request.auth.uid &&
-        !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['status', 'isActive', 'featured', 'verified', 'owner']) &&
-        validListingUpdate()
-      );
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'isActive', 'featured', 'verified', 'owner']) &&
+        validListingUpdate());
       allow delete: if isAdmin();
     }
 
-    // ============ Jobs ============
     match /jobs/{jobId} {
       allow read: if true;
       allow create: if isAdmin() || (isAuthenticated() && validListingCreate());
-      allow update: if isAdmin() || (
-        isAuthenticated() &&
+      allow update: if isAdmin() || (isAuthenticated() &&
         resource.data.owner == request.auth.uid &&
-        !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['status', 'isActive', 'featured', 'verified', 'owner']) &&
-        validListingUpdate()
-      );
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'isActive', 'featured', 'verified', 'owner']) &&
+        validListingUpdate());
       allow delete: if isAdmin();
     }
 
-    // ============ Events ============
     match /events/{eventId} {
       allow read: if true;
       allow create: if isAdmin() || (isAuthenticated() && validListingCreate());
-      allow update: if isAdmin() || (
-        isAuthenticated() &&
+      allow update: if isAdmin() || (isAuthenticated() &&
         resource.data.owner == request.auth.uid &&
-        !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['status', 'isActive', 'featured', 'verified', 'owner']) &&
-        validListingUpdate()
-      );
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'isActive', 'featured', 'verified', 'owner']) &&
+        validListingUpdate());
       allow delete: if isAdmin();
     }
 
-    // ============ Pricing ============
     match /pricing/{pricingId} {
-      // Anyone can read pricing (public data)
       allow read: if true;
-      // Only admins can create/update/delete pricing
       allow create, update, delete: if isAdmin();
     }
 
-    // ============ Ads ============
     match /ads/{adId} {
-      // Anyone can read ads (for display)
       allow read: if true;
-      // Only admins can manage ads
       allow create, update, delete: if isAdmin();
     }
 
-    // ============ Categories (Taxonomy) ============
     match /categories/{catId} {
-      // Anyone can read categories (public taxonomy)
       allow read: if true;
-      // Only admins can create/update/delete categories
       allow create, update, delete: if isAdmin();
     }
 
-    // ============ Place Edits (Edit-with-Review) ============
     match /place_edits/{editId} {
-      // Owners can read their own edits, admins can read all
-      allow read: if isAuthenticated() &&
-        (resource.data.owner == request.auth.uid || isAdmin());
-      // Place owners can submit edits
+      allow read: if isAdmin() ||
+        (isAuthenticated() && resource.data.owner == request.auth.uid);
       allow create: if isAuthenticated() &&
-        request.resource.data.owner == request.auth.uid;
-      // Only admins can update (approve/reject) edits
+        request.resource.data.keys().hasOnly([
+          'placeId', 'owner', 'ownerName', 'status', 'proposedData', 'currentData',
+          'placeName', 'adminNote', 'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.owner == request.auth.uid &&
+        request.resource.data.ownerName is string && request.resource.data.ownerName.size() <= 120 &&
+        request.resource.data.placeName is string && request.resource.data.placeName.size() <= 160 &&
+        request.resource.data.adminNote == '' &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.placeId is string &&
+        exists(/databases/$(database)/documents/places/$(request.resource.data.placeId)) &&
+        get(/databases/$(database)/documents/places/$(request.resource.data.placeId)).data.owner == request.auth.uid &&
+        request.resource.data.proposedData is map &&
+        request.resource.data.proposedData.keys().hasOnly([
+          'name', 'category', 'subcategory', 'city', 'description', 'address', 'phone',
+          'whatsapp', 'email', 'facebook', 'instagram', 'telegram', 'website',
+          'openTime', 'closeTime', 'workDays', 'images', 'lat', 'lng'
+        ]) &&
+        request.resource.data.currentData is map &&
+        request.resource.data.currentData.keys().hasOnly([
+          'name', 'category', 'subcategory', 'city', 'description', 'address', 'phone',
+          'whatsapp', 'email', 'facebook', 'instagram', 'telegram', 'website',
+          'openTime', 'closeTime', 'workDays', 'images', 'lat', 'lng'
+        ]) &&
+        validPlaceContent(request.resource.data.proposedData) &&
+        validPlaceCategory(request.resource.data.proposedData) &&
+        request.resource.data.createdAt == request.time && request.resource.data.updatedAt == request.time;
       allow update: if isAdmin();
-      // Owners can cancel (delete) their pending edits
-      allow delete: if isAuthenticated() &&
-        resource.data.owner == request.auth.uid &&
-        resource.data.status == 'pending';
+      allow delete: if isAdmin() ||
+        (isAuthenticated() && resource.data.owner == request.auth.uid && resource.data.status == 'pending');
     }
 
-    // ============ Login Attempts (Rate Limiting) ============
-    match /login_attempts/{email} {
-      // Only authenticated users can read rate limit data
-      allow read: if isAuthenticated();
-      // Only authenticated users can write rate limit data
-      allow create, update: if isAuthenticated();
-      // Only admins can delete rate limit records (to clear lockouts)
-      allow delete: if isAdmin();
+    // Persistent rate-limit data is not accessible from a browser client.
+    match /login_attempts/{attemptId} {
+      allow read, write: if false;
     }
 
-    // ============ Error Logs ============
     match /error_logs/{logId} {
-      // Only authenticated users can create error logs
       allow create: if isAuthenticated();
-      // Only admins can read error logs
-      allow read: if isAdmin();
-      // Only admins can delete error logs
-      allow delete: if isAdmin();
-      // No updates to error logs
+      allow read, delete: if isAdmin();
       allow update: if false;
     }
   }

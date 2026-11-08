@@ -8,32 +8,6 @@ const Admin = {
     return Auth.currentUser && Auth.currentUser.role === 'admin';
   },
 
-  // إنشاء أدمن افتراضي (admin@yemendirectory.net / admin123)
-  initDefaultAdmin() {
-    const users = JSON.parse(localStorage.getItem('dy_users') || '[]');
-    const hasAdmin = users.find(u => u.role === 'admin');
-    if (!hasAdmin) {
-      const admin = {
-        id: 'admin_001',
-        name: 'مدير النظام',
-        email: 'admin@yemendirectory.net',
-        phone: '777000000',
-        avatar: 'https://ui-avatars.com/api/?name=Admin&background=dc2626&color=fff&size=128',
-        role: 'admin',
-        verified: true,
-        suspended: false,
-        createdAt: new Date().toISOString(),
-      };
-      users.push(admin);
-      localStorage.setItem('dy_users', JSON.stringify(users));
-
-      // كلمة مرور الأدمن
-      const creds = JSON.parse(localStorage.getItem('dy_credentials') || '{}');
-      creds['admin@yemendirectory.net'] = Auth._hashPassword('admin123');
-      localStorage.setItem('dy_credentials', JSON.stringify(creds));
-    }
-  },
-
   // ====== إدارة المستخدمين ======
   getAllUsers() {
     return JSON.parse(localStorage.getItem('dy_users') || '[]');

@@ -8,10 +8,8 @@ const Auth = {
   _authListenerAttached: false,
   _initResolve: null,
 
-  // ====== Login Rate Limiting (Dual-Layer) ======
-  // Layer 1: In-memory (fast, UX feedback) — resets on page refresh
-  // Layer 2: Firestore (persistent, harder to bypass) — survives refresh
-  // Layer 3: Firebase Auth server-side IP blocking (automatic, cannot be bypassed)
+  // ====== Login Rate Limiting (Client UX only) ======
+  // Persistent lockout state must be handled by trusted server-side code, never by a browser client.
   _loginAttempts: {},
   _MAX_ATTEMPTS: 5,
   _WINDOW_MS: 300000,
@@ -25,8 +23,6 @@ const Auth = {
   async _checkRateLimit(email) {
     const key = this._getRateLimitKey(email);
     if (!key) return { allowed: true };
-
-    // Layer 1: Check in-memory (fast path)
     const memEntry = this._loginAttempts[key];
     if (memEntry) {
       const now = Date.now();
@@ -44,58 +40,6 @@ const Auth = {
         return { allowed: false, message: `تم إيقاف الدخول مؤقتاً. حاول بعد ${Math.ceil(lockoutDuration / 1000)} ثانية` };
       }
     }
-
-    // Layer 2: Check Firestore (persistent, cross-session)
-    try {
-      const doc = await db.collection('login_attempts').doc(key).get();
-      if (doc.exists) {
-        const data = doc.data();
-        const now = Date.now();
-        // Check lockout
-        if (data.lockedUntil && data.lockedUntil.toMillis && data.lockedUntil.toMillis() > now) {
-          const remainingSec = Math.ceil((data.lockedUntil.toMillis() - now) / 1000);
-          // Sync to memory
-          this._loginAttempts[key] = {
-            count: data.count || 0,
-            firstAttempt: data.firstAttempt ? data.firstAttempt.toMillis() : now,
-            lastAttempt: now,
-            lockedUntil: data.lockedUntil.toMillis(),
-            lockoutCount: data.lockoutCount || 0
-          };
-          return { allowed: false, message: `تم إيقاف الدخول مؤقتاً. حاول بعد ${remainingSec} ثانية` };
-        }
-        // Check window
-        const firstAttemptMs = data.firstAttempt ? data.firstAttempt.toMillis() : 0;
-        if (firstAttemptMs && (now - firstAttemptMs) > this._WINDOW_MS) {
-          // Window expired — clean up
-          try { await db.collection('login_attempts').doc(key).delete(); } catch(e) {}
-        } else if (data.count >= this._MAX_ATTEMPTS) {
-          // Apply lockout in Firestore
-          const lockoutMultiplier = Math.pow(2, data.lockoutCount || 0);
-          const lockoutDuration = Math.min(this._LOCKOUT_BASE * lockoutMultiplier, this._MAX_LOCKOUT);
-          const lockoutUntil = new Date(now + lockoutDuration);
-          try {
-            await db.collection('login_attempts').doc(key).update({
-              lockedUntil: firebase.firestore.Timestamp.fromDate(lockoutUntil),
-              lockoutCount: (data.lockoutCount || 0) + 1
-            });
-          } catch(e) {}
-          // Sync to memory
-          this._loginAttempts[key] = {
-            count: data.count,
-            firstAttempt: firstAttemptMs,
-            lastAttempt: now,
-            lockedUntil: lockoutUntil.getTime(),
-            lockoutCount: (data.lockoutCount || 0) + 1
-          };
-          return { allowed: false, message: `تم إيقاف الدخول مؤقتاً. حاول بعد ${Math.ceil(lockoutDuration / 1000)} ثانية` };
-        }
-      }
-    } catch (e) {
-      // Firestore check failed — fall through to allow (memory check already passed)
-      console.warn('Rate limit Firestore check failed:', e.message);
-    }
-
     return { allowed: true };
   },
 
@@ -104,7 +48,6 @@ const Auth = {
     if (!key) return;
     const now = Date.now();
 
-    // Layer 1: Update memory
     const memEntry = this._loginAttempts[key];
     if (!memEntry || (now - memEntry.firstAttempt > this._WINDOW_MS)) {
       this._loginAttempts[key] = {
@@ -116,37 +59,12 @@ const Auth = {
       memEntry.lastAttempt = now;
     }
 
-    // Layer 2: Update Firestore (persistent)
-    try {
-      const docRef = db.collection('login_attempts').doc(key);
-      const doc = await docRef.get();
-      if (!doc.exists || (doc.data().firstAttempt && (now - doc.data().firstAttempt.toMillis()) > this._WINDOW_MS)) {
-        await docRef.set({
-          email: key,
-          count: 1,
-          firstAttempt: firebase.firestore.FieldValue.serverTimestamp(),
-          lastAttempt: firebase.firestore.FieldValue.serverTimestamp(),
-          lockedUntil: null,
-          lockoutCount: doc.exists ? (doc.data().lockoutCount || 0) : 0
-        });
-      } else {
-        await docRef.update({
-          count: firebase.firestore.FieldValue.increment(1),
-          lastAttempt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-      }
-    } catch (e) {
-      console.warn('Rate limit Firestore write failed:', e.message);
-    }
   },
 
   async _clearFailedAttempts(email) {
     const key = this._getRateLimitKey(email);
     if (!key) return;
-    // Clear memory
     delete this._loginAttempts[key];
-    // Clear Firestore
-    try { await db.collection('login_attempts').doc(key).delete(); } catch(e) {}
   },
 
   // ====== التهيئة (تستدعى مرة واحدة) ======
@@ -682,7 +600,8 @@ const Auth = {
       await db.collection('admin_notifications').add({
         type, message,
         read: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdBy: auth.currentUser ? auth.currentUser.uid : ''
       });
     } catch (e) {
       console.error('_notifyAdmin error:', e);
