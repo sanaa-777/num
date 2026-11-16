@@ -60,8 +60,13 @@ const App = {
       
       // Now render with auth state
       // If hash is a detail view, don't render home first (prevents flicker)
-      const initHash = location.hash.slice(1) || 'home';
-      const initView = initHash.split('/')[0];
+      let initHash = location.hash.slice(1) || 'home';
+      let initView = initHash.split('/')[0];
+      if (Auth.currentUser && ['login', 'signup'].includes(initView)) {
+        location.hash = 'home';
+        initHash = 'home';
+        initView = 'home';
+      }
       const isDetailView = ['place', 'offer', 'job', 'event'].includes(initView);
       
       if (isDetailView) {
@@ -72,6 +77,7 @@ const App = {
         this.render();
         this.handleRoute();
       }
+      if (Auth._flushRedirectAuthError) Auth._flushRedirectAuthError();
       window.addEventListener('hashchange', () => this.handleRoute());
       
       // Load remaining data in background

@@ -75,16 +75,12 @@ const Auth = {
       this._authListenerAttached = true;
 
       // Handle redirect result from Google Sign-In
-      auth.getRedirectResult().then((result) => {
-        if (result && result.user) {
-          console.log('Google redirect sign-in successful');
-          this._normalizeSocialUser(result.user).then(() => {
-            if (typeof App !== 'undefined' && App.render) App.render();
-          });
-        }
-      }).catch((error) => {
-        console.warn('Redirect result error:', error.code);
-      });
+      auth.getRedirectResult()
+        .then((result) => this._completeGoogleRedirect(result))
+        .catch((error) => {
+          console.warn('Redirect result error:', error.code);
+          this._reportRedirectAuthError(error);
+        });
 
       // Timeout: إذا لم يستجب Firebase خلال 8 ثوانٍ
       const timeout = setTimeout(() => {
@@ -160,17 +156,19 @@ const Auth = {
           // لا تمسح صفحات التفاصيل — تدير محتواها بنفسها
           if (typeof App !== 'undefined' && App.render) {
             const target = App._authNavigationTarget;
+            const route = (location.hash.slice(1) || 'home').split('/')[0];
             if (target) {
               App._authNavigationTarget = null;
               clearTimeout(App._authNavigationTimeout);
               App._authNavigationTimeout = null;
-              const route = (location.hash.slice(1) || 'home').split('/')[0];
               if (route !== target) {
                 location.hash = target;
               } else if (App.currentView !== target || App._lastRenderedUserId !== (this.currentUser?.id || null)) {
                 App.currentView = target;
                 App.render();
               }
+            } else if (this.currentUser && ['login', 'signup'].includes(route) && App._navigateHomeAfterAuth) {
+              App._navigateHomeAfterAuth();
             } else {
               const v = App.currentView;
               if (!['place', 'offer', 'job', 'event', 'editplace'].includes(v)) {
@@ -184,6 +182,49 @@ const Auth = {
         resolve(null);
       }
     });
+  },
+
+  async _completeGoogleRedirect(result) {
+    if (!result || !result.user) return null;
+    const user = await this._normalizeSocialUser(result.user);
+    if (typeof App !== 'undefined' && typeof App._navigateHomeAfterAuth === 'function') {
+      App._navigateHomeAfterAuth();
+    } else if (typeof App !== 'undefined' && App.render) {
+      App.render();
+    }
+    return user;
+  },
+
+  _reportRedirectAuthError(error) {
+    this._handleError(error);
+    const messages = {
+      'auth/account-exists-with-different-credential': 'هذا البريد مرتبط بحساب مسجل بطريقة أخرى. سجّل الدخول بالطريقة التي استخدمتها سابقاً؛ لا يمكن إكمال Google لهذا البريد تلقائياً.',
+      'auth/operation-not-allowed': 'تسجيل الدخول باستخدام Google غير مفعّل في إعدادات Firebase لهذا الموقع.',
+      'auth/unauthorized-domain': 'نطاق الموقع غير مسموح به لتسجيل الدخول في Firebase.',
+      'auth/network-request-failed': 'تعذر الاتصال أثناء تسجيل الدخول بحساب Google. تحقق من الشبكة ثم حاول مجدداً.',
+      'permission-denied': 'تمت مصادقة Google لكن تعذر حفظ ملف الحساب. حاول مجدداً، وإذا تكرر الخطأ تواصل مع الإدارة.'
+    };
+    this._pendingRedirectAuthError = messages[error && error.code] || 'لم يكتمل تسجيل الدخول باستخدام Google. حاول مجدداً أو سجّل الدخول بالبريد الإلكتروني.';
+    this._flushRedirectAuthError();
+  },
+
+  _flushRedirectAuthError() {
+    if (!this._pendingRedirectAuthError) return false;
+    const route = (location.hash.slice(1) || 'home').split('/')[0];
+    const errorId = route === 'signup' ? 'signupError' : route === 'login' ? 'loginError' : null;
+    const errorElement = errorId && document.getElementById(errorId);
+    if (errorElement) {
+      const message = errorElement.querySelector('span');
+      if (message) message.textContent = this._pendingRedirectAuthError;
+      else errorElement.textContent = this._pendingRedirectAuthError;
+      errorElement.classList.remove('hidden');
+    } else if (typeof App !== 'undefined' && typeof App.showToast === 'function') {
+      App.showToast(this._pendingRedirectAuthError, 'error');
+    } else {
+      return false;
+    }
+    this._pendingRedirectAuthError = null;
+    return true;
   },
 
   // ====== التحقق من المصادقة (لتوافق الكود القديم) ======
@@ -329,7 +370,7 @@ const Auth = {
               // المستخدم مسجل بكلمة مرور — نطلب منه الدخول بكلمة المرور ثم نربط الحساب
               throw this._handleError({
                 code: 'auth/account-exists-with-different-credential',
-                message: 'هذا البريد مسجل بطريقة أخرى. سجّل دخول بالإيميل وكلمة المرور أولاً ثم يمكنك ربط حساب Google من الملف الشخصي.'
+                message: 'هذا البريد مرتبط بحساب مسجل بطريقة أخرى. سجّل الدخول بالطريقة التي استخدمتها سابقاً؛ لا يمكن إكمال Google لهذا البريد تلقائياً.'
               });
             }
           }
@@ -631,7 +672,7 @@ const Auth = {
     const messages = {
       'auth/email-already-in-use': 'البريد الإلكتروني مسجل مسبقاً',
       'auth/invalid-email': 'بريد إلكتروني غير صالح',
-      'auth/operation-not-allowed': 'عملية غير مسموحة',
+      'auth/operation-not-allowed': 'تسجيل الدخول بهذه الطريقة غير مفعّل في إعدادات Firebase',
       'auth/weak-password': 'كلمة المرور ضعيفة (6 أحرف على الأقل)',
       'auth/user-disabled': 'تم تعطيل هذا الحساب',
       'auth/user-not-found': 'بيانات الدخول غير صحيحة',
@@ -645,7 +686,8 @@ const Auth = {
       'auth/operation-not-supported-in-this-environment': 'المتصفح لا يدعم هذه الطريقة',
       'auth/web-storage-unsupported': 'المتصفح لا يدعم التخزين المطلوب',
       'auth/missing-initial-state': 'حدث خطأ في عملية تسجيل الدخول، يرجى المحاولة مرة أخرى',
-      'auth/account-exists-with-different-credential': 'يوجد حساب بنفس البريد الإلكتروني بطريقة دخول مختلفة',
+      'auth/account-exists-with-different-credential': 'هذا البريد مرتبط بحساب مسجل بطريقة أخرى. سجّل الدخول بالطريقة التي استخدمتها سابقاً؛ لا يمكن إكمال Google لهذا البريد تلقائياً.',
+      'auth/unauthorized-domain': 'نطاق الموقع غير مسموح به لتسجيل الدخول في Firebase',
       'auth/too-many-attempts': 'محاولات كثيرة، حاول لاحقاً',
       'auth/internal-error': 'حدث خطأ داخلي. تأكد من اتصالك بالإنترنت وحاول مرة أخرى. إذا استمرت المشكلة، جرّب مسح بيانات المتصفح أو استخدم نافذة تصفح خاص.'
     };
