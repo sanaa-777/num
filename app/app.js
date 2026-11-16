@@ -23,7 +23,7 @@ const App = {
   // Strips leading +, spaces, dashes, and redundant 967 prefix.
   _sanitizeWhatsApp(num) {
     if (!num) return '';
-    var cleaned = String(num).replace(/[^0-9]/g, ''); // digits only
+    var cleaned = Data.normalizePhone(num); // normalize Arabic, Persian, and Western digits
     // Strip leading 967 if present (Yemen country code)
     if (cleaned.startsWith('967') && cleaned.length > 9) {
       cleaned = cleaned.substring(3);

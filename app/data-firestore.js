@@ -921,7 +921,7 @@ const Data = {
       if (p.isActive === false) continue;
       const name = this.normalizeArabic((p.name || '').toLowerCase());
       const addr = this.normalizeArabic((p.address || '').toLowerCase());
-      if (name.includes(q) || addr.includes(q)) {
+      if (name.includes(q) || addr.includes(q) || this.matchesPhoneQuery(p, query)) {
         const cat = this.categories.find(c => c.id === p.category);
         const city = this.cities.find(c => c.id === p.city);
         results.push({ type: 'place', id: p.id, name: p.name, icon: cat ? cat.icon : 'map-pin', subtitle: [cat?.name, city?.name].filter(Boolean).join(' • ') });
@@ -931,9 +931,37 @@ const Data = {
   },
 
   // ====== البحث ======
+  normalizeDigits(text) {
+    if (text == null) return '';
+    return String(text).replace(/[٠-٩۰-۹]/g, digit => {
+      const code = digit.charCodeAt(0);
+      return String(code >= 0x06f0 ? code - 0x06f0 : code - 0x0660);
+    });
+  },
+
+  normalizePhone(value) {
+    return this.normalizeDigits(value).replace(/[^0-9]/g, '');
+  },
+
+  normalizePhoneForSearch(value) {
+    let phone = this.normalizePhone(value);
+    if (phone.startsWith('00967')) phone = phone.slice(5);
+    else if (phone.startsWith('967')) phone = phone.slice(3);
+    if (phone.startsWith('0')) phone = phone.slice(1);
+    return phone;
+  },
+
+  matchesPhoneQuery(place, query) {
+    const normalizedQuery = this.normalizePhoneForSearch(query);
+    if (normalizedQuery.length < 3) return false;
+    return [place.phone, place.whatsapp].some(value =>
+      this.normalizePhoneForSearch(value).includes(normalizedQuery)
+    );
+  },
+
   normalizeArabic(text) {
     if (!text) return '';
-    return text
+    return this.normalizeDigits(text)
       .replace(/[إأآا]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي')
       .replace(/ؤ/g, 'و').replace(/ئ/g, 'ي').replace(/گ/g, 'ك');
   },
@@ -949,7 +977,7 @@ const Data = {
         const name = this.normalizeArabic((p.name || '').toLowerCase());
         const desc = this.normalizeArabic((p.description || '').toLowerCase());
         const addr = this.normalizeArabic((p.address || '').toLowerCase());
-        return name.includes(q) || desc.includes(q) || addr.includes(q);
+        return name.includes(q) || desc.includes(q) || addr.includes(q) || this.matchesPhoneQuery(p, query);
       });
     }
     return places;
@@ -1251,7 +1279,7 @@ const Data = {
         const n = this.normalizeArabic((p.name || '').toLowerCase());
         const d = this.normalizeArabic((p.description || '').toLowerCase());
         const a = this.normalizeArabic((p.address || '').toLowerCase());
-        return n.includes(q) || d.includes(q) || a.includes(q);
+        return n.includes(q) || d.includes(q) || a.includes(q) || this.matchesPhoneQuery(p, query);
       });
     }
     return places;
