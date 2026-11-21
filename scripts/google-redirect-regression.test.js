@@ -35,6 +35,25 @@ async function main() {
   assert.match(appSource,
     /Auth\.currentUser && \['login', 'signup'\]\.includes\(initView\)/,
     'initial rendering redirects an already-authenticated visitor from auth pages');
+  assert.match(authSource, /userDoc\.exists \? userDoc\.data\(\) : await this\._ensureUserProfile\(user\)/,
+    'email sign-in and restored sessions recreate a fresh profile after Firestore deletion');
+
+  const createdProfiles = [];
+  const ensureProfile = loadMethod(authSource, '_ensureUserProfile', {
+    firebase: { firestore: { FieldValue: { serverTimestamp: () => 'SERVER_TIMESTAMP' } } },
+    db: { collection(name) {
+      assert.equal(name, 'users');
+      return { doc(id) { return { async set(profile) { createdProfiles.push({ id, profile }); } }; } };
+    } }
+  });
+  const freshProfile = await ensureProfile.call({}, {
+    uid: 'deleted-user', email: 'returning@example.com', displayName: 'مستخدم عائد',
+    phoneNumber: '', photoURL: null
+  });
+  assert.equal(createdProfiles[0].id, 'deleted-user', 'fresh profile is created for the authenticated UID');
+  assert.equal(freshProfile.role, 'user', 'recreated profile receives only the ordinary user role');
+  assert.equal(freshProfile.suspended, false, 'recreated profile is not suspended');
+  assert.equal(freshProfile.verified, false, 'recreated profile is not privileged or verified');
 
   const navigation = [];
   const app = {

@@ -2,7 +2,7 @@
 // Service Worker - دليل اليمن PWA (Versioned)
 // =============================================
 
-const BUILD_VERSION = '20261121152812';
+const BUILD_VERSION = '20261121153237';
 const CACHE_PREFIX = 'dalil-yemen-static-';
 const CACHE_NAME = `${CACHE_PREFIX}${BUILD_VERSION}`;
 const OFFLINE_FALLBACK = `/index.html?v=${BUILD_VERSION}`;

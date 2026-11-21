@@ -97,7 +97,7 @@ const Auth = {
           if (user) {
             try {
               const userDoc = await db.collection('users').doc(user.uid).get();
-              const userData = userDoc.exists ? userDoc.data() : {};
+              const userData = userDoc.exists ? userDoc.data() : await this._ensureUserProfile(user);
 
               this.currentUser = {
                 id: user.uid,
@@ -315,7 +315,7 @@ const Auth = {
       const user = userCredential.user;
 
       const userDoc = await db.collection('users').doc(user.uid).get();
-      const userData = userDoc.exists ? userDoc.data() : {};
+      const userData = userDoc.exists ? userDoc.data() : await this._ensureUserProfile(user);
 
       if (userData.suspended) {
         await auth.signOut();
@@ -483,6 +483,28 @@ const Auth = {
     } catch (error) {
       throw this._handleError(error);
     }
+  },
+
+  async _ensureUserProfile(user) {
+    if (!user || !user.uid) throw new Error('بيانات المستخدم غير صالحة');
+    const name = user.displayName || (user.email ? user.email.split('@')[0] : 'مستخدم') || 'مستخدم';
+    const profile = {
+      name: String(name).slice(0, 120),
+      email: user.email || '',
+      phone: user.phoneNumber || '',
+      avatar: user.photoURL || '',
+      coverImage: null,
+      role: 'user',
+      verified: false,
+      suspended: false,
+      bio: '',
+      location: '',
+      website: '',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    await db.collection('users').doc(user.uid).set(profile);
+    return profile;
   },
 
   async _normalizeSocialUser(user) {
