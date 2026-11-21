@@ -10,7 +10,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png">
   <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png">
   <link rel="preload" href="/assets/fonts/ibm-plex-sans-arabic-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="app/tailwind.css?v=20261121150738">
+  <link rel="stylesheet" href="app/tailwind.css?v=20261121152812">
   <script src="app/lucide-local.js"></script>
   <style>
     * { font-family: var(--font-arabic); box-sizing: border-box; margin: 0; padding: 0; }
@@ -120,21 +120,21 @@
   <script src="app/firebase-sdk/firebase-firestore-compat.js"></script>
 
   <!-- Error Tracker -->
-  <script src="app/error-tracker.js?v=20261121150738"></script>
+  <script src="app/error-tracker.js?v=20261121152812"></script>
 
   <!-- Firebase Config -->
-  <script src="app/firebase-config.js?v=20261121150738"></script>
+  <script src="app/firebase-config.js?v=20261121152812"></script>
 
   <!-- App Modules -->
-  <script src="app/image-storage.js?v=20261121150738"></script>
-  <script src="app/data-firestore.js?v=20261121150738"></script>
-  <script src="app/auth-firestore.js?v=20261121150738"></script>
-  <script src="app/admin-firestore.js?v=20261121150738"></script>
-  <script src="app/ads-firestore.js?v=20261121150738"></script>
-  <script src="app/offers-firestore.js?v=20261121150738"></script>
-  <script src="app/jobs-firestore.js?v=20261121150738"></script>
-  <script src="app/events-firestore.js?v=20261121150738"></script>
-  <script src="app/pricing-firestore.js?v=20261121150738"></script>
+  <script src="app/image-storage.js?v=20261121152812"></script>
+  <script src="app/data-firestore.js?v=20261121152812"></script>
+  <script src="app/auth-firestore.js?v=20261121152812"></script>
+  <script src="app/admin-firestore.js?v=20261121152812"></script>
+  <script src="app/ads-firestore.js?v=20261121152812"></script>
+  <script src="app/offers-firestore.js?v=20261121152812"></script>
+  <script src="app/jobs-firestore.js?v=20261121152812"></script>
+  <script src="app/events-firestore.js?v=20261121152812"></script>
+  <script src="app/pricing-firestore.js?v=20261121152812"></script>
 
   <script>
     // === Security: Prevent iframe embedding (clickjacking protection) ===
@@ -337,6 +337,10 @@
       placeFilter: 'all',
       placeSearch: '',
       userSearch: '',
+      selectedUserIds: [],
+      selectedPlaceIds: [],
+      _visibleUserIds: [],
+      _visiblePlaceIds: [],
       pricingCategory: 'currencies',
       editingItem: null,
 
@@ -640,6 +644,7 @@
           if (!q) return true;
           return ((u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q));
         });
+        this._visibleUserIds = filtered.filter(function(u) { return u.role !== 'admin'; }).map(function(u) { return u.id; });
 
         return '<div class="space-y-4">' +
           '<div class="bg-white rounded-xl border border-gray-100 p-4">' +
@@ -647,9 +652,16 @@
               '<h3 class="text-sm font-bold">إدارة المستخدمين</h3>' +
               '<input value="' + (this.userSearch || '') + '" oninput="AdminPanel.userSearch=this.value;AdminPanel.render()" placeholder="بحث بالاسم أو البريد" class="w-full md:w-80 px-3 py-2 rounded-lg border border-gray-200 text-sm">' +
             '</div>' +
+            '<p class="mt-3 text-xs text-amber-700 bg-amber-50 rounded-lg p-3">يحذف ملف الدليل وأنشطته ومراجعاته ومفضلاته وطلبات التعديل وإشعاراته من Firestore فقط. لا يحذف حساب Firebase Authentication ولا يحظره؛ وقد تبقى ملفات الصور المخزنة في Cloudinary.</p>' +
+            '<div class="flex flex-wrap gap-2 mt-3">' +
+              '<button onclick="AdminPanel.selectVisibleUsers()" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-xs">تحديد المستخدمين المعروضين</button>' +
+              '<button onclick="AdminPanel.clearSelectedUsers()" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-xs">إلغاء التحديد</button>' +
+              '<button onclick="AdminPanel.deleteSelectedUsers()" class="px-3 py-2 rounded-lg bg-red-600 text-white text-xs" ' + (this.selectedUserIds.length ? '' : 'disabled') + '>حذف المحدد (' + this.selectedUserIds.length + ')</button>' +
+            '</div>' +
           '</div>' +
           '<div class="bg-white rounded-xl border border-gray-100 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs">' +
             '<thead class="bg-gray-50"><tr>' +
+              '<th class="px-3 py-3 text-right font-medium text-gray-500">تحديد</th>' +
               '<th class="px-3 py-3 text-right font-medium text-gray-500">المستخدم</th>' +
               '<th class="px-3 py-3 text-right font-medium text-gray-500">البريد</th>' +
               '<th class="px-3 py-3 text-right font-medium text-gray-500">الدور</th>' +
@@ -659,6 +671,7 @@
             '<tbody class="divide-y divide-gray-100">' +
               filtered.map(function(u) {
                 return '<tr class="hover:bg-gray-50">' +
+                  '<td class="px-3 py-3">' + (u.role !== 'admin' ? '<input type="checkbox" aria-label="تحديد ' + AdminPanel._escHtml(u.name || 'مستخدم') + '" ' + (AdminPanel.selectedUserIds.indexOf(u.id) >= 0 ? 'checked' : '') + ' onchange="AdminPanel.toggleSelectedUser(\'' + u.id + '\',this.checked)">' : '') + '</td>' +
                   '<td class="px-3 py-3"><div class="flex items-center gap-2"><img src="' + AdminPanel._escHtml(u.avatar || '') + '" class="w-8 h-8 rounded-full" alt=""><div><div class="font-medium">' + AdminPanel._escHtml(u.name || 'بدون اسم') + '</div></div></div></td>' +
                   '<td class="px-3 py-3 text-gray-600">' + AdminPanel._escHtml(u.email || '') + '</td>' +
                   '<td class="px-3 py-3"><span class="px-2 py-0.5 rounded text-[11px] font-medium ' + (u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700') + '">' + (u.role === 'admin' ? 'أدمن' : 'مستخدم') + '</span></td>' +
@@ -668,7 +681,7 @@
                       '<button onclick="AdminPanel.toggleActiveUser(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.active ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-green-200" title="' + (u.active ? 'إلغاء التفعيل' : 'تفعيل') + '"><i data-lucide="power" class="w-3.5 h-3.5"></i></button>' +
                       '<button onclick="AdminPanel.toggleVerify(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.verified ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-blue-200" title="توثيق"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>' +
                       '<button onclick="AdminPanel.toggleSuspend(\'' + u.id + '\')" class="p-1.5 rounded-lg ' + (u.suspended ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-yellow-200" title="إيقاف"><i data-lucide="ban" class="w-3.5 h-3.5"></i></button>' +
-                      '<button onclick="AdminPanel.deleteUser(\'' + u.id + '\')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="تعطيل"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>' +
+                      '<button onclick="AdminPanel.deleteUser(\'' + u.id + '\')" class="p-1.5 rounded-lg bg-gray-100 text-red-500 hover:bg-red-100" title="حذف ملف الدليل بلا حظر"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>' +
                     '</div>' : '<span class="text-[11px] text-gray-400">-</span>') + '</td>' +
                 '</tr>';
               }).join('') +
@@ -691,6 +704,7 @@
           if (filter === 'featured') return !!p.featured;
           return true;
         });
+        this._visiblePlaceIds = filtered.map(function(p) { return p.id; });
 
         // Place edit form
         var formHtml = '';
@@ -737,9 +751,16 @@
               '</div>' +
               '<input value="' + (this.placeSearch || '') + '" oninput="AdminPanel.placeSearch=this.value;AdminPanel.render()" placeholder="بحث باسم النشاط أو الهاتف أو العنوان" class="w-full lg:w-96 px-3 py-2 rounded-lg border border-gray-200 text-sm">' +
             '</div>' +
+            '<div class="flex flex-wrap gap-2 mt-3">' +
+              '<button onclick="AdminPanel.selectVisiblePlaces()" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-xs">تحديد الأنشطة المعروضة (' + filtered.length + ')</button>' +
+              '<button onclick="AdminPanel.clearSelectedPlaces()" class="px-3 py-2 rounded-lg bg-gray-100 text-gray-700 text-xs">إلغاء التحديد</button>' +
+              '<button onclick="AdminPanel.deleteSelectedPlaces()" class="px-3 py-2 rounded-lg bg-red-600 text-white text-xs" ' + (this.selectedPlaceIds.length ? '' : 'disabled') + '>حذف المحدد (' + this.selectedPlaceIds.length + ')</button>' +
+              '<button onclick="AdminPanel.deleteAllPlaces()" class="px-3 py-2 rounded-lg border border-red-200 text-red-700 bg-white text-xs" ' + (places.length ? '' : 'disabled') + '>حذف جميع الأنشطة (' + places.length + ')</button>' +
+            '</div>' +
           '</div>' +
           '<div class="bg-white rounded-xl border border-gray-100 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-xs">' +
             '<thead class="bg-gray-50"><tr>' +
+              '<th class="px-3 py-3 text-right font-medium text-gray-500">تحديد</th>' +
               '<th class="px-3 py-3 text-right font-medium text-gray-500">النشاط</th>' +
               '<th class="px-3 py-3 text-right font-medium text-gray-500">التصنيف</th>' +
               '<th class="px-3 py-3 text-right font-medium text-gray-500">الحالة</th>' +
@@ -758,6 +779,7 @@
                   ? '<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-700 mr-1">معلّق</span>'
                   : '<span class="px-2 py-0.5 rounded text-[11px] bg-blue-100 text-blue-700 mr-1">نشط</span>';
                 return '<tr class="hover:bg-gray-50 align-top">' +
+                  '<td class="px-3 py-3"><input type="checkbox" aria-label="تحديد نشاط ' + AdminPanel._escHtml(p.name || '') + '" ' + (AdminPanel.selectedPlaceIds.indexOf(p.id) >= 0 ? 'checked' : '') + ' onchange="AdminPanel.toggleSelectedPlace(\'' + p.id + '\',this.checked)"></td>' +
                   '<td class="px-3 py-3"><div class="flex items-center gap-2">' +
                     ((p.image || (p.images && p.images[0])) ? '<img src="' + AdminPanel._escHtml(p.image || p.images[0]) + '" class="w-10 h-10 rounded-lg object-cover shrink-0" onerror="this.style.display=\'none\'">' : '<div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><i data-lucide="image" class="w-4 h-4 text-gray-400"></i></div>') +
                     '<div><div class="font-medium">' + AdminPanel._escHtml(p.name || 'نشاط بدون اسم') + '</div><div class="text-[11px] text-gray-400">' + AdminPanel._escHtml(p.phone || '') + ' • ' + AdminPanel._escHtml(p.address || '') + '</div>' +
@@ -773,6 +795,7 @@
                     '<button onclick="AdminPanel.verifyPlace(\'' + p.id + '\')" class="p-1.5 rounded-lg ' + (p.verified ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-blue-200" title="توثيق"><i data-lucide="badge-check" class="w-3.5 h-3.5"></i></button>' +
                     '<button onclick="AdminPanel.featurePlace(\'' + p.id + '\')" class="p-1.5 rounded-lg ' + (p.featured ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-500') + ' hover:bg-yellow-200" title="تمييز"><i data-lucide="star" class="w-3.5 h-3.5"></i></button>' +
                     '<button onclick="AdminPanel.editPlaceItem(\'' + p.id + '\')" class="p-1.5 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200" title="تعديل"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>' +
+                    '<button onclick="AdminPanel.deletePlace(\'' + p.id + '\')" class="p-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200" title="حذف نهائي بلا تعليق أو إشعار"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>' +
                   '</div></td>' +
                 '</tr>';
               }).join('') +
@@ -1801,13 +1824,83 @@
           this.render();
         } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
       },
-      deleteUser: async function(userId) {
-        if (!confirm('هل تريد تعطيل هذا المستخدم وإخفاء أنشطته؟')) return;
+      confirmPermanentDelete: function(kind, count, note) {
+        var message = 'تنبيه: سيُحذف ' + count + ' ' + kind + ' نهائياً من Firestore مع البيانات التابعة. لن يتم إرسال إشعارات لأصحابها، وهذا ليس حظراً أو تعليقاً. لا تُحذف ملفات الصور من Cloudinary. لا يمكن التراجع عن الحذف.';
+        if (note) message += '\n\n' + note;
+        if (!window.confirm(message)) return false;
+        return window.prompt('للتأكيد اكتب كلمة «حذف»:') === 'حذف';
+      },
+      toggleSelectedUser: function(userId, checked) {
+        var ids = this.selectedUserIds.filter(function(id) { return id !== userId; });
+        if (checked) ids.push(userId);
+        this.selectedUserIds = ids;
+      },
+      selectVisibleUsers: function() {
+        this.selectedUserIds = Array.from(new Set(this.selectedUserIds.concat(this._visibleUserIds || [])));
+        this.render();
+      },
+      clearSelectedUsers: function() { this.selectedUserIds = []; this.render(); },
+      toggleSelectedPlace: function(placeId, checked) {
+        var ids = this.selectedPlaceIds.filter(function(id) { return id !== placeId; });
+        if (checked) ids.push(placeId);
+        this.selectedPlaceIds = ids;
+      },
+      selectVisiblePlaces: function() {
+        this.selectedPlaceIds = Array.from(new Set(this.selectedPlaceIds.concat(this._visiblePlaceIds || [])));
+        this.render();
+      },
+      clearSelectedPlaces: function() { this.selectedPlaceIds = []; this.render(); },
+      deleteUsersByIds: async function(userIds) {
+        var ids = Array.from(new Set(userIds || [])).filter(Boolean);
+        if (!ids.length || !this.confirmPermanentDelete('ملف مستخدم', ids.length, 'تنبيه مهم: حساب Firebase Authentication نفسه لن يُحذف أو يُحظر، ويمكن أن يظل تسجيل الدخول ممكناً.')) return;
+        var deleted = 0;
         try {
-          var result = await Admin.deleteUser(userId);
-          this.showToast(result ? '✅ تم تعطيل المستخدم' : '❌ فشل التعطيل', result ? 'success' : 'error');
-          this.render();
-        } catch(e) { this.showToast('❌ خطأ: ' + e.message, 'error'); }
+          for (var i = 0; i < ids.length; i++) {
+            var result = await Admin.deleteUser(ids[i]);
+            if (result && result.deleted) deleted++;
+          }
+          this.selectedUserIds = this.selectedUserIds.filter(function(id) { return ids.indexOf(id) < 0; });
+          this.showToast('تم حذف ' + deleted + ' ملف مستخدم وبيانات الدليل التابعة؛ لم يُحذف أو يُحظر حساب تسجيل الدخول', 'success');
+        } catch (e) {
+          console.error('Delete user records error:', e);
+          this.showToast('توقف الحذف بعد إزالة ' + deleted + ' ملفاً. راجع الاتصال والصلاحيات ثم حدّث القائمة.', 'error');
+        }
+        await this.render();
+      },
+      deleteSelectedUsers: async function() { await this.deleteUsersByIds(this.selectedUserIds.slice()); },
+      deleteUser: async function(userId) {
+        await this.deleteUsersByIds([userId]);
+      },
+      deletePlacesByIds: async function(placeIds) {
+        var ids = Array.from(new Set(placeIds || [])).filter(Boolean);
+        if (!ids.length || !this.confirmPermanentDelete('نشاط تجاري', ids.length)) return;
+        var deleted = 0;
+        try {
+          for (var i = 0; i < ids.length; i++) {
+            if (await Admin.deletePlacePermanently(ids[i])) deleted++;
+          }
+          this.selectedPlaceIds = this.selectedPlaceIds.filter(function(id) { return ids.indexOf(id) < 0; });
+          this.showToast('تم حذف ' + deleted + ' نشاط/أنشطة وبياناتها التابعة دون إشعار أصحابها', 'success');
+        } catch (e) {
+          console.error('Delete places error:', e);
+          this.showToast('توقف الحذف بعد إزالة ' + deleted + ' نشاط. راجع الاتصال والصلاحيات ثم حدّث القائمة.', 'error');
+        }
+        await this.render();
+      },
+      deletePlace: async function(placeId) { await this.deletePlacesByIds([placeId]); },
+      deleteSelectedPlaces: async function() { await this.deletePlacesByIds(this.selectedPlaceIds.slice()); },
+      deleteAllPlaces: async function() {
+        var count = (this._places || []).length;
+        if (!count || !this.confirmPermanentDelete('نشاط تجاري', count)) return;
+        try {
+          var deleted = await Admin.deleteAllPlacesPermanently();
+          this.selectedPlaceIds = [];
+          this.showToast('تم حذف ' + deleted + ' نشاط/أنشطة وبياناتها التابعة دون إشعار أصحابها', 'success');
+        } catch (e) {
+          console.error('Delete all places error:', e);
+          this.showToast('توقف حذف الأنشطة بسبب خطأ. ربما أُزيل جزء منها؛ حدّث القائمة قبل إعادة المحاولة.', 'error');
+        }
+        await this.render();
       },
       verifyPlace: async function(placeId) {
         try {

@@ -12,8 +12,10 @@ const Admin = {
   // ====== إدارة المستخدمين ======
   async getAllUsers() {
     try {
-      const snapshot = await db.collection('users').orderBy('createdAt', 'desc').get();
-      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const snapshot = await db.collection('users').get();
+      const users = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const toMillis = value => value && typeof value.toMillis === 'function' ? value.toMillis() : (value ? new Date(value).getTime() || 0 : 0);
+      return users.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
     } catch (e) {
       console.error('getAllUsers error:', e);
       return [];
@@ -83,41 +85,101 @@ const Admin = {
     }
   },
 
-  async deleteUser(userId) {
-    try {
-      const userRef = db.collection('users').doc(userId);
-      const doc = await userRef.get();
-      if (!doc.exists) return false;
-      if (doc.data().role === 'admin') return false;
-
-      const placesSnap = await db.collection('places').where('owner', '==', userId).get();
+  async _deleteQueryDocuments(query) {
+    const snapshot = await query.get();
+    const docs = snapshot.docs;
+    for (let offset = 0; offset < docs.length; offset += 400) {
       const batch = db.batch();
-      placesSnap.docs.forEach(d => batch.update(d.ref, {
-        isActive: false,
-        status: d.data().status === 'approved' ? 'approved' : 'rejected',
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }));
-      batch.update(userRef, { suspended: true, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      docs.slice(offset, offset + 400).forEach(doc => batch.delete(doc.ref));
       await batch.commit();
-
-      await this.addNotification('delete', `تم تعطيل الحساب: ${doc.data().name}`);
-      return true;
-    } catch (e) {
-      console.error('deleteUser error:', e);
-      return false;
     }
+    return docs.length;
+  },
+
+  async _deletePlaceCascade(placeId) {
+    const placeRef = db.collection('places').doc(placeId);
+    const placeDoc = await placeRef.get();
+    if (!placeDoc.exists) return false;
+
+    // Remove Firestore children first so a deleted listing leaves no orphan reviews,
+    // favorites, or edit requests. These writes do not create owner notifications.
+    await Promise.all([
+      this._deleteQueryDocuments(db.collection('reviews').where('placeId', '==', placeId)),
+      this._deleteQueryDocuments(db.collection('favorites').where('placeId', '==', placeId)),
+      this._deleteQueryDocuments(db.collection('place_edits').where('placeId', '==', placeId))
+    ]);
+    await placeRef.delete();
+    return true;
+  },
+
+  async _recalculatePlaceRating(placeId) {
+    const placeRef = db.collection('places').doc(placeId);
+    const placeDoc = await placeRef.get();
+    if (!placeDoc.exists) return;
+    const reviewsSnap = await db.collection('reviews').where('placeId', '==', placeId).get();
+    const ratings = reviewsSnap.docs.map(doc => Number(doc.data().rating) || 0);
+    const average = ratings.length ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length : 0;
+    await placeRef.update({
+      rating: Math.round(average * 10) / 10,
+      reviews: ratings.length,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  },
+
+  async deletePlacePermanently(placeId) {
+    if (!this.isAdmin()) throw new Error('غير مصرح: يلزم حساب مدير');
+    const deleted = await this._deletePlaceCascade(placeId);
+    if (deleted && typeof Data !== 'undefined' && Data._invalidateCache) Data._invalidateCache();
+    return deleted;
+  },
+
+  async deleteAllPlacesPermanently() {
+    if (!this.isAdmin()) throw new Error('غير مصرح: يلزم حساب مدير');
+    const snapshot = await db.collection('places').get();
+    let deleted = 0;
+    for (const placeDoc of snapshot.docs) {
+      if (await this._deletePlaceCascade(placeDoc.id)) deleted++;
+    }
+    if (deleted && typeof Data !== 'undefined' && Data._invalidateCache) Data._invalidateCache();
+    return deleted;
+  },
+
+  async deleteUser(userId) {
+    if (!this.isAdmin()) throw new Error('غير مصرح: يلزم حساب مدير');
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) return { deleted: false, placesDeleted: 0 };
+    if (userDoc.data().role === 'admin') throw new Error('لا يمكن حذف ملف حساب مدير');
+
+    const ownedPlaces = await db.collection('places').where('owner', '==', userId).get();
+    let placesDeleted = 0;
+    for (const placeDoc of ownedPlaces.docs) {
+      if (await this._deletePlaceCascade(placeDoc.id)) placesDeleted++;
+    }
+    const authoredReviews = await db.collection('reviews').where('userId', '==', userId).get();
+    const affectedPlaceIds = Array.from(new Set(authoredReviews.docs.map(doc => doc.data().placeId).filter(Boolean)));
+    await Promise.all([
+      this._deleteQueryDocuments(db.collection('reviews').where('userId', '==', userId)),
+      this._deleteQueryDocuments(db.collection('favorites').where('userId', '==', userId)),
+      this._deleteQueryDocuments(db.collection('place_edits').where('owner', '==', userId)),
+      this._deleteQueryDocuments(db.collection('notifications').where('userId', '==', userId))
+    ]);
+    for (const placeId of affectedPlaceIds) await this._recalculatePlaceRating(placeId);
+    await userRef.delete();
+    if (typeof Data !== 'undefined' && Data._invalidateCache) Data._invalidateCache();
+
+    // This browser-only operation deletes Firestore profile data, not the Firebase
+    // Authentication identity. It neither disables nor blocks future sign-in.
+    return { deleted: true, placesDeleted: placesDeleted, authAccountDeleted: false };
   },
 
   // ====== إدارة الأماكن ======
   async getAllPlaces() {
     try {
-      try {
-        const snapshot = await db.collection('places').orderBy('createdAt', 'desc').get();
-        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (idxErr) {
-        const snapshot = await db.collection('places').get();
-        return snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      }
+      const snapshot = await db.collection('places').get();
+      const places = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      const toMillis = value => value && typeof value.toMillis === 'function' ? value.toMillis() : (value ? new Date(value).getTime() || 0 : 0);
+      return places.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
     } catch (e) {
       console.error('getAllPlaces error:', e);
       return [];
@@ -173,7 +235,7 @@ const Admin = {
   },
 
   async deletePlaceAdmin(placeId) {
-    return this.setPlaceActive(placeId, false, 'تم تعطيل النشاط بواسطة الإدارة');
+    return this.deletePlacePermanently(placeId);
   },
 
   async approvePlace(placeId, note) {

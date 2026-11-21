@@ -88,10 +88,15 @@ async function seed(env) {
     await setDoc(doc(db, 'places/rejected-place'), place('owner', {
       status: 'rejected', isActive: false, createdAt: Timestamp.now(), updatedAt: Timestamp.now()
     }));
+    await setDoc(doc(db, 'favorites/other-approved-place'), { userId: 'other', placeId: 'approved-place' });
     await setDoc(doc(db, 'reviews/legacy-review'), review('approved-place', 'owner'));
     await setDoc(doc(db, 'notifications/owner-note'), {
       userId: 'owner', type: 'admin', message: 'رسالة اختبار', read: false,
-      createdAt: Timestamp.now()
+      createdAt: serverTimestamp()
+    });
+    await setDoc(doc(db, 'notifications/other-note'), {
+      userId: 'other', type: 'admin', message: 'إشعار مستخدم آخر', read: false,
+      createdAt: serverTimestamp()
     });
   });
 }
@@ -150,6 +155,8 @@ async function testUsers(env) {
   await assertSucceeds(updateDoc(doc(owner, 'users/owner'), { name: 'اسم جديد', updatedAt: serverTimestamp() }));
   await assertFails(updateDoc(doc(admin, 'users/owner'), { role: 'admin' }));
   await assertSucceeds(updateDoc(doc(admin, 'users/owner'), { verified: true, updatedAt: serverTimestamp() }));
+  await assertFails(deleteDoc(doc(admin, 'users/admin')));
+  await assertSucceeds(deleteDoc(doc(admin, 'users/owner')));
 }
 
 async function testPlaces(env) {
@@ -202,6 +209,7 @@ async function testPlaces(env) {
 async function testReviews(env) {
   const owner = env.authenticatedContext('owner', { email: 'owner@example.com' }).firestore();
   const other = env.authenticatedContext('other', { email: 'other@example.com' }).firestore();
+  const admin = env.authenticatedContext('admin', { email: 'admin@example.com' }).firestore();
   const anonymous = env.unauthenticatedContext().firestore();
   const reviewId = 'approved-place_other';
   const reviewRef = doc(other, `reviews/${reviewId}`);
@@ -223,6 +231,12 @@ async function testReviews(env) {
   await assertFails(updateDoc(reviewRef, { placeId: 'pending-place' }));
   await assertSucceeds(updateDoc(reviewRef, { rating: 4, comment: 'تحديث مسموح' }));
   await assertFails(deleteDoc(reviewRef));
+  await assertSucceeds(deleteDoc(doc(admin, `reviews/${reviewId}`)));
+
+  await assertFails(getDoc(doc(owner, 'favorites/other-approved-place')));
+  await assertSucceeds(getDoc(doc(admin, 'favorites/other-approved-place')));
+  await assertFails(deleteDoc(doc(owner, 'favorites/other-approved-place')));
+  await assertSucceeds(deleteDoc(doc(admin, 'favorites/other-approved-place')));
 }
 
 async function testPlaceEdits(env) {
@@ -260,6 +274,9 @@ async function testNotificationsAndLoginAttempts(env) {
 
   await assertSucceeds(getDoc(doc(owner, 'notifications/owner-note')));
   await assertFails(getDoc(doc(other, 'notifications/owner-note')));
+  await assertSucceeds(getDoc(doc(admin, 'notifications/owner-note')));
+  await assertFails(deleteDoc(doc(owner, 'notifications/other-note')));
+  await assertSucceeds(deleteDoc(doc(admin, 'notifications/other-note')));
   await assertFails(setDoc(doc(owner, 'notifications/self-created'), {
     userId: 'owner', type: 'admin', message: 'رسالة', read: false, createdAt: serverTimestamp()
   }));
