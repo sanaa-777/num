@@ -13,36 +13,35 @@ try {
 } catch (_) {}
 const deployedAt = new Date().toISOString();
 
+function stampHtmlAssets(content) {
+  return content
+    .replace(/((?:src|href)=["'][^"']+\.(?:css|js))\?v=(?:__APP_BUILD_VERSION__|\d{14})/gi, `$1?v=${version}`)
+    .replace(/((?:src|href)=["'][^"']+\.(?:json|png|jpe?g|svg|ico|webp))\?v=(?:__APP_BUILD_VERSION__|\d{14})/gi, '$1');
+}
+
 const updates = [
   {
     file: 'index.html',
-    transforms: [
-      (content) => content.replace(/([?&]v=)(?:__APP_BUILD_VERSION__|\d{14})/g, `$1${version}`)
-    ]
+    transforms: [stampHtmlAssets]
   },
   {
     file: 'admin.html',
-    transforms: [
-      (content) => content.replace(/([?&]v=)(?:__APP_BUILD_VERSION__|\d{14})/g, `$1${version}`)
-    ]
+    transforms: [stampHtmlAssets]
   },
   {
     file: 'about.html',
-    transforms: [
-      (content) => content.replace(/([?&]v=)(?:__APP_BUILD_VERSION__|\d{14})/g, `$1${version}`)
-    ]
+    transforms: [stampHtmlAssets]
   },
   {
     file: 'privacy.html',
-    transforms: [
-      (content) => content.replace(/([?&]v=)(?:__APP_BUILD_VERSION__|\d{14})/g, `$1${version}`)
-    ]
+    transforms: [stampHtmlAssets]
   },
   {
     file: 'sw.js',
     transforms: [
       (content) => content.replace(/const BUILD_VERSION = '(?:__APP_BUILD_VERSION__|\d{14})';/, `const BUILD_VERSION = '${version}';`),
-      (content) => content.replace(/([?&]v=)(?:__APP_BUILD_VERSION__|\d{14})/g, `$1${version}`)
+      (content) => content.replace(/(\/(?:index|admin)\.html|\/manifest\.json)\?v=(?:__APP_BUILD_VERSION__|\d{14}|\$\{BUILD_VERSION\})/g, '$1'),
+      (content) => content.replace(/(\/[^`'"\s]+?\.(?:css|js))\?v=(?:__APP_BUILD_VERSION__|\d{14}|\$\{BUILD_VERSION\})/g, `$1?v=${version}`)
     ]
   },
   {

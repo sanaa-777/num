@@ -40,12 +40,12 @@
   <meta name="twitter:image:alt" content="الدليل اليمني التجاري">
 
   <!-- PWA -->
-  <link rel="manifest" href="manifest.json?v=20261121153237">
-  <script src="app/build-meta.js?v=20261121153237"></script>
-  <script src="app/version-manager.js?v=20261121153237"></script>
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/favicon-32x32.png?v=20261121153237">
-  <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png?v=20261121153237">
-  <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png?v=20261121153237">
+  <link rel="manifest" href="manifest.json">
+  <script src="app/build-meta.js?v=20261123101803"></script>
+  <script src="app/version-manager.js?v=20261123101803"></script>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/branding/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/branding/favicon-16x16.png">
+  <link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png">
   <link rel="canonical" href="https://dalil-yemen-deel.web.app/">
 
   <!-- Structured Data -->
@@ -68,15 +68,15 @@
     "inLanguage": "ar",
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "https://dalil-yemen-deel.web.app/#search?q={search_term_string}",
+      "target": "https://dalil-yemen-deel.web.app/search?q={search_term_string}",
       "query-input": "required name=search_term_string"
     }
   }
   </script>
 
   <link rel="preload" href="/assets/fonts/ibm-plex-sans-arabic-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="app/styles.css?v=20261121153237">
-  <link rel="stylesheet" href="app/tailwind.css?v=20261121153237">
+  <link rel="stylesheet" href="app/styles.css?v=20261123101803">
+  <link rel="stylesheet" href="app/tailwind.css?v=20261123101803">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
   <script src="app/lucide-local.js" defer></script>
@@ -129,22 +129,22 @@
   <script src="app/firebase-sdk/firebase-messaging-compat.js"></script>
 
   <!-- Error Tracker -->
-  <script src="app/error-tracker.js?v=20261121153237"></script>
+  <script src="app/error-tracker.js?v=20261123101803"></script>
 
   <!-- Firebase Config -->
-  <script src="app/firebase-config.js?v=20261121153237"></script>
+  <script src="app/firebase-config.js?v=20261123101803"></script>
 
   <!-- App Modules (Firestore-based) -->
-  <script src="app/image-storage.js?v=20261121153237"></script>
-  <script src="app/data-firestore.js?v=20261121153237"></script>
-  <script src="app/auth-firestore.js?v=20261121153237"></script>
-  <script src="app/admin-firestore.js?v=20261121153237"></script>
-  <script src="app/ads-firestore.js?v=20261121153237"></script>
-  <script src="app/offers-firestore.js?v=20261121153237"></script>
-  <script src="app/jobs-firestore.js?v=20261121153237"></script>
-  <script src="app/events-firestore.js?v=20261121153237"></script>
-  <script src="app/pricing-firestore.js?v=20261121153237"></script>
-  <script src="app/app.js?v=20261121153237"></script>
+  <script src="app/image-storage.js?v=20261123101803"></script>
+  <script src="app/data-firestore.js?v=20261123101803"></script>
+  <script src="app/auth-firestore.js?v=20261123101803"></script>
+  <script src="app/admin-firestore.js?v=20261123101803"></script>
+  <script src="app/ads-firestore.js?v=20261123101803"></script>
+  <script src="app/offers-firestore.js?v=20261123101803"></script>
+  <script src="app/jobs-firestore.js?v=20261123101803"></script>
+  <script src="app/events-firestore.js?v=20261123101803"></script>
+  <script src="app/pricing-firestore.js?v=20261123101803"></script>
+  <script src="app/app.js?v=20261123101803"></script>
 
   <!-- PWA Service Worker -->
   <script>
@@ -154,7 +154,7 @@
         navigator.serviceWorker.addEventListener('message', (event) => {
           const activatedVersion = event.data && event.data.type === 'DY_VERSION_ACTIVATED' ? String(event.data.version || '') : '';
           if (!activatedVersion || activatedVersion === String(buildVersion)) return;
-          const route = location.hash.slice(1);
+          const route = window.App?.getCurrentRoute?.() || location.pathname.replace(/^\//, '') || location.hash.slice(1);
           if (/^(add|login|signup|verify|reset|profile|settings|edit|write|checkout)(\/|$)/.test(route)) {
             window.__DY_PENDING_BUILD_VERSION__ = activatedVersion;
             console.info('تحديث الموقع جاهز؛ لم تتم إعادة التحميل حفاظاً على البيانات المدخلة.');

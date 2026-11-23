@@ -10,6 +10,19 @@
   // Only clear caches we own — never Firestore/Firebase IndexedDB
   const CACHE_PREFIX = 'dalil-yemen-static-';
 
+  // Older builds appended ?v= to the document URL. Keep only real page
+  // parameters and clean that legacy cache-busting parameter without reload.
+  function removeLegacyDocumentVersion() {
+    try {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.has('v')) return;
+      url.searchParams.delete('v');
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+    } catch (_) {
+      // URL cleanup must never prevent application startup.
+    }
+  }
+
   async function clearOldCaches() {
     if (!('caches' in window)) return;
     const keys = await caches.keys();
@@ -43,9 +56,10 @@
       // ignore session storage failures
     }
 
-    // Preserve the current hash (route) during reload
+    // HTML is served with no-cache headers; reload the current clean URL.
+    // Cache-busting versions belong on static assets, never on page URLs.
     const url = new URL(window.location.href);
-    url.searchParams.set('v', version);
+    url.searchParams.delete('v');
     window.location.replace(url.toString());
     return true;
   }
@@ -106,6 +120,7 @@
     }
   }
 
+  removeLegacyDocumentVersion();
   const ready = ensureFreshClient();
 
   if ('serviceWorker' in navigator) {

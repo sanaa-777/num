@@ -18,6 +18,96 @@ const App = {
   // For use inside template literals: App.h(place.description)
   h(str) { return this._escHtml(str); },
 
+  _isKnownRoute(route) {
+    return /^(place|offer|job|event|category|subcategory|city|editplace)\/.+/.test(route) ||
+      /^(home|search|offers|jobs|events|pricing|login|signup|profile|favorites|notifications|myplaces|myads|add)$/.test(route);
+  },
+
+  getCurrentRoute() {
+    let path = window.location.pathname || '/';
+    try { path = decodeURIComponent(path); } catch (_) {}
+    path = path.replace(/\/$/, '') || '/';
+    const pathRoute = path === '/index.html' ? '' : path.replace(/^\//, '');
+    const hashRoute = window.location.hash.slice(1);
+    if (hashRoute) return hashRoute;
+    if (pathRoute && this._isKnownRoute(pathRoute)) return pathRoute;
+    return 'home';
+  },
+
+  _routeToPath(route) {
+    const value = String(route || 'home').replace(/^#/, '');
+    if (!value || value === 'home') return '/';
+    const queryIndex = value.indexOf('?');
+    const routePath = queryIndex < 0 ? value : value.slice(0, queryIndex);
+    const query = queryIndex < 0 ? '' : value.slice(queryIndex);
+    const encodedPath = routePath.split('/').map(segment => {
+      try { return encodeURIComponent(decodeURIComponent(segment)); }
+      catch (_) { return encodeURIComponent(segment); }
+    }).join('/');
+    return `/${encodedPath}${query}`;
+  },
+
+  _syncCleanRouteUrl(route = this.getCurrentRoute()) {
+    const target = this._routeToPath(route);
+    const queryIndex = target.indexOf('?');
+    const pathname = queryIndex < 0 ? target : target.slice(0, queryIndex);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('v');
+    const search = queryIndex < 0 ? url.search : target.slice(queryIndex);
+    const cleanUrl = `${pathname}${search}`;
+    if (window.location.pathname + window.location.search + window.location.hash !== cleanUrl) {
+      window.history.replaceState(window.history.state, '', cleanUrl);
+    }
+  },
+
+  _normalizeRouteLinks(root = document) {
+    const links = [];
+    if (root.matches?.('a[href^="#"]')) links.push(root);
+    if (root.querySelectorAll) links.push(...root.querySelectorAll('a[href^="#"]'));
+    links.forEach(link => {
+      const route = link.getAttribute('href').slice(1);
+      if (this._isKnownRoute(route)) link.setAttribute('href', this._routeToPath(route));
+    });
+  },
+
+  _navigateToCleanRoute(route, replace = false) {
+    const destination = this._routeToPath(route);
+    window.history[replace ? 'replaceState' : 'pushState'](window.history.state, '', destination);
+    this.handleRoute();
+  },
+
+  _bindCleanRouteNavigation() {
+    if (this._cleanRouteNavigationBound) return;
+    this._cleanRouteNavigationBound = true;
+    const appRoot = document.getElementById('app');
+    this._normalizeRouteLinks(appRoot || document);
+    if (appRoot && typeof MutationObserver !== 'undefined') {
+      this._routeLinkObserver = new MutationObserver(records => {
+        records.forEach(record => record.addedNodes.forEach(node => {
+          if (node.nodeType === 1) this._normalizeRouteLinks(node);
+        }));
+      });
+      this._routeLinkObserver.observe(appRoot, { childList: true, subtree: true });
+    }
+    document.addEventListener('click', event => {
+      const link = event.target.closest?.('a[href]');
+      if (!link || (link.target && link.target !== '_self') || link.hasAttribute('download') || event.defaultPrevented) return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      let route = url.pathname.replace(/^\/+/, '');
+      if ((!route || route === 'home') && url.hash) route = url.hash.slice(1);
+      route = route || 'home';
+      try { route = decodeURIComponent(route); } catch (_) {}
+      if (!this._isKnownRoute(route)) return;
+      event.preventDefault();
+      const destination = this._routeToPath(route) + url.search;
+      if (destination !== window.location.pathname + window.location.search) {
+        window.history.pushState(window.history.state, '', destination);
+      }
+      this.handleRoute();
+    });
+  },
+
   // ====== WhatsApp Number Sanitizer ======
   // Ensures the number works with wa.me links.
   // Strips leading +, spaces, dashes, and redundant 967 prefix.
@@ -36,20 +126,12 @@ const App = {
   },
 
   async init() {
-    // Path-to-hash redirect: /place/ID → /#place/ID
-    var _p = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
-    var _pp = _p.split('/');
-    var _validTypes = {place:1, offer:1, job:1, event:1};
-    if (_pp[0] && _pp[1] && _validTypes[_pp[0]]) {
-      window.location.replace('/#' + _pp[0] + '/' + _pp[1]);
-      return;
-    }
-
     if (this._initialized) return;
     this._initialized = true;
     // Remove loading skeleton if present
     var _sk = document.getElementById('initial-loader');
     if (_sk) _sk.remove();
+    this._bindCleanRouteNavigation();
     try {
       this.initDarkMode();
       this.initLang();
@@ -60,10 +142,10 @@ const App = {
       
       // Now render with auth state
       // If hash is a detail view, don't render home first (prevents flicker)
-      let initHash = location.hash.slice(1) || 'home';
+      let initHash = this.getCurrentRoute();
       let initView = initHash.split('/')[0];
       if (Auth.currentUser && ['login', 'signup'].includes(initView)) {
-        location.hash = 'home';
+        window.history.replaceState(window.history.state, '', '/');
         initHash = 'home';
         initView = 'home';
       }
@@ -79,6 +161,7 @@ const App = {
       }
       if (Auth._flushRedirectAuthError) Auth._flushRedirectAuthError();
       window.addEventListener('hashchange', () => this.handleRoute());
+      window.addEventListener('popstate', () => this.handleRoute());
       
       // Load remaining data in background
       // Preload ads EARLY so renderPosition() has data on first render
@@ -95,7 +178,7 @@ const App = {
       }).then(() => {
         // Only re-render for non-detail views
         // Detail views handle their own data loading in showPlace/showItemDetail
-        const curHash = location.hash.slice(1) || 'home';
+        const curHash = this.getCurrentRoute();
         const curView = curHash.split('/')[0];
         const isDetail = ['place', 'offer', 'job', 'event'].includes(curView);
         if (!isDetail) {
@@ -108,7 +191,7 @@ const App = {
 
       // Delayed re-render: ensures ads and other late-loaded data appear
       setTimeout(() => {
-        const curHash = location.hash.slice(1) || 'home';
+        const curHash = this.getCurrentRoute();
         const curView = curHash.split('/')[0];
         const isDetail = ['place', 'offer', 'job', 'event'].includes(curView);
         if (!isDetail && Ads._cache && Ads._cache.length > 0) {
@@ -141,8 +224,13 @@ const App = {
   },
 
   handleRoute() {
-    const hash = location.hash.slice(1) || 'home';
-    const [view, ...params] = hash.split('/');
+    const hash = this.getCurrentRoute();
+    this._syncCleanRouteUrl(hash);
+    const [view, ...params] = hash.split('?')[0].split('/');
+    if (view === 'search') {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.has('q')) this.searchQuery = searchParams.get('q') || '';
+    }
     const previousView = this.currentView;
     this.currentView = view;
     try {
@@ -178,10 +266,10 @@ const App = {
   },
 
   _navigateHomeAfterAuth() {
-    const hashView = (location.hash.slice(1) || 'home').split('/')[0];
+    const hashView = this.getCurrentRoute().split('?')[0].split('/')[0];
     const userId = Auth.currentUser?.id || null;
     if (hashView !== 'home') {
-      location.hash = 'home';
+      this._navigateToCleanRoute('home');
       return;
     }
     if (this.currentView !== 'home' || this._lastRenderedUserId !== userId) {
@@ -298,6 +386,7 @@ const App = {
       const isDetail = ['place', 'offer', 'job', 'event'].includes(this.currentView);
       const mainContent = isDetail ? '' : (this['render_' + this.currentView]?.() || '');
       app.innerHTML = `<div class="min-h-screen ${bg}">${this.renderHeader(user)}${Ads.renderPosition('header')}<main class="fade-in pb-20 md:pb-0">${mainContent}</main>${this.renderFooter()}${this.renderBottomNav(user)}</div>`;
+      this._normalizeRouteLinks(app);
       this.initIcons();
       this.initAllCustomSelects();
       Ads.initAllSliders();

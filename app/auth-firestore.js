@@ -156,7 +156,7 @@ const Auth = {
           // لا تمسح صفحات التفاصيل — تدير محتواها بنفسها
           if (typeof App !== 'undefined' && App.render) {
             const target = App._authNavigationTarget;
-            const route = (location.hash.slice(1) || 'home').split('/')[0];
+            const route = (App.getCurrentRoute?.() || location.hash.slice(1) || 'home').split('?')[0].split('/')[0];
             if (target) {
               App._authNavigationTarget = null;
               clearTimeout(App._authNavigationTimeout);
@@ -210,7 +210,7 @@ const Auth = {
 
   _flushRedirectAuthError() {
     if (!this._pendingRedirectAuthError) return false;
-    const route = (location.hash.slice(1) || 'home').split('/')[0];
+    const route = (App.getCurrentRoute?.() || location.hash.slice(1) || 'home').split('?')[0].split('/')[0];
     const errorId = route === 'signup' ? 'signupError' : route === 'login' ? 'loginError' : null;
     const errorElement = errorId && document.getElementById(errorId);
     if (errorElement) {

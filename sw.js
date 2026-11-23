@@ -2,25 +2,25 @@
 // Service Worker - دليل اليمن PWA (Versioned)
 // =============================================
 
-const BUILD_VERSION = '20261121153237';
+const BUILD_VERSION = '20261123101803';
 const CACHE_PREFIX = 'dalil-yemen-static-';
 const CACHE_NAME = `${CACHE_PREFIX}${BUILD_VERSION}`;
-const OFFLINE_FALLBACK = `/index.html?v=${BUILD_VERSION}`;
+const OFFLINE_FALLBACK = '/index.html';
 const APP_SHELL = [
   OFFLINE_FALLBACK,
-  `/admin.html?v=${BUILD_VERSION}`,
-  `/manifest.json?v=${BUILD_VERSION}`,
-  `/app/styles.css?v=${BUILD_VERSION}`,
+  '/admin.html',
+  '/manifest.json',
+  `/app/styles.css?v=20261123101803`,
   `/app/build-meta.js`,
-  `/app/version-manager.js?v=${BUILD_VERSION}`,
-  `/app/error-tracker.js?v=${BUILD_VERSION}`,
-  `/app/data-firestore.js?v=${BUILD_VERSION}`,
-  `/app/image-storage.js?v=${BUILD_VERSION}`,
-  `/app/auth-firestore.js?v=${BUILD_VERSION}`,
-  `/app/admin-firestore.js?v=${BUILD_VERSION}`,
-  `/app/ads-firestore.js?v=${BUILD_VERSION}`,
-  `/app/lucide-local.js?v=${BUILD_VERSION}`,
-  `/app/app.js?v=${BUILD_VERSION}`
+  `/app/version-manager.js?v=20261123101803`,
+  `/app/error-tracker.js?v=20261123101803`,
+  `/app/data-firestore.js?v=20261123101803`,
+  `/app/image-storage.js?v=20261123101803`,
+  `/app/auth-firestore.js?v=20261123101803`,
+  `/app/admin-firestore.js?v=20261123101803`,
+  `/app/ads-firestore.js?v=20261123101803`,
+  `/app/lucide-local.js?v=20261123101803`,
+  `/app/app.js?v=20261123101803`
 ];
 
 self.addEventListener('install', (event) => {
