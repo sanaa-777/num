@@ -713,7 +713,7 @@ const App = {
     <header class="md:hidden bg-white dark:bg-dark-900 shadow-sm sticky top-0 z-50 border-b border-gray-100 dark:border-dark-700 safe-area-top">
       <div class="px-3 py-2 flex items-center justify-between gap-2">
         <a href="#home" class="flex items-center gap-2 shrink-0">
-          <img src="assets/branding/logo-transparent.png?v=20260806204514" alt="${isAr ? 'شعار الدليل اليمني' : 'Yemen Guide'}" class="h-7 w-auto" fetchpriority="high">
+          <img src="/assets/branding/logo-transparent.png" alt="${isAr ? 'شعار الدليل اليمني' : 'Yemen Guide'}" class="h-7 w-auto" fetchpriority="high">
         </a>
         <div class="flex items-center gap-1">
           <button onclick="App.toggleMobileSearch()" class="mobile-header-btn">
@@ -746,7 +746,7 @@ const App = {
       <div class="max-w-7xl mx-auto px-4 lg:px-6">
         <div class="flex items-center justify-between py-3 gap-6">
           <a href="#home" class="flex items-center gap-3 shrink-0">
-            <img src="assets/branding/logo-transparent.png?v=20260806204514" alt="${isAr ? 'شعار الدليل اليمني' : 'Yemen Guide'}" class="brand-logo brand-logo-header" width="1024" height="559" fetchpriority="high">
+            <img src="/assets/branding/logo-transparent.png" alt="${isAr ? 'شعار الدليل اليمني' : 'Yemen Guide'}" class="brand-logo brand-logo-header" width="1024" height="559" fetchpriority="high">
           </a>
           <div class="flex-1 max-w-md">
             <div class="relative">
@@ -1143,16 +1143,16 @@ const App = {
     const placeImages = this.getPlaceImageUrls(place);
 
     const app = document.getElementById('app');
-    app.innerHTML = `<div class="min-h-screen bg-gray-50">${this.renderHeader(Auth.currentUser)}
-    <section class="py-4 md:py-8">
+    app.innerHTML = `<div class="min-h-screen bg-gray-50 place-detail-page">${this.renderHeader(Auth.currentUser)}
+    <section class="py-4 md:py-8 place-detail-shell">
       <div class="max-w-4xl mx-auto px-3">
         <div class="flex items-center gap-2 text-xs text-gray-500 mb-3">
           <a href="#home" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="home" class="w-3 h-3"></i>الرئيسية</a>
           ${cat ? `<i data-lucide="chevron-left" class="w-3 h-3"></i><a href="#category/${cat.id}" class="text-blue-600 hover:underline">${cat.name}</a>` : ''}
           ${sub ? `<i data-lucide="chevron-left" class="w-3 h-3"></i><a href="#subcategory/${cat.id}/${sub.id}" class="text-blue-600 hover:underline">${sub.name}</a>` : ''}
         </div>
-        <div class="bg-white rounded-xl overflow-hidden border border-gray-100">
-          <div class="h-40 md:h-56 relative" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
+        <div class="bg-white rounded-xl overflow-hidden border border-gray-100 place-detail-card">
+          <div class="h-40 md:h-56 relative place-detail-gallery" style="background:linear-gradient(135deg, ${catColor}20, ${catColor}40)">
             ${placeImages.length > 0 ? `
               <div id="placeGallery" class="relative w-full h-full">
                 <img src="${App.h(this._cloudinaryJpegFallback(placeImages[0]) || placeImages[0])}" alt="${App.h(place.name)}" class="w-full h-full object-contain bg-gray-50" id="placeGalleryImg" data-gallery-index="0" data-gallery-request="0" loading="eager" decoding="async" fetchpriority="high" onerror="App.handlePlaceGalleryImageError(this)">
@@ -1173,10 +1173,10 @@ const App = {
             `}
             ${place.verified ? `<div class="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 z-10"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i>موثّق</div>` : ''}
           </div>
-          <div class="p-4 md:p-6">
+          <div class="p-4 md:p-6 place-detail-content">
             <div class="flex items-start justify-between mb-3">
               <div>
-                <h2 class="text-xl md:text-2xl font-bold text-gray-900">${App.h(place.name)}</h2>
+                <h2 class="text-xl md:text-2xl font-bold text-gray-900 place-detail-title">${App.h(place.name)}</h2>
                 <div class="flex flex-wrap items-center gap-2 mt-1.5">
                   ${sub ? `<span class="bg-gray-100 px-2 py-0.5 rounded text-xs flex items-center gap-1"><i data-lucide="${sub.icon}" class="w-3 h-3"></i>${sub.name}</span>` : (cat ? `<span class="bg-gray-100 px-2 py-0.5 rounded text-xs flex items-center gap-1"><i data-lucide="${cat.icon}" class="w-3 h-3"></i>${cat.name}</span>` : '')}
                   ${city ? `<span class="text-xs text-gray-500 flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>${city.name}</span>` : ''}
@@ -1187,13 +1187,13 @@ const App = {
                 ${isOwner ? `<button onclick="App.deletePlaceConfirm('${place.id}')" class="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center"><i data-lucide="trash-2" class="w-5 h-5 text-red-500"></i></button>` : ''}
               </div>
             </div>
-            <div class="flex items-center gap-3 mb-3 text-sm">
+            <div class="flex items-center gap-3 mb-3 text-sm place-detail-stats">
               <span class="flex items-center gap-1"><i data-lucide="star" class="w-4 h-4 text-yellow-500 fill-yellow-500"></i><span class="font-bold">${place.rating || '0'}</span><span class="text-gray-400 text-xs">(${place.reviews || 0})</span></span>
               <span class="text-gray-400 text-xs flex items-center gap-1"><i data-lucide="eye" class="w-3.5 h-3.5"></i>${place.views || 0} مشاهدة</span>
             </div>
             ${place.description ? `<p class="text-gray-600 mb-4 text-sm leading-relaxed">${App.h(place.description)}</p>` : ''}
             <!-- Action Buttons -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 px-1">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 px-1 place-detail-actions">
               ${place.phone ? `<a href="tel:${place.phone}" class="bg-green-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="phone" class="w-4 h-4"></i>اتصال</a>` : ''}
               ${place.whatsapp ? `<a href="https://wa.me/${App._sanitizeWhatsApp(place.whatsapp)}" target="_blank" class="bg-green-600 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-green-700 text-xs flex items-center justify-center gap-1.5"><i data-lucide="message-circle" class="w-4 h-4"></i>واتساب</a>` : ''}
               ${place.email ? `<a href="mailto:${place.email}" class="bg-blue-500 text-white py-2.5 rounded-lg text-center font-semibold hover:bg-blue-600 text-xs flex items-center justify-center gap-1.5"><i data-lucide="mail" class="w-4 h-4"></i>إيميل</a>` : ''}
@@ -1250,7 +1250,7 @@ const App = {
             </div>` : ''}
           </div>
         </div>
-        <div class="bg-white rounded-xl p-4 md:p-6 mt-3 border border-gray-100">
+        <div class="bg-white rounded-xl p-4 md:p-6 mt-3 border border-gray-100 place-detail-reviews">
           <h3 class="text-base font-bold mb-3 flex items-center gap-2"><i data-lucide="star" class="w-5 h-5 text-yellow-500"></i>المراجعات (${reviews.length})</h3>
           ${Auth.currentUser ? `<div class="bg-gray-50 rounded-lg p-3 mb-3">
             <div class="flex items-center gap-1 mb-2"><span class="text-xs font-medium">تقييمك:</span>${[1,2,3,4,5].map(i => `<button onclick="App.setRating(${i})" class="text-xl text-gray-300 hover:text-yellow-500" data-star="${i}"><i data-lucide="star" class="w-5 h-5"></i></button>`).join('')}</div>

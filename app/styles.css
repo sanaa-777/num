@@ -1425,3 +1425,88 @@ i[data-lucide] {
 .ad-fb {
   border-radius: 8px;
 }
+
+
+/* Place detail page polish — additive styles that preserve existing controls and handlers. */
+.place-detail-page .place-detail-shell {
+  padding-block: clamp(0.75rem, 2.5vw, 1.75rem);
+}
+.place-detail-page .place-detail-card,
+.place-detail-page .place-detail-reviews {
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  border-radius: 20px;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.055);
+}
+.place-detail-page .place-detail-gallery {
+  height: clamp(250px, 38vw, 340px);
+  background-color: #f3f6fa;
+  isolation: isolate;
+}
+.place-detail-page .place-detail-gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.place-detail-page .place-detail-content {
+  padding: clamp(1rem, 3vw, 1.75rem);
+}
+.place-detail-page .place-detail-title {
+  font-size: clamp(1.375rem, 2.6vw, 1.625rem);
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.place-detail-page .place-detail-stats {
+  min-height: 2.5rem;
+  gap: 1rem;
+}
+.place-detail-page .place-detail-actions > a,
+.place-detail-page .place-detail-actions > button {
+  min-height: 48px;
+  border-radius: 13px;
+  font-size: 0.875rem;
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+.place-detail-page .place-detail-actions > a:active,
+.place-detail-page .place-detail-actions > button:active {
+  transform: translateY(1px);
+}
+.place-detail-page .place-detail-reviews {
+  margin-top: 1rem;
+}
+.place-detail-page .place-detail-reviews textarea {
+  min-height: 72px;
+  line-height: 1.7;
+}
+.dark .place-detail-page .place-detail-card,
+.dark .place-detail-page .place-detail-reviews {
+  border-color: var(--border-color);
+  background-color: var(--bg-card);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+}
+.dark .place-detail-page .place-detail-gallery,
+.dark .place-detail-page .place-detail-gallery img {
+  background-color: #0f172a;
+}
+.dark .place-detail-page .place-detail-title {
+  color: var(--text-primary);
+}
+@media (max-width: 640px) {
+  .place-detail-page .place-detail-gallery {
+    height: 250px;
+  }
+  .place-detail-page .place-detail-content {
+    padding: 1rem;
+  }
+  .place-detail-page .place-detail-actions {
+    gap: 0.55rem;
+    padding-inline: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .place-detail-page .place-detail-actions > a,
+  .place-detail-page .place-detail-actions > button {
+    transition: none;
+  }
+}

@@ -8,6 +8,7 @@ const stampSource = read('scripts/stamp-build.js');
 const indexSource = read('index.html');
 const sitemapSource = read('sitemap.xml');
 const robotsSource = read('robots.txt');
+const stylesSource = read('app/styles.css');
 const firebase = JSON.parse(read('firebase.json'));
 
 assert.match(appSource, /getCurrentRoute\(\)/, 'the app resolves routes from clean paths');
@@ -18,6 +19,14 @@ assert.match(appSource, /searchParams\.has\('q'\)/, 'clean search pages read the
 assert.match(appSource, /_normalizeRouteLinks\(app\)/, 'rendered internal links use clean paths');
 assert.match(appSource, /addEventListener\('popstate'/, 'browser back and forward are handled');
 assert.doesNotMatch(appSource, /Path-to-hash redirect/, 'clean detail paths are not redirected back to hashes');
+assert.equal((appSource.match(/src="\/assets\/branding\/logo-transparent\.png"/g) || []).length, 2,
+  'mobile and desktop headers use a root-relative logo URL on nested clean routes');
+assert.doesNotMatch(appSource, /src="assets\/branding\/logo-transparent\.png/, 'header logo never resolves relative to a nested route');
+assert.equal(new URL('/assets/branding/logo-transparent.png', 'https://dalil-yemen-deel.web.app/place/example').pathname,
+  '/assets/branding/logo-transparent.png', 'header logo resolves from the site root on place routes');
+assert.match(appSource, /place-detail-page[\s\S]*place-detail-gallery[\s\S]*place-detail-reviews/,
+  'detail-page visual polish is scoped to the existing activity page');
+assert.match(stylesSource, /\.place-detail-page \.place-detail-gallery/, 'activity gallery polish uses scoped CSS');
 
 assert.match(versionSource, /removeLegacyDocumentVersion\(\)/, 'old document-level v= parameters are removed');
 assert.match(versionSource, /url\.searchParams\.delete\('v'\)/, 'reloads do not retain a build query parameter');
