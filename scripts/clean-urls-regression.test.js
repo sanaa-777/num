@@ -48,6 +48,11 @@ for (const route of ['/admin', '/admin.html']) {
 }
 
 assert.match(indexSource, /<link rel="canonical" href="https:\/\/dalil-yemen-deel\.web\.app\/"\s*\/?>/, 'homepage canonical is the clean production root');
+const nestedRouteRelativeAssets = indexSource.match(/(?:src|href)="(?:app\/|assets\/|manifest\.json)/g) || [];
+assert.equal(nestedRouteRelativeAssets.length, 0,
+  'HTML entry assets are root-relative so direct refreshes of nested clean routes load the app');
+assert.equal(new URL('/app/app.js?v=20261123101803', 'https://dalil-yemen-deel.web.app/place/example').pathname,
+  '/app/app.js', 'root-relative JavaScript stays outside the nested route on mobile refresh');
 assert.match(indexSource, /dalil-yemen-deel\.web\.app\/search\?q=\{search_term_string\}/, 'SearchAction uses the clean search path');
 assert.doesNotMatch(sitemapSource, /#|\?v=/, 'sitemap contains no hash routes or build-version queries');
 assert.match(sitemapSource, /https:\/\/dalil-yemen-deel\.web\.app\//, 'sitemap uses the canonical production host');
